@@ -5,9 +5,9 @@ Provides an API to define epidemiological models.
 import numpy as np 
 import scipy.sparse as sprs
 
-from metapop.integrators import integrate_dopri5
+from epidemicmodeling.integrators import integrate_dopri5
 
-class EpiModel():
+class DeterministicEpiModel():
     """
     A general class to define any 
     mean-field compartmental
@@ -48,7 +48,7 @@ class EpiModel():
 
     .. code:: python
         
-        >>> epi = EpiModel(["S","I","R"])
+        >>> epi = DeterministicEpiModel(["S","I","R"])
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
 
@@ -300,7 +300,6 @@ class EpiModel():
         """
         """
 
-
         if type(initial_conditions) == dict:
             initial_conditions = list(initial_conditions.items())
 
@@ -336,7 +335,7 @@ class EpiModel():
 
         return result[ndx,:]
 
-    def get_result_dict(self,time_points,return_compartments=None):
+    def integrate(self,time_points,return_compartments=None):
         """
         Returns values of the given compartments at the demanded
         time points (as a dictionary).
@@ -359,14 +358,14 @@ class EpiModel():
 
 
 
-class SIModel(EpiModel):
+class SIModel(DeterministicEpiModel):
     """
-    An SI model derived from :class:`metapop.epi.EpiModel`.
+    An SI model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, infection_rate, population_size=1.0):
 
-        EpiModel.__init__(self, list("SI"), population_size)
+        DeterministicEpiModel.__init__(self, list("SI"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -374,9 +373,9 @@ class SIModel(EpiModel):
             ])
 
 
-class SISModel(EpiModel):
+class SISModel(DeterministicEpiModel):
     """
-    An SIS model derived from :class:`metapop.epi.EpiModel`.
+    An SIS model derived from :class:`metapop.epi.DeterministicEpiModel`.
 
     Parameters
     ----------
@@ -393,7 +392,7 @@ class SISModel(EpiModel):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SI"), population_size)
+        DeterministicEpiModel.__init__(self, list("SI"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -403,16 +402,16 @@ class SISModel(EpiModel):
                 ("I", "S", recovery_rate),
             ])
 
-class SIRModel(EpiModel):
+class SIRModel(DeterministicEpiModel):
     """
-    An SIR model derived from :class:`metapop.epi.EpiModel`.
+    An SIR model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -422,16 +421,16 @@ class SIRModel(EpiModel):
                 ("I", "R", recovery_rate),
             ])
 
-class SIRXModel(EpiModel):
+class SIRXModel(DeterministicEpiModel):
     """
-    An SIRX model derived from :class:`metapop.epi.EpiModel`.
+    An SIRX model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, quarantine_rate, containment_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SIRXH"), population_size)
+        DeterministicEpiModel.__init__(self, list("SIRXH"), population_size)
         self.set_compartment_mobility({
                     "X": False,
                     "H": False,
@@ -446,16 +445,16 @@ class SIRXModel(EpiModel):
                 ("I", "X", containment_rate+quarantine_rate),
             ])
 
-class SEIRXModel(EpiModel):
+class SEIRXModel(DeterministicEpiModel):
     """
-    An SEIRX model derived from :class:`metapop.epi.EpiModel`.
+    An SEIRX model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, quarantine_rate, containment_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SEIRXH"), population_size)
+        DeterministicEpiModel.__init__(self, list("SEIRXH"), population_size)
         self.set_compartment_mobility({
                     "X": False,
                     "H": False,
@@ -471,16 +470,16 @@ class SEIRXModel(EpiModel):
                 ("I", "X", containment_rate+quarantine_rate),
             ])
 
-class SIRSModel(EpiModel):
+class SIRSModel(DeterministicEpiModel):
     """
-    An SIRS model derived from :class:`metapop.epi.EpiModel`.
+    An SIRS model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, waning_immunity_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -491,16 +490,16 @@ class SIRSModel(EpiModel):
                 ("R", "S", waning_immunity_rate),
             ])
 
-class SEIRModel(EpiModel):
+class SEIRModel(DeterministicEpiModel):
     """
-    An SEIR model derived from :class:`metapop.epi.EpiModel`.
+    An SEIR model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SEIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SEIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -511,16 +510,16 @@ class SEIRModel(EpiModel):
                 ("I", "R", recovery_rate),
             ])
 
-class SEIRSModel(EpiModel):
+class SEIRSModel(DeterministicEpiModel):
     """
-    An SEIRS model derived from :class:`metapop.epi.EpiModel`.
+    An SEIRS model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, waning_immunity_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        EpiModel.__init__(self, list("SEIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SEIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -533,9 +532,9 @@ class SEIRSModel(EpiModel):
             ])
 
 
-class SEAIHDRModel(EpiModel):
+class SEAIHDRModel(DeterministicEpiModel):
     """
-    An SEAIHDR model derived from :class:`metapop.epi.EpiModel`.
+    An SEAIHDR model derived from :class:`metapop.epi.DeterministicEpiModel`.
     """
 
     def __init__(self, asymptomatic_infection_rate,
@@ -560,7 +559,7 @@ class SEAIHDRModel(EpiModel):
         discharge_rate = (1-fraction_ICU_patients_succumbing)*rate_leaving_ICU
 
 
-        EpiModel.__init__(self, list("SEAIHDR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SEAIHDR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "A", "S", -asymptomatic_infection_rate),
@@ -580,7 +579,7 @@ class SEAIHDRModel(EpiModel):
             ])
 
 if __name__=="__main__":
-    epi = EpiModel(list("SEIR"))
+    epi = DeterministicEpiModel(list("SEIR"))
     print(epi.compartments)
     epi.set_compartment_mobility({
                 "S": True,

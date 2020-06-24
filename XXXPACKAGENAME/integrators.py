@@ -3,10 +3,8 @@ Contains integrator methods that will be used
 to integrate ODEs or SDEs.
 """
 
-
 import numpy as np
 from scipy.integrate import ode
-
 
 def integrate_dopri5(dydt, t, y0, *args):
     """
@@ -56,7 +54,7 @@ def integrate_dopri5(dydt, t, y0, *args):
 
 if __name__ == "__main__":
 
-    from metapop.epi import SISModel
+    from epidemicmodeling import SISModel
 
     SIS = SISModel(R0=2.0,recovery_rate=1)
     SIS.set_initial_conditions({

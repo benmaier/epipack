@@ -1,4 +1,10 @@
+"""
+Contains a general base class to define 
+stochastic epidemiological models in
+populations of constant size.
+"""
 import numpy as np
+
 
 # Try to import the original SamplableSet,
 # but if that doesn't work, use the mock version
@@ -6,8 +12,8 @@ import numpy as np
 try:
     from SamplableSet import SamplableSet
 except ImportError as e:
-    from MockSamplableSet import MockSamplableSet as SamplableSet
-    raise ImportWarning("Couldn't find the efficient implementation of `SamplableSet` (see github.com/stonge/SamplableSet). Proceeding with less efficient implementation.")
+    from epidemicmodelsMockSet import MockSamplableSet as SamplableSet
+    raise ImportWarning("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
 
 #from MockSamplableSet import MockSamplableSet as SamplableSet
 
@@ -99,6 +105,7 @@ class StochasticEpiModel():
         self.node_transition_events = None
         self.link_transmission_events = None
         self.node_and_link_events = None
+        self.conditional_link_transmission_events = None
 
         # check whether to initiate as a network or well-mixed simulation
         if edge_weight_tuples is not None:
@@ -315,6 +322,102 @@ class StochasticEpiModel():
 
         return self
 
+    def set_conditional_link_transmission_processes(self,process_dict):
+        r"""
+        Define link transmission processes between compartments.
+
+        Parameters
+        ----------
+        process_dict : :obj:`list` of :obj:`tuple`
+            A dictionary of tuples that contains conditional transmission events in the following format:
+
+            .. code:: python
+
+                {  
+                    conditional_reaction: [
+                        ("source_compartment", 
+                         "target_compartment_initial",
+                         "source_compartment", 
+                         "target_compartment_final", 
+                         ),
+                    ...
+                   ]
+                }
+
+        Example
+        -------
+
+        For an SEIR model.
+
+        .. code:: python
+
+            epi.set_link_transmission_processes([
+                ("I", "S", +1, "I", "E" ),
+            ])
+
+        """
+
+        # each compartment is associated with a list of events that it can be
+        # involved in (event = first entry)
+        # Each event is associated with a rate (rate = second entry)
+        self.conditional_link_transmission_events = {}
+
+        # iterate through processes
+        for triggering_event, triggered_events in process_dict.items():
+
+            if len(triggering_event) == 5:
+                coupling0, coupling1, _, affected0, affected1 = triggering_event
+                if coupling0 != affected0:
+                    raise ValueError("In process",
+                                      coupling0, coupling1, "->", affected0, affected1,
+                                      "The source (infecting) compartment", coupling0, "and first affected compartment (here: ", affected0,
+                                      "), must be equal on both sides of the reaction equation but are not.",
+                                      )
+                _c0 = self.get_compartment_id(coupling0)
+                _s = self.get_compartment_id(coupling1)
+                _t = self.get_compartment_id(affected1)
+            elif len(triggering_event) == 3:
+                source, _, target = triggering_event
+                _c0 = -1
+                _s = self.get_compartment_id(source)
+                _t = self.get_compartment_id(target)
+            else:
+                raise ValueError("Only node transition or link transmission events are allowed to trigger conditional link transmission events (invalid event:", triggering_event,'"')
+
+            event = (_c0, _s, _t)
+            self.conditional_link_transmission_events[event] = {}
+
+
+            for triggered_event in triggered_events:
+                # link event
+                if len(triggered_event) != 5:
+                    raise ValueError("Only link transmission events are allowed to trigger conditional link transmission events (invalid event:", triggered_event)
+
+                coupling0, coupling1, _, affected0, affected1 = triggered_event
+
+                if coupling0 != affected0:
+                    raise ValueError("In process",
+                                      coupling0, coupling1, "->", affected0, affected1,
+                                      "The source (infecting) compartment", coupling0, "and first affected compartment (here: ", affected0,
+                                      "), must be equal on both sides of the reaction equation but are not.",
+                                      )
+
+                if self.get_compartment_id(coupling0) != event[_AFFECTED_TARGET_COMPARTMENT]:
+                    raise ValueError("In conditional link transmission process",
+                                      coupling0, coupling1, "->", affected0, affected1,
+                                      "The source (infecting) compartment", coupling0, "must be equal to the affected (target) compartment of",
+                                      "the triggering event", triggering_event, " but is not."
+                                      )
+
+                _c0 = self.get_compartment_id(coupling0)
+                _s = self.get_compartment_id(coupling1)
+                _t = self.get_compartment_id(affected1)
+                
+                this_triggered_event = (_c0, _s, _t)
+                self.conditional_link_transmission_events[event][_s] = this_triggered_event
+
+        return self
+
     def _zip_events(self):
         """
         Concatenate link and node events.
@@ -329,11 +432,24 @@ class StochasticEpiModel():
             # the last entry in this list saves the event index range that are link events.
             # we need this, because for every node, these rates have to be multiplied by
             # the out degree later on.
-            self.node_and_link_events[comp] = [
-                                    np.concatenate((node_events[_EVENTS],link_events[_EVENTS])),
-                                    np.concatenate((node_events[_RATES],link_events[_RATES])),
-                                    [len(node_events[_RATES]), len(node_events[_RATES]) + len(link_events[_RATES])]
-                                ]
+            if len(node_events[_EVENTS]) == 0 and len(link_events[_EVENTS]) == 0:
+                events = np.array([])
+                rates = np.array([])
+                indices = [0, 0]
+            elif len(node_events[_EVENTS]) != 0 and len(link_events[_EVENTS]) == 0:
+                events = node_events[_EVENTS]
+                rates = node_events[_RATES]
+                indices = [0, 0]
+            elif len(node_events[_EVENTS]) == 0 and len(link_events[_EVENTS]) != 0:
+                events = link_events[_EVENTS]
+                rates = link_events[_RATES]
+                indices = [0, len(link_events[_EVENTS])]
+            else:
+                events = np.concatenate((node_events[_EVENTS],link_events[_EVENTS]))
+                rates = np.concatenate((node_events[_RATES],link_events[_RATES]))
+                indices = [len(node_events[_RATES]), len(node_events[_RATES]) + len(link_events[_RATES])]
+
+            self.node_and_link_events[comp] = [ events, rates, indices ]
 
     def set_random_initial_conditions(self, initial_conditions):
         """
@@ -416,10 +532,16 @@ class StochasticEpiModel():
         compartment_min = (compartment_mins[compartment_mins>0]).min()
         compartment_max = (compartment_maxs).max()
 
-        self.node_status = node_status.copy()
+        # set these node statuses
+        self.node_status = node_status.copy()    
+
+        # construct a SamplableSet in which we insert the node reaction rates
         self.all_node_events = SamplableSet(compartment_min,compartment_max,cpp_type='int')
+
+        # construct a list that contains events and rates for each node once it was triggered
         self.node_event_probabilities = [ [] for n in range(self.N_nodes) ]
 
+        # set each node status according to the passed node_status array
         for node, status in enumerate(self.node_status):
             self.set_node_status(node, status)
 
@@ -437,19 +559,27 @@ class StochasticEpiModel():
             The index of the compartment that the node changes into.
         """
 
+        # get the events that can happen to a node of this status/compartment
         status_events = self.node_and_link_events[status]
 
+        # if no events can happen, remove the node from 
+        # the event set and set the node events to an empty set
         if len(status_events[_RATES]) == 0:
-            del  self.all_node_events[node]
+            del self.all_node_events[node]
             self.node_event_probabilities[node] = []
         else:
+            # otherwise, get a copy of this compartment's rate vector
             these_rates = status_events[_RATES].copy()
+            # scale the link events by this node's out degree            
             scale_from, scale_to = status_events[_LINK_PROCESS_INDICES]
             these_rates[scale_from:scale_to] *= self.out_degree[node]
             total_rate = these_rates.sum()
+            # add the node to the node event set 
             self.all_node_events[node] = total_rate
+            # save the probabilities with which each of the node's events happens
             self.node_event_probabilities[node] = these_rates / total_rate
 
+        # finally, set node status
         self.node_status[node] = status
 
         return self
@@ -484,16 +614,19 @@ class StochasticEpiModel():
             and the index of the compartment that gains a member.
         """
 
-
+        # once a node that reacts, obtain the probabilities with which
+        # each of its events happens, and its current status
         status = self.node_status[reacting_node]
         node_event_probabilities = self.node_event_probabilities[reacting_node]
 
+        # sample the index of the event that happens according to the node probabilities
+        # and get the corresponding event
         event_index = np.random.choice(len(node_event_probabilities),p=node_event_probabilities)
         event = self.node_and_link_events[status][_EVENTS][event_index]
 
         return self.make_node_event(reacting_node, tuple(event))
 
-    def make_node_event(self, reacting_node, event):
+    def make_node_event(self, reacting_node, event, neighbor=None):
         """
         Let a specific node event happen
 
@@ -503,6 +636,8 @@ class StochasticEpiModel():
             the index of the node that reacts
         event : tuple of int
             three-entry long tuple that characterizes this event
+        neighbor : int, default = None
+            specify the neighbor to which this specific event happens
 
         Returns
         -------
@@ -512,28 +647,83 @@ class StochasticEpiModel():
             and the index of the compartment that gains a member.
         """
 
+        # classify the event and changing compartments
         is_transmission_event = event[_TRANSMITTING_COMPARTMENT] != -1
         losing_compartment = event[_AFFECTED_SOURCE_COMPARTMENT]
         gaining_compartment = event[_AFFECTED_TARGET_COMPARTMENT]
 
-        if is_transmission_event:
-            if self.is_network_model:
-                neighbor, _ = self.graph[reacting_node].sample()
-            else:
-                neighbor = np.random.choice(self.N_nodes-1)
-                if neighbor >= reacting_node:
-                    neighbor += 1
+        compartment_changes = []
 
+        # if is transmission event
+        if is_transmission_event:            
+            if neighbor is None:
+                # if no reacting neighbor was specified    
+                if self.is_network_model:
+                    # sample a neighbor from the reacting node's neighbor set
+                    neighbor, _ = self.graph[reacting_node].sample()
+                else:
+                    # in well-mixed, sample any other node
+                    neighbor = np.random.choice(self.N_nodes-1)
+                    if neighbor >= reacting_node:
+                        neighbor += 1
+            # if the sampled neighbor is of the affected compartment,
+            # the affected node is the neighbor
             if self.node_status[neighbor] == event[_AFFECTED_SOURCE_COMPARTMENT]:
-                self.set_node_status(neighbor,event[_AFFECTED_TARGET_COMPARTMENT])
+                affected_node = neighbor
             else:
-                return []
+                # otherwise, nothing happens
+                return compartment_changes
         else:
-            self.set_node_status(reacting_node,event[_AFFECTED_TARGET_COMPARTMENT])
+            # if it's a node transition event, this node is affected
+            affected_node = reacting_node
 
-        return [(losing_compartment, gaining_compartment)]
+        new_compartment = event[_AFFECTED_TARGET_COMPARTMENT]
+        self.set_node_status(affected_node,new_compartment)
 
-    def simulation(self,tmax,return_compartments=None,sampling_dt=None):
+        # check for conditional processes based on this process
+        if self.conditional_link_transmission_events is not None:
+
+            # check whether an entry exists for this event
+            try:
+                conditional_events = self.conditional_link_transmission_events[event]
+                has_conditional_transmissions = True
+            except KeyError as e:
+                has_conditional_transmissions = False
+
+            # if it exists
+            if has_conditional_transmissions:
+
+                # sample neighbors of the affected node (might include this reacting node)
+                if self.is_network_model:
+                    neighbors = self.graph[affected_node]
+                else:
+                    neighbors = np.random.choice(self.N_nodes-1,size=int(self.out_degree[affected_node]),replace=False)
+                    neighbors[neighbors >= affected_node] += 1
+
+                # iterate through neighbors
+                for n in neighbors:
+                    # samplableset returns node ids together with weight, therefore we 
+                    # have to ask for the first entry of n
+                    try:
+                        n = n[0]
+                    except IndexError as e:
+                        pass
+
+                    # if the compartment of the neighbor is affected by a conditional event,
+                    # let this conditional event happen to the neighbor, as triggered
+                    # by the affected node
+                    try:
+                        conditional_transmission_event = conditional_events[self.node_status[n]]
+                        these_compartment_changes = self.make_node_event(affected_node, conditional_transmission_event, neighbor = n)
+                        compartment_changes.extend(these_compartment_changes)
+                    except KeyError as e:
+                        pass
+
+        compartment_changes.append((losing_compartment, gaining_compartment))
+
+        return compartment_changes
+
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -553,31 +743,48 @@ class StochasticEpiModel():
         t = 0.0
         time = [0.0]
         while t < tmax and self.get_total_event_rate() > 0:
+
+            # sample and advance time according to current total rate
             tau = np.random.exponential(1/self.get_total_event_rate())
             new_t = t+tau
+
+            # break if simulation time is reached
             if new_t >= tmax:
                 break
+
+            # sample a reacting node from the reaction set
             reacting_node = self.get_reacting_node()
+
+            # let the event take place and get all the compartments
+            # that are associated with changes
             changing_compartments = self.make_random_node_event(reacting_node)
+
+            # only save compartment counts if anything changed
             if len(changing_compartments) > 0:
 
                 if sampling_dt is not None:
+                    # sample all the time steps that were demanded in between the two events
                     last_sample_dt = time[-1]
                     for idt in range(1,int(np.ceil((new_t-last_sample_dt)/sampling_dt))):
                         time.append(last_sample_dt+idt*sampling_dt)
                         compartments.append(current_state.copy())
 
+                # write losses and gains into the current state vector
                 for losing, gaining in changing_compartments:
                     current_state[losing] -= 1 
                     current_state[gaining] += 1 
 
+                # save the current state if sampling_dt wasn't specified
                 if sampling_dt is None:
                     time.append(t)
                     compartments.append(current_state.copy())
 
 
+            # advance time
             t = new_t
 
+
+        # convert to result dictionary
         time = np.array(time)
         result = np.array(compartments)
 
@@ -628,7 +835,7 @@ if __name__ == "__main__":
     model.set_link_transmission_processes([("I","S",R0/k0,"I","I")])
     model.set_random_initial_conditions({"S":S0,"I":I0})
 
-    t, result = model.simulation(4,sampling_dt = 0.1)
+    t, result = model.simulate(4,sampling_dt = 0.1)
 
     from bfmplot import pl
     for comp, series in result.items():
@@ -664,7 +871,7 @@ if __name__ == "__main__":
     model.set_link_transmission_processes([("I","S",R0/k0*mu,"I","I")])
     model.set_random_initial_conditions({"S":S0,"I":I0})
 
-    t, result = model.simulation(4,sampling_dt = 0.1)
+    t, result = model.simulate(4,sampling_dt = 0.1)
 
     pl.figure()
 
@@ -710,7 +917,7 @@ if __name__ == "__main__":
 
     from time import time
     start = time()
-    t, result = model.simulation(100)
+    t, result = model.simulate(100)
     end = time()
     print("composition rejection needed", end-start,"seconds") 
 

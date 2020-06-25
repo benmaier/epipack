@@ -3,4 +3,3 @@ include setup.py
 include README.rst
 include LICENSE
 include setup.cfg
-include metapop/data/*

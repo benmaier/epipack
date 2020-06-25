@@ -539,10 +539,7 @@ class DeterministicSIRXModel(DeterministicEpiModel):
         infection_rate = R0 * recovery_rate
 
         DeterministicEpiModel.__init__(self, list("SIRXH"), population_size)
-        self.set_compartment_mobility({
-                    "X": False,
-                    "H": False,
-                })
+
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "I", +infection_rate),
@@ -563,10 +560,7 @@ class DeterministicSEIRXModel(DeterministicEpiModel):
         infection_rate = R0 * recovery_rate
 
         DeterministicEpiModel.__init__(self, list("SEIRXH"), population_size)
-        self.set_compartment_mobility({
-                    "X": False,
-                    "H": False,
-                })
+
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "E", +infection_rate),

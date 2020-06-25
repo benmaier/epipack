@@ -54,9 +54,9 @@ def integrate_dopri5(dydt, t, y0, *args):
 
 if __name__ == "__main__":
 
-    from epidemicmodeling import SISModel
+    from epipack import DeterministicSISModel
 
-    SIS = SISModel(R0=2.0,recovery_rate=1)
+    SIS = DeterministicSISModel(R0=2.0,recovery_rate=1)
     SIS.set_initial_conditions({
                     'S': 0.99,
                     'I': 0.01,

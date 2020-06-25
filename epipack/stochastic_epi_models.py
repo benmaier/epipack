@@ -12,7 +12,7 @@ import numpy as np
 try:
     from SamplableSet import SamplableSet
 except ImportError as e:
-    from epipack.MockSet import MockSamplableSet as SamplableSet
+    from epipack.mock_samplable_set import MockSamplableSet as SamplableSet
     raise ImportWarning("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
 
 #from MockSamplableSet import MockSamplableSet as SamplableSet

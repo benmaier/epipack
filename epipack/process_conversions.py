@@ -23,7 +23,7 @@ def processes_to_rates(process_list, compartments):
 
         if len(process) == 3:
             # it's either a transition process or a birth process:
-            if type(process[1]) not in compartments:
+            if process[1] not in compartments:
                 # it's a fission process
                 linear_rates.extend(transition_processes_to_rates([process]))
             else:
@@ -32,19 +32,19 @@ def processes_to_rates(process_list, compartments):
         elif len(process) == 4:
             # it's either a fission process or a fusion process
 
-            if type(process[1]) not in compartments:
+            if process[1] not in compartments:
                 # it's a fission process
-                quadratic_rates.extend(fission_processes_to_rates)
-            elif type(process[2]) not in compartments:
+                quadratic_rates.extend(fission_processes_to_rates([process]))
+            elif process[2] not in compartments:
                 # it's a fusion process
-                quadratic_rates.extend(fusion_processes_to_rates)
+                quadratic_rates.extend(fusion_processes_to_rates([process]))
             else:
                 raise TypeError("Process " + str(process) + " is not understood.")
 
         elif len(process) == 5:
 
             # it's a transmission process
-            if type(process[2]) not in compartments:
+            if process[2] not in compartments:
                 quadratic_rates.extend(transmission_processes_to_rates([process]))
             else:
                 raise TypeError("Process " + str(process) + " is not understood.")
@@ -264,7 +264,7 @@ def transmission_processes_to_rates(process_list):
 
         reactants = [_s0, _s1]
         products = [_t0, _t1]
-        constant = next(iter(set.intersection(set(reactants), set(products))))
+        constant = (set.intersection(set(reactants), set(products)))        
         if len(constant) == 2 or tuple(reactants) == tuple(products):
             raise ValueError("Process "+\
                              str((coupling0, coupling1, rate, affected0, affected1)) +\
@@ -273,6 +273,7 @@ def transmission_processes_to_rates(process_list):
             #print("reactants", reactants)
             #print("constant", constant)
             #print("products", products)
+            constant = next(iter(constant))
             reactants.remove(constant)
             products.remove(constant)
             _s0 = constant

@@ -52,6 +52,8 @@ def processes_to_rates(process_list, compartments):
         else:
             raise TypeError("Process " + str(process) + " is not understood.")
 
+    return quadratic_rates, linear_rates
+
 
 def transition_processes_to_rates(process_list):
     """

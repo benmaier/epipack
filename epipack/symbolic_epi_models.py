@@ -207,10 +207,11 @@ class SymbolicEpiModel(DeterministicEpiModel):
         """
         Obtain the equations of motion for this model in form of equations.
         """
+        t = sympy.symbols("t")
         Eqs = []
         ynew = self.dydt()
         for compartment, expr in zip(self.compartments,ynew):
-            dXdt = sympy.symbols("d"+str(compartment)+"dt")
+            dXdt = sympy.Derivative(compartment, t)
             Eqs.append(sympy.Eq(dXdt, expr))
         return Eqs
 
@@ -464,3 +465,21 @@ if __name__=="__main__":
     print()
     print(epi.ODEs())
     print(epi.find_fixed_points())
+
+
+    import sympy
+    from epipack import SymbolicEpiModel
+
+    S, I, eta, rho = sympy.symbols("S I eta rho")
+
+    SIS = SymbolicEpiModel([S,I])
+    SIS.add_transmission_processes([
+            (I, S, eta, I, I),
+        ])
+    SIS.add_transition_processes([
+            (I, rho, S),
+        ])
+
+    print(SIS.find_fixed_points())
+
+    print(SIS.get_eigenvalues_at_fixed_point({S:1}))

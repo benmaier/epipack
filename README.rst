@@ -1,22 +1,16 @@
-About
------
-
-Simulate meta-population models on time-varying networks. Written by (in
-alphabetical order) `Laura
-Alessandretti <http://lauraalessandretti.weebly.com/>`__, `Flavio
-Iannelli <https://www.business.uzh.ch/en/research/professorships/networkscience/people/Dr.-Flavio-Iannelli.html>`__,
-`Jonas S. Juul <http://www.nbi.dk/~jonassj/>`__, `Benjamin F.
-Maier <https://benmaier.org/>`__.
-
-Install
+epipack
 -------
+
+Build any epidemiological model based on reaction equations, analyze the
+ODEs analytically, integrate them numerically, or do stochastic
+simulations of the system on networks or in a well-mixed system.
 
 .. code:: bash
 
-   git clone git@github.com:benmaier/metapop.git
-   pip install ./metapop
+   git clone git@github.com:benmaier/epipack.git
+   pip install ./epipack
 
-``metapop`` was developed and tested for
+``epipack`` was developed and tested for
 
 -  Python 3.7
 
@@ -25,13 +19,16 @@ So far, the package's functionality was tested on Mac OS X only.
 Dependencies
 ------------
 
-``metapop`` directly depends on the following packages which will be
+``epipack`` directly depends on the following packages which will be
 installed by ``pip`` during the installation process
 
--  ``networkx==2.2``
--  ``numpy>=1.16``
--  ``scipy>=1.3.1``
--  ``tqdm>=4.41.1``
+-  ``numpy>=1.17``
+-  ``scipy>=1.3``
+-  ``sympy==1.6``
+
+Please note that **fast network simulations are only available if you
+install**\ `SamplableSet <github.com/gstonge/SamplableSet>`__\ **manually**
+(pip won't do it for you).
 
 Documentation
 -------------
@@ -41,32 +38,29 @@ The full documentation is available at XXX.
 Examples
 --------
 
-Quick API
----------
-
 Changelog
 ---------
 
 Changes are logged in a `separate
-file <https://github.com/benmaier/metapop/blob/master/CHANGELOG.md>`__.
+file <https://github.com/benmaier/epipack/blob/master/CHANGELOG.md>`__.
 
 License
 -------
 
 This project is licensed under the `MIT
-License <https://github.com/benmaier/metapop/blob/master/LICENSE>`__.
+License <https://github.com/benmaier/epipack/blob/master/LICENSE>`__.
 
 Contributing
 ------------
 
 If you want to contribute to this project, please make sure to read the
 `code of
-conduct <https://github.com/benmaier/metapop/blob/master/CODE_OF_CONDUCT.md>`__
+conduct <https://github.com/benmaier/epipack/blob/master/CODE_OF_CONDUCT.md>`__
 and the `contributing
-guidelines <https://github.com/benmaier/metapop/blob/master/CONTRIBUTING.md>`__.
+guidelines <https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md>`__.
 In case you're wondering about what to contribute, we're always
 collecting ideas of what we want to implement next in the `outlook
-notes <https://github.com/benmaier/metapop/blob/master/OUTLOOK.md>`__.
+notes <https://github.com/benmaier/epipack/blob/master/OUTLOOK.md>`__.
 
 |Contributor Covenant|
 
@@ -77,7 +71,7 @@ Fork this repository, clone it, and install it in dev mode.
 
 .. code:: bash
 
-   git clone git@github.com:YOURUSERNAME/metapop.git
+   git clone git@github.com:YOURUSERNAME/epipack.git
    make
 
 If you want to upload to PyPI, first convert the new ``README.md`` to

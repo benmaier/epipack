@@ -12,7 +12,7 @@ import numpy as np
 try:
     from SamplableSet import SamplableSet
 except ImportError as e:
-    from epidemicmodelsMockSet import MockSamplableSet as SamplableSet
+    from epipack.MockSet import MockSamplableSet as SamplableSet
     raise ImportWarning("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
 
 #from MockSamplableSet import MockSamplableSet as SamplableSet
@@ -85,7 +85,6 @@ class StochasticEpiModel():
         >>> epi = StochasticEpiModel(["S","I","R"],10)
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
-
 
     """
 
@@ -912,6 +911,7 @@ if __name__ == "__main__":
                                             ("I",mu,"R"),
                                         ])
     model.set_link_transmission_processes([("I","S",R0/k_norm*mu,"I","I")])
+
     model.set_network(N,weighted_edge_tuples)
     model.set_random_initial_conditions({"S":S0,"I":I0})
 

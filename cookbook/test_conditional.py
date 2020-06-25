@@ -1,12 +1,12 @@
 import numpy as np
-from StochasticEpiModel import StochasticEpiModel
+from StochasticEpiModels import StochasticEpiModel
 from SIRXQ import mean_field_SIRX_tracing
 
 from time import time
 
 if __name__=="__main__":
 
-    N = 100000
+    N = 10000
     I0 = 50
     k0 = 100
     R0 = 2.5
@@ -23,6 +23,7 @@ if __name__=="__main__":
             ("I",kappa,"X"),
             ("Q",omega,"S"),
         ])
+
     model.set_link_transmission_processes([
             ("I","S",eta,"I","I"),
         ])
@@ -39,7 +40,7 @@ if __name__=="__main__":
 
     print(model.node_and_link_events)
     start = time()
-    t, result = model.simulation(300,sampling_dt=1)
+    t, result = model.simulate(300,sampling_dt=1)
     end = time()
 
     print("simulation took", end-start,"seconds")

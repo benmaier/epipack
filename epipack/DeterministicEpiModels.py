@@ -1,15 +1,22 @@
 """
-Provides an API to define epidemiological models.
+Provides an API to define deterministic epidemiological models.
 """
 
 import numpy as np 
 import scipy.sparse as sprs
 
-from epidemicmodeling.integrators import integrate_dopri5
+from epipack.integrators import integrate_dopri5
+from epipack.process_conversions import (
+            processes_to_rates,
+            transition_processes_to_rates,
+            fission_processes_to_rates,
+            fusion_processes_to_rates,
+            transmission_processes_to_rates,
+        )
 
-class DeterministicEpiModel():
+class EpiModel():
     """
-    A general class to define any 
+    A general class to define standard 
     mean-field compartmental
     epidemiological model.
 
@@ -27,9 +34,6 @@ class DeterministicEpiModel():
         (e.g. "S", "I", etc.).
     N_comp : :obj:`int`
         Number of compartments (including population number)
-    mobility : scipy.sparse.csr_matrix
-        Sparse matrix containing whether a compartment
-        is mobile or not.
     linear_rates : scipy.sparse.csr_matrix
         Sparse matrix containing 
         transition rates of the linear processes.
@@ -48,7 +52,7 @@ class DeterministicEpiModel():
 
     .. code:: python
         
-        >>> epi = DeterministicEpiModel(["S","I","R"])
+        >>> epi = EpiModel(["S","I","R"])
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
 
@@ -65,11 +69,10 @@ class DeterministicEpiModel():
         self.compartments = list(compartments)
         self.population_size = population_size
         self.N_comp = len(self.compartments)
-        self.mobility = sprs.eye(self.N_comp,format='csr') 
+        self.birth_rates = np.zeros((self.N_comp,),dtype=np.float64)
         self.linear_rates = sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64) 
         self.quadratic_rates = [ sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64)\
                                  for c in range(self.N_comp) ]
-        # TODO: Make a version where the last compartment is ignored and always given by 1 - sum over remaining
 
     def get_compartment_id(self,C):
         """Get the integer ID of a compartment ``C``"""
@@ -79,62 +82,17 @@ class DeterministicEpiModel():
         """Get the compartment, given an integer ID ``iC``"""
         return self.compartments[iC]
 
-    def set_compartment_mobility(self,mobility):
-        """
-        Define whether compartments are mobile. Note
-        that as per default, all compartments will be considered
-        to be mobile, so in principle you only have to define the
-        compartments that are immobile.
+    def set_processes(self,process_list):
 
-        Parameters
-        ==========
-
-        mobility : :obj:`list` of :obj:`tuple`
-            A dictionary that contains Boolean information about compartment
-            mobility
-
-            .. code:: python
-
-                {
-                    "compartment0": True ,  # if mobile
-                    "compartment1": False , # if not mobile
-                    ...
-                }
-
-        """
-        
-        # initiate with population number N, which is always mobile
-        data = []
-        row_ind = []
-        col_ind = []
-
-        this_mobility = sprs.eye(self.N_comp, dtype=np.float64).tolil()
-
-        not_given = []
-        for C, mob in mobility.items():
-            if C not in self.compartments:
-                not_given.append(C)
-        if len(not_given) > 0:
-            raise ValueError("The following compartments are undefined: ", not_given)
-
-        for compartment, is_mobile in mobility.items():
-            c = self.get_compartment_id(compartment)
-
-            if is_mobile:
-                this_mobility[c,c] = 1.0
-            else:
-                this_mobility[c,c] = 0.0
-            row_ind.append(c)
-            col_ind.append(c)
-
-        self.mobility = this_mobility.tocsr()
+        quadratic_rates, linear_rates = processes_to_rates(process_list, self.compartments)
+        self.set_linear_rates(linear_rates)
+        self.set_quadratic_rates(quadratic_rates)
 
         return self
-        
 
-    def set_linear_processes(self,rate_list,allow_nonzero_column_sums=False):
+    def set_linear_rates(self,rate_list,allow_nonzero_column_sums=False,reset_rates=True):
         """
-        Define the linear transition processes between compartments.
+        Define the linear transition rates between compartments.
 
         Parameters
         ==========
@@ -145,14 +103,62 @@ class DeterministicEpiModel():
             .. code:: python
 
                 [
-                    ("source_compartment", "target_compartment", rate ),
+                    ( acting_compartment, affected_compartment, rate ),
                     ...
                 ]
 
-        allow_nonzero_column_sums : :obj:`bool`, default : False
-            Traditionally, epidemiological models preserve the
-            total population size. If that's not the case,
-            switch off testing for this.
+        reset_rates : bool, default : True
+            Whether to reset all linear rates to zero before 
+            converting those.
+        """
+
+        if reset_rates:
+            linear_rates = sprs.lil_matrix((self.N_comp, self.N_comp),dtype=np.float64) 
+            birth_rates = np.zeros((self.N_comp,),dtype=np.float64)
+        else:
+            linear_rates = self.linear_rates.tolil()
+            birth_rates = self.birth_rates.copy()
+
+        for acting_compartment, affected_compartment, rate in process_list:
+
+            _t = self.get_compartment_id(affected_compartment)
+            if acting_compartment is None:
+                self.birth_rates[_t] += rate
+            else:
+                _s = self.get_compartment_id(affecting_compartment)
+                self.linear_rates[_t, _s] += rate
+
+
+        linear_rates = linear_rates.tocsr()
+
+        if not allow_nonzero_column_sums:
+            test = linear_rates.sum(axis=0) + birth_rates
+            test_sum = test.sum()
+            if np.abs(test_sum) > 1e-15:
+                raise ValueError("Rates do not sum to zero for each column:" + str(test_sum))
+
+        self.linear_rates = linear_rates
+        self.birth_rates = birth_rates
+
+        return self
+
+
+    def add_transition_processes(self,process_list):
+        """
+        Define the linear transition processes between compartments.
+
+        Parameters
+        ==========
+
+        process_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains transitions rates in the following format:
+
+            .. code:: python
+
+                [
+                    ( source_compartment, rate, target_compartment ),
+                    ...
+                ]
 
         Example
         -------
@@ -161,41 +167,140 @@ class DeterministicEpiModel():
 
         .. code:: python
 
-            epi.set_linear_processes([
-                ("E", "I", symptomatic_rate ),
-                ("I", "R", recovery_rate ),
+            epi.set_transition_processes([
+                ("E", symptomatic_rate, "I" ),
+                ("I", recovery_rate, "R" ),
             ])
 
         """
 
-        linear_rates = sprs.lil_matrix(
-                                (self.N_comp, self.N_comp),
-                                dtype=np.float64,
-                               )
-        
-        for source, target, rate in rate_list:
+        linear_rates = transmission_processes_to_rates(process_list)
 
-            _s = self.get_compartment_id(source)
-            _t = self.get_compartment_id(target)
+        return self.set_linear_rates(linear_rates, reset_rates=False, allow_nonzero_column_sums=True)
+
+    def add_fission_processes(self,process_list):
+        """
+        Define linear fission processes between compartments.
+
+        Parameters
+        ==========
+
+        process_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains fission rates in the following format:
+
+            .. code:: python
+
+                [
+                    ("source_compartment", rate, "target_compartment_0", "target_compartment_1" ),
+                    ...
+                ]
+
+        Example
+        -------
+
+        For pure exponential growth of compartment `B`.
+
+        .. code:: python
+
+            epi.set_fission_processes([
+                ("B", growth_rate, "B", "B" ),
+            ])
+
+        """
+        linear_rates = fission_processes_to_rates(process_list)
+
+        return self.set_linear_rates(linear_rates, reset_rates=False, allow_nonzero_column_sums=True)
+    
+    def add_fusion_processes_to_rates(self,process_list):
+        """
+        Define fusion processes between compartments.
+
+        Parameters
+        ==========
+
+        process_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains fission rates in the following format:
+
+            .. code:: python
+
+                [
+                    ("coupling_compartment_0", "coupling_compartment_1", rate, "target_compartment_0" ),
+                    ...
+                ]
+
+        Example
+        -------
+
+        Fusion of reactants "A", and "B" to form "C".
+
+        .. code:: python
+
+            fusion_processes_to_rates([
+                ("A", "B", reaction_rate, "C" ),
+            ])
+
+        """
+        quadratic_rates = fusion_processes_to_rates(process_list)
+
+        return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
+
+    def add_transmission_processes_to_rates(process_list):
+        r"""
+        A wrapper to define quadratic process rates through transmission reaction equations.
+        Note that in stochastic network/agent simulations, the transmission
+        rate is equal to a rate per link. For the mean-field ODEs,
+        the rates provided to this function will just be equal 
+        to the prefactor of the respective quadratic terms.
+
+        For instance, if you analyze an SIR system and simulate on a network of mean degree :math:`k_0`,
+        a basic reproduction number :math:`R_0`, and a recovery rate :math:`\mu`,
+        you would define the single link transmission process as 
+
+            .. code:: python
+
+                ("I", "S", R_0/k_0 * mu, "I", "I")
+
+        For the mean-field system here, the corresponding reaction equation would read
             
-            # source compartment loses an entity
-            # target compartment gains one
-            linear_rates[_s, _s] += -rate
-            linear_rates[_t, _s] += rate
+            .. code:: python
+                
+                ("I", "S", R_0 * mu, "I", "I")
 
-        linear_rates = linear_rates.tocsr()
+        Parameters
+        ----------
+        process_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains transitions rates in the following format:
 
-        if not allow_nonzero_column_sums:
-            test = linear_rates.sum(axis=0)
-            test_sum = test.sum()
-            if np.abs(test_sum) > 1e-15:
-                raise ValueError("Rates do not sum to zero for each column:" + str(test_sum))
+            .. code:: python
 
-        self.linear_rates = linear_rates
+                [
+                    ("source_compartment", 
+                     "target_compartment_initial",
+                     rate 
+                     "source_compartment", 
+                     "target_compartment_final", 
+                     ),
+                    ...
+                ]
 
-        return self
+        Example
+        -------
 
-    def set_quadratic_processes(self,rate_list,allow_nonzero_column_sums=False):
+        For an SEIR model.
+
+        .. code:: python
+
+            transmission_processes_to_rates([
+                ("I", "S", +1, "I", "E" ),
+            ])
+
+        """
+        quadratic_rates = transmission_processes_to_rates(process_list)
+
+        return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
+
+
+    def set_quadratic_rates(self,rate_list,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.
 
@@ -227,7 +332,7 @@ class DeterministicEpiModel():
 
         .. code:: python
 
-            epi.set_quadratic_processes([
+            epi.set_quadratic_rates([
                 ("S", "I", "S", -1 ),
                 ("S", "I", "E", +1 )
             ])
@@ -271,6 +376,7 @@ class DeterministicEpiModel():
 
         return self
 
+
     def dydt(self,t,y,quadratic_global_factor=None):
         """
         Compute the current momenta of the epidemiological model.
@@ -289,7 +395,7 @@ class DeterministicEpiModel():
             the quadratic rates will be modulated.
         """
         
-        ynew = self.linear_rates.dot(y)
+        ynew = self.linear_rates.dot(y) + self.birth_rates
         f = quadratic_global_factor(y) if quadratic_global_factor is not None else 1.0
         for c in self.affected_by_quadratic_process:
             ynew[c] += f*y.dot(self.quadratic_rates[c].dot(y)) / self.population_size
@@ -317,7 +423,7 @@ class DeterministicEpiModel():
 
         return self
 
-    def get_result(self,time_points,return_compartments=None):
+    def integrate_and_return_by_index(self,time_points,return_compartments=None):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -345,7 +451,7 @@ class DeterministicEpiModel():
         """
         if return_compartments is None:
             return_compartments = self.compartments
-        result = self.get_result(time_points, return_compartments)
+        result = self.integrate_and_return_by_index(time_points, return_compartments)
 
         result_dict = {}
         for icomp, compartment in enumerate(return_compartments):
@@ -354,18 +460,14 @@ class DeterministicEpiModel():
         return result_dict
 
 
-
-
-
-
-class SIModel(DeterministicEpiModel):
+class SIModel(EpiModel):
     """
-    An SI model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SI model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, infection_rate, population_size=1.0):
 
-        DeterministicEpiModel.__init__(self, list("SI"), population_size)
+        EpiModel.__init__(self, list("SI"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -373,9 +475,9 @@ class SIModel(DeterministicEpiModel):
             ])
 
 
-class SISModel(DeterministicEpiModel):
+class SISModel(EpiModel):
     """
-    An SIS model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIS model derived from :class:`metapop.epi.EpiModel`.
 
     Parameters
     ----------
@@ -392,7 +494,7 @@ class SISModel(DeterministicEpiModel):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SI"), population_size)
+        EpiModel.__init__(self, list("SI"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -402,16 +504,16 @@ class SISModel(DeterministicEpiModel):
                 ("I", "S", recovery_rate),
             ])
 
-class SIRModel(DeterministicEpiModel):
+class SIRModel(EpiModel):
     """
-    An SIR model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIR model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIR"), population_size)
+        EpiModel.__init__(self, list("SIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -421,16 +523,16 @@ class SIRModel(DeterministicEpiModel):
                 ("I", "R", recovery_rate),
             ])
 
-class SIRXModel(DeterministicEpiModel):
+class SIRXModel(EpiModel):
     """
-    An SIRX model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIRX model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, quarantine_rate, containment_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIRXH"), population_size)
+        EpiModel.__init__(self, list("SIRXH"), population_size)
         self.set_compartment_mobility({
                     "X": False,
                     "H": False,
@@ -445,16 +547,16 @@ class SIRXModel(DeterministicEpiModel):
                 ("I", "X", containment_rate+quarantine_rate),
             ])
 
-class SEIRXModel(DeterministicEpiModel):
+class SEIRXModel(EpiModel):
     """
-    An SEIRX model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SEIRX model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, quarantine_rate, containment_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SEIRXH"), population_size)
+        EpiModel.__init__(self, list("SEIRXH"), population_size)
         self.set_compartment_mobility({
                     "X": False,
                     "H": False,
@@ -470,16 +572,16 @@ class SEIRXModel(DeterministicEpiModel):
                 ("I", "X", containment_rate+quarantine_rate),
             ])
 
-class SIRSModel(DeterministicEpiModel):
+class SIRSModel(EpiModel):
     """
-    An SIRS model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIRS model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, waning_immunity_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIR"), population_size)
+        EpiModel.__init__(self, list("SIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -490,16 +592,16 @@ class SIRSModel(DeterministicEpiModel):
                 ("R", "S", waning_immunity_rate),
             ])
 
-class SEIRModel(DeterministicEpiModel):
+class SEIRModel(EpiModel):
     """
-    An SEIR model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SEIR model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SEIR"), population_size)
+        EpiModel.__init__(self, list("SEIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -510,16 +612,16 @@ class SEIRModel(DeterministicEpiModel):
                 ("I", "R", recovery_rate),
             ])
 
-class SEIRSModel(DeterministicEpiModel):
+class SEIRSModel(EpiModel):
     """
-    An SEIRS model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SEIRS model derived from :class:`metapop.epi.EpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, waning_immunity_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SEIR"), population_size)
+        EpiModel.__init__(self, list("SEIR"), population_size)
 
         self.set_quadratic_processes([
                 ("S", "I", "S", -infection_rate),
@@ -532,70 +634,16 @@ class SEIRSModel(DeterministicEpiModel):
             ])
 
 
-class SEAIHDRModel(DeterministicEpiModel):
-    """
-    An SEAIHDR model derived from :class:`metapop.epi.DeterministicEpiModel`.
-    """
-
-    def __init__(self, asymptomatic_infection_rate,
-                       symptomatic_infection_rate, 
-                       asymptomatic_rate, 
-                       fraction_never_symptomatic,
-                       rate_escaping_asymptomatic,
-                       escape_rate,
-                       fraction_requiring_ICU,
-                       fraction_ICU_patients_succumbing,
-                       rate_of_succumbing,
-                       rate_leaving_ICU,
-                       population_size=1.0):
-        
-        asymptomatic_recovery_rate = fraction_never_symptomatic*rate_escaping_asymptomatic
-        symptomatic_rate = (1-fraction_never_symptomatic)*rate_escaping_asymptomatic
-
-        hospitalization_rate = escape_rate*fraction_requiring_ICU
-        symptomatic_recovery_rate = escape_rate*(1-fraction_requiring_ICU)
-
-        fatality_rate = fraction_ICU_patients_succumbing*rate_of_succumbing
-        discharge_rate = (1-fraction_ICU_patients_succumbing)*rate_leaving_ICU
-
-
-        DeterministicEpiModel.__init__(self, list("SEAIHDR"), population_size)
-
-        self.set_quadratic_processes([
-                ("S", "A", "S", -asymptomatic_infection_rate),
-                ("S", "A", "E", +asymptomatic_infection_rate),                
-                ("S", "I", "S", -symptomatic_infection_rate),
-                ("S", "I", "E", +symptomatic_infection_rate),
-            ])
-        self.set_linear_processes([
-                ("E", "A", asymptomatic_rate),
-                ("A", "I", symptomatic_rate),
-                ("A", "R", asymptomatic_recovery_rate),
-                ("I", "R", symptomatic_recovery_rate),
-                ("I","H",hospitalization_rate),
-                ("H","D",fatality_rate),
-                ("H","R",discharge_rate),
-
-            ])
-
 if __name__=="__main__":
-    epi = DeterministicEpiModel(list("SEIR"))
+    epi = EpiModel(list("SEIR"))
     print(epi.compartments)
-    epi.set_compartment_mobility({
-                "S": True,
-                "E": True,
-                "I": True,
-                "R": True,
-            })
-    print("Mobility")
-    print(epi.mobility)
     print()
-    epi.set_linear_processes([
-            ("E", "I", 1.0),
-            ("I", "R", 1.0),
+    epi.set_linear_rates([
+            ("E", "I", 1.0,),
+            ("I", "R", 1.0,),
             ])
     print(epi.linear_rates)
-    epi.set_quadratic_processes([
+    epi.set_quadratic_rates([
             ("S", "I", "S", -1.0),
             ("S", "I", "E", +1.0),
             ])
@@ -609,7 +657,7 @@ if __name__=="__main__":
     epi = SISModel(R0=2,recovery_rate=1,population_size=N)
     epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
     tt = np.linspace(0,10,100)
-    result = epi.get_result_dict(tt,['S','I'])
+    result = epi.integrate(tt,['S','I'])
 
     pl.plot(tt, result['S'],label='S')
     pl.plot(tt, result['I'],label='I')

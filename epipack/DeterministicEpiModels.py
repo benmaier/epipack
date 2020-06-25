@@ -119,14 +119,14 @@ class EpiModel():
             linear_rates = self.linear_rates.tolil()
             birth_rates = self.birth_rates.copy()
 
-        for acting_compartment, affected_compartment, rate in process_list:
+        for acting_compartment, affected_compartment, rate in rate_list:
 
             _t = self.get_compartment_id(affected_compartment)
             if acting_compartment is None:
-                self.birth_rates[_t] += rate
+                birth_rates[_t] += rate
             else:
-                _s = self.get_compartment_id(affecting_compartment)
-                self.linear_rates[_t, _s] += rate
+                _s = self.get_compartment_id(acting_compartment)
+                linear_rates[_t, _s] += rate
 
 
         linear_rates = linear_rates.tocsr()
@@ -167,14 +167,14 @@ class EpiModel():
 
         .. code:: python
 
-            epi.set_transition_processes([
+            epi.add_transition_processes([
                 ("E", symptomatic_rate, "I" ),
                 ("I", recovery_rate, "R" ),
             ])
 
         """
 
-        linear_rates = transmission_processes_to_rates(process_list)
+        linear_rates = transition_processes_to_rates(process_list)
 
         return self.set_linear_rates(linear_rates, reset_rates=False, allow_nonzero_column_sums=True)
 
@@ -202,7 +202,7 @@ class EpiModel():
 
         .. code:: python
 
-            epi.set_fission_processes([
+            epi.add_fission_processes([
                 ("B", growth_rate, "B", "B" ),
             ])
 
@@ -211,7 +211,7 @@ class EpiModel():
 
         return self.set_linear_rates(linear_rates, reset_rates=False, allow_nonzero_column_sums=True)
     
-    def add_fusion_processes_to_rates(self,process_list):
+    def add_fusion_processes(self,process_list):
         """
         Define fusion processes between compartments.
 
@@ -235,7 +235,7 @@ class EpiModel():
 
         .. code:: python
 
-            fusion_processes_to_rates([
+            epi.add_fusion_processes([
                 ("A", "B", reaction_rate, "C" ),
             ])
 
@@ -244,7 +244,7 @@ class EpiModel():
 
         return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
 
-    def add_transmission_processes_to_rates(process_list):
+    def add_transmission_processes(self,process_list):
         r"""
         A wrapper to define quadratic process rates through transmission reaction equations.
         Note that in stochastic network/agent simulations, the transmission
@@ -290,7 +290,7 @@ class EpiModel():
 
         .. code:: python
 
-            transmission_processes_to_rates([
+            epi.add_transmission_processes([
                 ("I", "S", +1, "I", "E" ),
             ])
 
@@ -300,7 +300,7 @@ class EpiModel():
         return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
 
 
-    def set_quadratic_rates(self,rate_list,allow_nonzero_column_sums=False):
+    def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.
 
@@ -345,14 +345,19 @@ class EpiModel():
         an increase in "E" proportional to :math:`S\times I` and rate +1/time_unit."
         """
 
-        matrices = [None for c in self.compartments]
-        for c in range(self.N_comp):
-            matrices[c] = sprs.lil_matrix(
-                                (self.N_comp, self.N_comp),
-                                dtype=np.float64,
-                               )
+        if reset_rates:
 
-        all_affected = []
+            matrices = [None for c in self.compartments]
+            for c in range(self.N_comp):
+                matrices[c] = sprs.lil_matrix(
+                                    (self.N_comp, self.N_comp),
+                                    dtype=np.float64,
+                                   )
+
+            all_affected = []
+        else:
+            matrices =  [ M.tolil() for M in self.quadratic_rates ]
+            all_affected = self.affected_by_quadratic_process if self.affected_by_quadratic_process is not None else []
         
         for coupling0, coupling1, affected, rate in rate_list:
 
@@ -469,7 +474,7 @@ class SIModel(EpiModel):
 
         EpiModel.__init__(self, list("SI"), population_size)
 
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "I", +infection_rate),
             ])
@@ -496,12 +501,12 @@ class SISModel(EpiModel):
 
         EpiModel.__init__(self, list("SI"), population_size)
 
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "I", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("I", "S", recovery_rate),
+        self.add_transition_processes([
+                ("I", recovery_rate, "S" ),
             ])
 
 class SIRModel(EpiModel):
@@ -515,12 +520,12 @@ class SIRModel(EpiModel):
 
         EpiModel.__init__(self, list("SIR"), population_size)
 
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "I", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("I", "R", recovery_rate),
+        self.add_transition_processes([
+                ("I", recovery_rate, "R"),
             ])
 
 class SIRXModel(EpiModel):
@@ -537,14 +542,14 @@ class SIRXModel(EpiModel):
                     "X": False,
                     "H": False,
                 })
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "I", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("S", "H", containment_rate),
-                ("I", "R", recovery_rate),
-                ("I", "X", containment_rate+quarantine_rate),
+        self.add_transition_processes([
+                ("S", containment_rate, "H"),
+                ("I", recovery_rate, "R"),
+                ("I", containment_rate+quarantine_rate, "X"),
             ])
 
 class SEIRXModel(EpiModel):
@@ -561,15 +566,15 @@ class SEIRXModel(EpiModel):
                     "X": False,
                     "H": False,
                 })
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "E", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("E", "I", symptomatic_rate),
-                ("S", "H", containment_rate),
-                ("I", "R", recovery_rate),
-                ("I", "X", containment_rate+quarantine_rate),
+        self.add_transition_processes([
+                ("E", symptomatic_rate                ,"I"),
+                ("S", containment_rate               ,"H"), 
+                ("I", recovery_rate                  ,"R"),
+                ("I", containment_rate+quarantine_rate,"X")
             ])
 
 class SIRSModel(EpiModel):
@@ -583,13 +588,13 @@ class SIRSModel(EpiModel):
 
         EpiModel.__init__(self, list("SIR"), population_size)
 
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "I", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("I", "R", recovery_rate),
-                ("R", "S", waning_immunity_rate),
+        self.add_transition_processes([
+                ("I", recovery_rate, "R"),
+                ("R", waning_immunity_rate, "S"),
             ])
 
 class SEIRModel(EpiModel):
@@ -603,13 +608,13 @@ class SEIRModel(EpiModel):
 
         EpiModel.__init__(self, list("SEIR"), population_size)
 
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "E", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("E", "I", symptomatic_rate),
-                ("I", "R", recovery_rate),
+        self.add_transition_processes([
+                ("E", symptomatic_rate, "I"),
+                ("I", recovery_rate, "R"),
             ])
 
 class SEIRSModel(EpiModel):
@@ -623,14 +628,14 @@ class SEIRSModel(EpiModel):
 
         EpiModel.__init__(self, list("SEIR"), population_size)
 
-        self.set_quadratic_processes([
+        self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
                 ("S", "I", "E", +infection_rate),
             ])
-        self.set_linear_processes([
-                ("E", "I", symptomatic_rate),
-                ("I", "R", recovery_rate),
-                ("R", "S", waning_immunity_rate),
+        self.add_transition_processes([
+                ("E", symptomatic_rate      , "I"),
+                ("I", recovery_rate         , "R"),
+                ("R", waning_immunity_rate , "S"),
             ])
 
 
@@ -638,9 +643,9 @@ if __name__=="__main__":
     epi = EpiModel(list("SEIR"))
     print(epi.compartments)
     print()
-    epi.set_linear_rates([
-            ("E", "I", 1.0,),
-            ("I", "R", 1.0,),
+    epi.add_transition_processes([
+            ("E", 1.0, "I"),
+            ("I", 1.0, "R"),
             ])
     print(epi.linear_rates)
     epi.set_quadratic_rates([
@@ -655,6 +660,7 @@ if __name__=="__main__":
 
     N = 100
     epi = SISModel(R0=2,recovery_rate=1,population_size=N)
+    print(epi.linear_rates)
     epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
     tt = np.linspace(0,10,100)
     result = epi.integrate(tt,['S','I'])

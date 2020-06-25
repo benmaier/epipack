@@ -4,14 +4,14 @@ import os
 import sys
 
 # get __version__, __author__, and __email__
-exec(open("./XXXPACKAGENAME/metadata.py").read())
+exec(open("./epipack/metadata.py").read())
 
 setup(
-    name='XXXPACKAGENAME',
+    name='epipack',
     version=__version__,
     author=__author__,
     author_email=__email__,
-    url='https://github.com/benmaier/XXXPACKAGENAME',
+    url='https://github.com/benmaier/epipack',
     license=__license__,
     description="Simulate epidemic spreading on networks with Gillespie's SSA.",
     long_description='',
@@ -28,10 +28,10 @@ setup(
                  ],
     project_urls={
         'Documentation': 'TODO',
-        'Contributing Statement': 'https://github.com/benmaier/XXXPACKAGENAME/blob/master/CONTRIBUTING.md',
-        'Bug Reports': 'https://github.com/benmaier/XXXPACKAGENAME/issues',
-        'Source': 'https://github.com/benmaier/XXXPACKAGENAME/',
-        'PyPI': 'https://pypi.org/project/XXXPACKAGENAME/',
+        'Contributing Statement': 'https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md',
+        'Bug Reports': 'https://github.com/benmaier/epipack/issues',
+        'Source': 'https://github.com/benmaier/epipack/',
+        'PyPI': 'https://pypi.org/project/epipack/',
     },
     include_package_data=True,
     zip_safe=False,

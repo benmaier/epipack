@@ -1,4 +1,4 @@
-PKG=metapop
+PKG=epipack
 
 default: 
 	make python

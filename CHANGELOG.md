@@ -17,5 +17,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/XXXPACKAGENAME/compare/v0.0.1...HEAD
-[v0.1.4]: https://github.com/benmaier/XXXPACKAGENAME/compare/v0.0.0...v0.0.1
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.0.1...HEAD
+[v0.1.4]: https://github.com/benmaier/epipack/compare/v0.0.0...v0.0.1

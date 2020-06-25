@@ -53,7 +53,7 @@ def processes_to_rates(process_list, compartments):
             raise TypeError("Process " + str(process) + " is not understood.")
 
 
-def transition_processes_to_rates(self,process_list,allow_nonzero_column_sums=False):
+def transition_processes_to_rates(process_list):
     """
     Define the transition processes between compartments, including birth and deaths processes.
 
@@ -69,11 +69,6 @@ def transition_processes_to_rates(self,process_list,allow_nonzero_column_sums=Fa
                 ( source_compartment, rate, target_compartment ),
                 ...
             ]
-
-    allow_nonzero_column_sums : :obj:`bool`, default : False
-        Traditionally, epidemiological models preserve the
-        total population size. If that's not the case,
-        switch off testing for this.
 
     Example
     -------
@@ -104,12 +99,12 @@ def transition_processes_to_rates(self,process_list,allow_nonzero_column_sums=Fa
             # source compartment loses an entity
             # target compartment gains one
             linear_rates.append((source, source, -rate))
-            linear_rates.append((target, source, +rate))
+            linear_rates.append((source, target, +rate))
 
     return linear_rates
 
 
-def fission_processes_to_rates(self,process_list,allow_nonzero_column_sums=False):
+def fission_processes_to_rates(process_list):
     """
     Define linear fission processes between compartments.
 
@@ -125,11 +120,6 @@ def fission_processes_to_rates(self,process_list,allow_nonzero_column_sums=False
                 ("source_compartment", rate, "target_compartment_0", "target_compartment_1" ),
                 ...
             ]
-
-    allow_nonzero_column_sums : :obj:`bool`, default : False
-        Traditionally, epidemiological models preserve the
-        total population size. If that's not the case,
-        switch off testing for this.
 
     Example
     -------
@@ -155,12 +145,12 @@ def fission_processes_to_rates(self,process_list,allow_nonzero_column_sums=False
         # source compartment loses an entity
         # target compartment gains one
         linear_rates.append((_s, _s, -rate))
-        linear_rates.append((_t0, _s, -rate))
-        linear_rates.append((_t1, _s, -rate))
+        linear_rates.append((_s, _t0, +rate))
+        linear_rates.append((_s, _t1, +rate))
 
     return linear_rates
 
-def fusion_processes_to_rates(self,process_list,allow_nonzero_column_sums=False):
+def fusion_processes_to_rates(process_list):
     """
     Define fusion processes between compartments.
 
@@ -176,11 +166,6 @@ def fusion_processes_to_rates(self,process_list,allow_nonzero_column_sums=False)
                 ("coupling_compartment_0", "coupling_compartment_1", rate, "target_compartment_0" ),
                 ...
             ]
-
-    allow_nonzero_column_sums : :obj:`bool`, default : False
-        Traditionally, epidemiological models preserve the
-        total population size. If that's not the case,
-        switch off testing for this.
 
     Example
     -------
@@ -277,29 +262,35 @@ def transmission_processes_to_rates(process_list):
         _t0 = affected0
         _t1 = affected1
 
-        #reactants = set([_s0, _s1])
-        #products = set([_t0, _t1])
-        #constant = set.intersection(reactants, products)
-        #if len(constant) == 2:
-        #    raise ValueError("Process "+\
-        #                     str((coupling0, coupling1, rate, affected0, affected1)) +\
-        #                     " leaves system unchanged")
-        #elif len(constant) == 1:
-        #    _s0 = next(iter(constant))
-        #    _s1 = next(iter(reactants - constant))
-        #    _t1 = next(iter(products - constant))
+        reactants = [_s0, _s1]
+        products = [_t0, _t1]
+        constant = next(iter(set.intersection(set(reactants), set(products))))
+        if len(constant) == 2 or tuple(reactants) == tuple(products):
+            raise ValueError("Process "+\
+                             str((coupling0, coupling1, rate, affected0, affected1)) +\
+                             " leaves system unchanged")
+        elif len(constant) == 1:
+            #print("reactants", reactants)
+            #print("constant", constant)
+            #print("products", products)
+            reactants.remove(constant)
+            products.remove(constant)
+            _s0 = constant
+            _s1 = reactants[0]
+            _t1 = products[0]
 
-        #    rate_list.append( (_s0, _s1, _s1, -rate) )
-        #    rate_list.append( (_s0, _s1, _t1, +rate) )
-        #else:
+            rate_list.append( (_s0, _s1, _s1, -rate) )
+            rate_list.append( (_s0, _s1, _t1, +rate) )
+            #print(rate_list)
+        else:
 
-        #    rate_list.append( (_s0, _s1, _s1, -rate) )
-        #    rate_list.append( (_s0, _s1, _t1, +rate) )
-        #    rate_list.append( (_s0, _s1, _s0, -rate) )
-        #    rate_list.append( (_s0, _s1, _t0, +rate) )
-        rate_list.append( (_s0, _s1, _s1, -rate) )
-        rate_list.append( (_s0, _s1, _t1, +rate) )
-        rate_list.append( (_s0, _s1, _s0, -rate) )
-        rate_list.append( (_s0, _s1, _t0, +rate) )
+            rate_list.append( (_s0, _s1, _s1, -rate) )
+            rate_list.append( (_s0, _s1, _t1, +rate) )
+            rate_list.append( (_s0, _s1, _s0, -rate) )
+            rate_list.append( (_s0, _s1, _t0, +rate) )
+        #rate_list.append( (_s0, _s1, _s1, -rate) )
+        #rate_list.append( (_s0, _s1, _t1, +rate) )
+        #rate_list.append( (_s0, _s1, _s0, -rate) )
+        #rate_list.append( (_s0, _s1, _t0, +rate) )
 
     return rate_list

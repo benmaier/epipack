@@ -1,5 +1,5 @@
 import numpy as np
-from StochasticEpiModels import StochasticEpiModel
+from epipack.StochasticEpiModels import StochasticEpiModel
 from SIRXQ import mean_field_SIRX_tracing
 import networkx as nx
 
@@ -7,7 +7,7 @@ from time import time
 
 if __name__=="__main__":
 
-    N = 100000
+    N = 1000
     I0 = 50
     k0 = 100
     R0 = 2.5

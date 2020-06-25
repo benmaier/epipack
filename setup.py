@@ -18,7 +18,9 @@ setup(
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
     install_requires=[
-                'numpy>=1.16',
+                'numpy>=1.17',
+                'scipy>=1.3',
+                'sympy==1.6',
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],

@@ -1,9 +1,9 @@
 
-[//]: # (![logo](https://github.com/benmaier/epipack/raw/master/img/logo_small.png))
+[//]: # (![logo](https://github.com/benmaier/epipack/raw/master/docs/img/logo_small.png))
 
-## About
+## epipack
 
-Simulate any epidemiological model on networks or in a well-mixed system.
+Build any epidemiological model based on reaction equations, analyze the ODEs analytically, integrate them numerically, or do stochastic simulations of the system on networks or in a well-mixed system.
 
     git clone git@github.com:benmaier/epipack.git
     pip install ./epipack
@@ -18,18 +18,17 @@ So far, the package's functionality was tested on Mac OS X only.
 
 `epipack` directly depends on the following packages which will be installed by `pip` during the installation process
 
-* `numpy>=1.16`
-* `sympy>=1.6`
+* `numpy>=1.17`
+* `scipy>=1.3`
+* `sympy==1.6`
 
-Please note that fast network simulations are only available if you install [SamplableSet](github.com/gstonge/SamplableSet) manually (pip won't do it for you).
+Please note that *fast network simulations are only available if you install [SamplableSet](github.com/gstonge/SamplableSet) manually* (pip won't do it for you).
 
 ## Documentation
 
 The full documentation is available at XXX.
 
 ## Examples
-
-## Quick API
 
 ## Changelog
 

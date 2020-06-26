@@ -1,8 +1,8 @@
 =======
-metapop
+epipack
 =======
 
-.. image:: img/metapop.png
+.. image:: img/logo_large.png
     :scale: 50 %
 
 .. raw:: latex
@@ -32,9 +32,11 @@ metapop
    :maxdepth: 2
    :caption: API
 
-   api/epi
-   api/flux
-   api/metapopulation
+   api/deterministic_epi_models
+   api/symbolic_epi_models
+   api/stochastic_epi_models   
+   api/process_conversions
+   api/mock_samplable_set
    api/integrators
 
 .. .. toctree::

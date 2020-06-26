@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# _metapop documentation build configuration file, created by
+# _epipack documentation build configuration file, created by
 # sphinx-quickstart on Fri Feb 26 00:29:33 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -28,8 +28,11 @@ class Mock(MagicMock):
             return Mock()
 
 MOCK_MODULES = [
-                'wget',
-                'simplejson',
+                #'wget',
+                #'scipy',
+                #'scipy.sparse',
+                #'sympy',
+                #'SamplableSet',
                ]
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
@@ -78,16 +81,16 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'metapop'
-copyright = u'2020, In alphabetical order: Jonas S. Juul, Benjamin F. Maier'
-author = u'In alphabetical order: Jonas S. Juul, Benjamin F. Maier'
+project = u'epipack'
+copyright = u'2020,  Benjamin F. Maier'
+author = u' Benjamin F. Maier'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-exec(open("../metapop/metadata.py").read())
+exec(open("../epipack/metadata.py").read())
 
 version = __version__
 # The full version, including alpha/beta/rc tags.
@@ -260,7 +263,7 @@ html_show_sourcelink = True
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'metapopdoc'
+htmlhelp_basename = 'epipackdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -284,11 +287,11 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'metapop.tex', u'metapop Documentation',
-        u'In alphabetical order: Jonas S. Juul, Benjamin F. Maier', 'manual'),
+    (master_doc, 'epipack.tex', u'epipack Documentation',
+        u'Benjamin F. Maier', 'manual'),
 ]
 
-pdf_documents = [('index', u'rst2pdf', u'Sample rst2pdf doc', u'In alphabetical order: Jonas S. Juul, Benjamin F. Maier'),]
+pdf_documents = [('index', u'rst2pdf', u'Sample rst2pdf doc', u'Benjamin F. Maier'),]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -316,7 +319,7 @@ pdf_documents = [('index', u'rst2pdf', u'Sample rst2pdf doc', u'In alphabetical 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'metapop', u'metapop Documentation',
+    (master_doc, 'epipack', u'epipack Documentation',
      [author], 1)
 ]
 
@@ -330,7 +333,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'metapop', u'metapop Documentation',
+    (master_doc, 'epipack', u'epipack Documentation',
      author, __author__, 'Simulate meta-population models on time-varying networks.',
      'Miscellaneous'),
 ]

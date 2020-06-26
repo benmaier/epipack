@@ -1,7 +1,7 @@
 Integrators
 -----------
 
-.. automodule:: metapop.integrators
+.. automodule:: epipack.integrators
     :members:
     :undoc-members:
     :show-inheritance:

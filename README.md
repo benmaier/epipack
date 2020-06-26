@@ -22,7 +22,11 @@ So far, the package's functionality was tested on Mac OS X only.
 * `scipy>=1.3`
 * `sympy==1.6`
 
-Please note that **fast network simulations are only available if you install [SamplableSet](http://github.com/gstonge/SamplableSet) manually** (pip won't do it for you).
+Please note that **fast network simulations are only available if you install** 
+
+* `[SamplableSet](http://github.com/gstonge/SamplableSet)`
+
+**manually** (pip won't do it for you).
 
 ## Documentation
 

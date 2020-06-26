@@ -24,7 +24,7 @@ So far, the package's functionality was tested on Mac OS X only.
 
 Please note that **fast network simulations are only available if you install** 
 
-* `[SamplableSet](http://github.com/gstonge/SamplableSet)`
+* `SamplableSet==2.0` ([SamplableSet](http://github.com/gstonge/SamplableSet)`)
 
 **manually** (pip won't do it for you).
 

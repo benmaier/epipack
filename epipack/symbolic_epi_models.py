@@ -212,8 +212,17 @@ class SymbolicEpiModel(DeterministicEpiModel):
         ynew = self.dydt()
         for compartment, expr in zip(self.compartments,ynew):
             dXdt = sympy.Derivative(compartment, t)
-            Eqs.append(sympy.Eq(dXdt, expr))
+            Eqs.append(sympy.Eq(dXdt, sympy.simplify(expr)))
         return Eqs
+
+    def ODEs_jupyter(self):
+        """
+        Pretty-print the equations of motion for this model in a Jupyter notebook.
+        """
+
+        from IPython.display import Math, display
+        for ode in self.ODEs():
+            display(Math(sympy.latex(ode)))
 
     def find_fixed_points(self):
         """
@@ -223,7 +232,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
         return sympy.nonlinsolve(ynew, self.compartments)
 
 
-    def jacobian(self):
+    def jacobian(self,simplify=True):
         """
         Obtain the Jacobian for this model.
         """
@@ -233,6 +242,9 @@ class SymbolicEpiModel(DeterministicEpiModel):
         
         for i in range(self.N_comp):
             J[i,:] += (self.quadratic_rates[i] * y + self.quadratic_rates[i].T * y).T
+
+        if simplify:
+            J = sympy.simplify(J)
 
         return J
 

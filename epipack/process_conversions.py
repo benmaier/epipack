@@ -8,6 +8,31 @@ def processes_to_rates(process_list, compartments):
     process_list : :obj:`list` of :obj:`tuple`
         A list containing reaction processes in terms of tuples.
 
+        .. code:: python
+
+            [
+                # transition process
+                ( source_compartment, rate, target_compartment),
+
+                # transmission process
+                ( coupling_compartment_0, coupling_compartment_1, rate, target_compartment_0, target_ccompartment_1),
+
+                # fission process
+                ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
+                
+                # fusion process
+                ( source_compartment_0, source_compartment_1, rate, target_compartment),
+
+                # death process
+                ( source_compartment, rate, None),
+
+                # birth process
+                ( None, rate, target_compartment),
+            ]
+
+    compartments : :obj:`list` of hashable type
+        The compartments of these reaction equations. 
+
     Returns
     -------
     quadratic_rates : :obj:`list` of :obj:`tuple`

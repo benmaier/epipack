@@ -82,7 +82,43 @@ class DeterministicEpiModel():
         """Get the compartment, given an integer ID ``iC``"""
         return self.compartments[iC]
 
-    def set_processes(self,process_list):
+    def set_processes(self,process_list,allow_nonzero_column_sums=False,reset_rates=True):
+        """
+        Converts a list of reaction process tuples to rate tuples and sets the rates for this model.
+
+        Parameters
+        ----------
+        process_list : :obj:`list` of :obj:`tuple`
+            A list containing reaction processes in terms of tuples.
+
+            .. code:: python
+
+                [
+                    # transition process
+                    ( source_compartment, rate, target_compartment),
+
+                    # transmission process
+                    ( coupling_compartment_0, coupling_compartment_1, rate, target_compartment_0, target_ccompartment_1),
+
+                    # fission process
+                    ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
+                    
+                    # fusion process
+                    ( source_compartment_0, source_compartment_1, rate, target_compartment),
+
+                    # death process
+                    ( source_compartment, rate, None),
+
+                    # birth process
+                    ( None, rate, target_compartment),
+                ]
+        allow_nonzero_column_sums : :obj:`bool`, default : False
+            Traditionally, epidemiological models preserve the
+            total population size. If that's not the case,
+            switch off testing for this.
+
+
+        """
 
         quadratic_rates, linear_rates = processes_to_rates(process_list, self.compartments)
         self.set_linear_rates(linear_rates)
@@ -106,6 +142,13 @@ class DeterministicEpiModel():
                     ( acting_compartment, affected_compartment, rate ),
                     ...
                 ]
+
+        allow_nonzero_column_sums : :obj:`bool`, default : False
+            Traditionally, epidemiological models preserve the
+            total population size. If that's not the case,
+            switch off testing for this.
+
+        Example
 
         reset_rates : bool, default : True
             Whether to reset all linear rates to zero before 
@@ -299,7 +342,22 @@ class DeterministicEpiModel():
 
         return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
 
+    def add_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
+        """
+        Add quadratic rates without resetting the existing rate terms.
+        See :func:`_tacoma.set_quadratic_rates` for docstring.
+        """
 
+        return self.set_quadratic_rates(rate_list,reset_rates=False,allow_nonzero_column_sums=allow_nonzero_column_sums)
+
+    def add_linear_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
+        """
+        Add linear rates without resetting the existing rate terms.
+        See :func:`_tacoma.set_linear_rates` for docstring.
+        """
+
+        return self.set_linear_rates(rate_list,reset_rates=False,allow_nonzero_column_sums=allow_nonzero_column_sums)
+    
     def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.

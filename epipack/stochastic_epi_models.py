@@ -346,13 +346,18 @@ class StochasticEpiModel():
         Example
         -------
 
-        For an SEIR model.
+        When an `I`-node recovers (to `R`), scan all of the newly-recovered node's
+        neighbors. If the neighbor is an `S`, transition the neighbor
+        to `X`. If the neighbor is an `I`, transition the neighbor to `Q`.
 
         .. code:: python
 
-            epi.set_link_transmission_processes([
-                ("I", "S", +1, "I", "E" ),
-            ])
+            epi.set_conditional_link_transmission_processes({
+                ( "I", "->", "R" ) : [
+                    ("R", "S", "->", "R", "X" ),
+                    ("R", "I", "->", "R", "Q" ),
+                ]
+            })
 
         """
 

@@ -528,3 +528,30 @@ if __name__=="__main__":
         ])
     print(SIS.jacobian())
     print(SIS.get_eigenvalues_at_disease_free_state())
+
+
+    print("gray scott")
+    u, v, f, k = sympy.symbols("u v f k")
+    GS = SymbolicEpiModel([u,v])
+    GS.set_linear_rates([
+            (None, u, f),
+            (u, u, -f),
+            (v, v, -f-k),
+        ])
+
+    GS.set_quadratic_rates([
+            (u, v, u, -v),
+            (u, v, v, +v),
+        ])
+
+
+    GS.set_processes([
+            (u, f, None),
+            (None, f, u),
+            (v, f+k, None),
+            (u, v, v*1, v, v),
+        ],ignore_rate_position_checks=True)
+
+    print(GS.ODEs())
+
+    print(GS.find_fixed_points())

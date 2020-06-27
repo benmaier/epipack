@@ -1,5 +1,5 @@
 
-def processes_to_rates(process_list, compartments):
+def processes_to_rates(process_list, compartments, ignore_rate_position_checks=False):
     """
     Converts a list of reaction process tuples to rate tuples
 
@@ -32,6 +32,12 @@ def processes_to_rates(process_list, compartments):
 
     compartments : :obj:`list` of hashable type
         The compartments of these reaction equations. 
+    ignore_rate_position_checks : bool, default = False
+        This function usually checks whether the rate of 
+        a reaction is positioned correctly. You can
+        turn this behavior off for transition, birth, death, and
+        transmission processes. (Useful if you want to define
+        symbolic transmission processes that are compartment-dependent).
 
     Returns
     -------
@@ -48,8 +54,7 @@ def processes_to_rates(process_list, compartments):
 
         if len(process) == 3:
             # it's either a transition process or a birth process:
-            if process[1] not in compartments:
-                # it's a fission process
+            if process[1] not in compartments or ignore_rate_position_checks:
                 linear_rates.extend(transition_processes_to_rates([process]))
             else:
                 raise TypeError("Process " + str(process) + " is not understood.")
@@ -69,7 +74,7 @@ def processes_to_rates(process_list, compartments):
         elif len(process) == 5:
 
             # it's a transmission process
-            if process[2] not in compartments:
+            if process[2] not in compartments or ignore_rate_position_checks:
                 quadratic_rates.extend(transmission_processes_to_rates([process]))
             else:
                 raise TypeError("Process " + str(process) + " is not understood.")
@@ -320,5 +325,6 @@ def transmission_processes_to_rates(process_list):
         #rate_list.append( (_s0, _s1, _t1, +rate) )
         #rate_list.append( (_s0, _s1, _s0, -rate) )
         #rate_list.append( (_s0, _s1, _t0, +rate) )
+
 
     return rate_list

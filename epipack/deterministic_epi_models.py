@@ -82,7 +82,8 @@ class DeterministicEpiModel():
         """Get the compartment, given an integer ID ``iC``"""
         return self.compartments[iC]
 
-    def set_processes(self,process_list,allow_nonzero_column_sums=False,reset_rates=True):
+    def set_processes(self,process_list,allow_nonzero_column_sums=False,reset_rates=True,
+                      ignore_rate_position_checks=False):
         """
         Converts a list of reaction process tuples to rate tuples and sets the rates for this model.
 
@@ -112,15 +113,23 @@ class DeterministicEpiModel():
                     # birth process
                     ( None, rate, target_compartment),
                 ]
-        allow_nonzero_column_sums : :obj:`bool`, default : False
+        allow_nonzero_column_sums : bool, default : False
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
+        reset_rates : bool, default : True
+            If this is `True`, reset all rates to zero before setting the new ones.
+        ignore_rate_position_checks : bool, default = False
+            This function usually checks whether the rate of 
+            a reaction is positioned correctly. You can
+            turn this behavior off for transition, birth, death, and
+            transmission processes. (Useful if you want to define
+            symbolic transmission processes that are compartment-dependent).
 
 
         """
 
-        quadratic_rates, linear_rates = processes_to_rates(process_list, self.compartments)
+        quadratic_rates, linear_rates = processes_to_rates(process_list, self.compartments,ignore_rate_position_checks)
         self.set_linear_rates(linear_rates)
         self.set_quadratic_rates(quadratic_rates)
 

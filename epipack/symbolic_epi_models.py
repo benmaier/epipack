@@ -69,6 +69,12 @@ class SymbolicEpiModel(DeterministicEpiModel):
         DeterministicEpiModel.__init__(self, compartments, population_size)
 
 
+        self.t = sympy.symbols("t")
+        if self.t in self.compartments:
+            raise ValueError("Don't use `t` as a compartment symbol, as it is reserved for time.")
+
+        self.has_functional_rates = False
+
         self.birth_rates = sympy.zeros(self.N_comp,1)
         self.linear_rates = sympy.zeros(self.N_comp, self.N_comp)
         self.quadratic_rates = [ sympy.zeros(self.N_comp, self.N_comp)\
@@ -100,6 +106,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
         if reset_rates:
             linear_rates = sympy.zeros(self.N_comp, self.N_comp)
             birth_rates = sympy.zeros(self.N_comp,1)
+            self.has_functional_rates = False
         else:
             linear_rates = sympy.Matrix(self.linear_rates)
             birth_rates = sympy.Matrix(self.birth_rates)
@@ -113,10 +120,15 @@ class SymbolicEpiModel(DeterministicEpiModel):
                 _s = self.get_compartment_id(acting_compartment)
                 linear_rates[_t, _s] += rate
 
+            self._check_rate_for_functional_dependency(rate)
+
         self.linear_rates = linear_rates
         self.birth_rates = birth_rates
 
         return self
+
+    def _check_rate_for_functional_dependency(self,rate):
+        self.has_functional_rates |= any([ compartment in rate.free_symbols for compartment in self.compartments])
 
 
     def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
@@ -172,6 +184,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
                 matrices[c] = sympy.zeros(self.N_comp, self.N_comp)
 
             all_affected = []
+            self.has_functional_rates = False
         else:
             matrices =  [ sympy.Matrix(M) for M in self.quadratic_rates ]
             all_affected = self.affected_by_quadratic_process if self.affected_by_quadratic_process is not None else []
@@ -180,6 +193,8 @@ class SymbolicEpiModel(DeterministicEpiModel):
 
             c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
             a = self.get_compartment_id(affected)
+
+            self._check_rate_for_functional_dependency(rate)
 
             matrices[a][c0,c1] += rate
             all_affected.append(a)
@@ -237,11 +252,20 @@ class SymbolicEpiModel(DeterministicEpiModel):
         Obtain the Jacobian for this model.
         """
 
-        y = sympy.Matrix(self.compartments)
-        J = sympy.Matrix(self.linear_rates) 
-        
-        for i in range(self.N_comp):
-            J[i,:] += (self.quadratic_rates[i] * y + self.quadratic_rates[i].T * y).T
+        if not self.has_functional_rates:
+            y = sympy.Matrix(self.compartments)
+            J = sympy.Matrix(self.linear_rates) 
+            
+            for i in range(self.N_comp):
+                J[i,:] += (self.quadratic_rates[i] * y + self.quadratic_rates[i].T * y).T
+
+        else:
+            y = sympy.Matrix(self.compartments)
+            J = sympy.zeros(self.N_comp, self.N_comp)
+            dydt = self.dydt()
+            for i in range(self.N_comp):
+                for j in range(self.N_comp):
+                    J[i,j] = sympy.diff(dydt[i], self.compartments[j])
 
         if simplify:
             J = sympy.simplify(J)
@@ -495,3 +519,12 @@ if __name__=="__main__":
     print(SIS.find_fixed_points())
 
     print(SIS.get_eigenvalues_at_fixed_point({S:1}))
+
+    print("==========")
+    SIS = SymbolicEpiModel([S,I])
+    SIS.set_processes([
+            (I, S, eta/(1-I), I, I),
+            (I, rho, S),
+        ])
+    print(SIS.jacobian())
+    print(SIS.get_eigenvalues_at_disease_free_state())

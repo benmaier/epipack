@@ -34,62 +34,7 @@ The full documentation is available at XXX.
 
 ## Examples
 
-Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and waning immunity rate `omega` and ananalyze the system
-
-### Symbolic evaluations
-
-```python
-from epipack import SymbolicEpiModel
-import sympy as sy
-
-S, I, R, eta, rho, omega = sy.symbols("S I R eta rho omega")
-
-SIRS = SymbolicEpiModel([S,I,R])
-
-SIRS.set_processes([
-    #### transmission process ####
-    # S + I (eta)-> I + I
-    (S, I, eta, I, I),
-
-    #### transition processes ####
-    # I (rho)-> R
-    # R (omega)-> S
-    (I, rho, R),
-    (R, omega, S),
-
-])
-```
-
-Print the ODE system in a Jupyter notebook
-
-```
->>> SIRS.ODEs_jupyter()
-```
-
-![ODEs](https://github.com/benmaier/epipack/raw/master/img/ODEs.png)
-
-Get the Jacobian
-
-```python
->>> SIRS.jacobian()
-```
-
-![Jacobian](https://github.com/benmaier/epipack/raw/master/img/jacobian.png)
-
-Find the fixed points
-
-```python
->>> SIRS.find_fixed_points()
-```
-
-![fixedpoints](https://github.com/benmaier/epipack/raw/master/img/fixed_points.png)
-
-Get the eigenvalues at the disease-free state in order to find the epidemic threshold
-
-```python
->>> SIRS.get_eigenvalues_at_disease_free_state()
-{-omega: 1, eta - rho: 1, 0: 1}
-```
+Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and waning immunity rate `omega` and analyze the system
 
 ### Numeric evaluations
 
@@ -160,6 +105,62 @@ SIRS.set_random_initial_conditions({S:N-int(1e-2*N), I:int(1e-2*N)})
 t_s, result_s = SIRS.simulate(100)
 ```
 ![integrated-ODEs](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
+
+
+### Symbolic evaluations
+
+```python
+from epipack import SymbolicEpiModel
+import sympy as sy
+
+S, I, R, eta, rho, omega = sy.symbols("S I R eta rho omega")
+
+SIRS = SymbolicEpiModel([S,I,R])
+
+SIRS.set_processes([
+    #### transmission process ####
+    # S + I (eta)-> I + I
+    (S, I, eta, I, I),
+
+    #### transition processes ####
+    # I (rho)-> R
+    # R (omega)-> S
+    (I, rho, R),
+    (R, omega, S),
+
+])
+```
+
+Print the ODE system in a Jupyter notebook
+
+```
+>>> SIRS.ODEs_jupyter()
+```
+
+![ODEs](https://github.com/benmaier/epipack/raw/master/img/ODEs.png)
+
+Get the Jacobian
+
+```python
+>>> SIRS.jacobian()
+```
+
+![Jacobian](https://github.com/benmaier/epipack/raw/master/img/jacobian.png)
+
+Find the fixed points
+
+```python
+>>> SIRS.find_fixed_points()
+```
+
+![fixedpoints](https://github.com/benmaier/epipack/raw/master/img/fixed_points.png)
+
+Get the eigenvalues at the disease-free state in order to find the epidemic threshold
+
+```python
+>>> SIRS.get_eigenvalues_at_disease_free_state()
+{-omega: 1, eta - rho: 1, 0: 1}
+```
 
 ## Changelog
 

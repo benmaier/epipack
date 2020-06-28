@@ -13,7 +13,7 @@ setup(
     author_email=__email__,
     url='https://github.com/benmaier/epipack',
     license=__license__,
-    description="Build any polynomial epidemiological model, analyze its ODEs, or run stochastic simulations on networks or well-mixed systems.",
+    description="Fast prototyping of epidemiological models based on reaction equations. Analyze the ODEs analytically or numerically, or run stochastic simulations on networks/well-mixed systems.",
     long_description='',
     packages=setuptools.find_packages(),
     python_requires='>=3.6',

@@ -48,8 +48,8 @@ class MockSamplableSet:
 
     def __setitem__(self,key,value):
         if value < self.min_weight or value > self.max_weight:
-            raise ValueError('Inserting element-weight pair ', key, value,
-                             'has weight value out of bounds of ', self.min_weight, self.max_weight)
+            raise ValueError(" ".join('Inserting element-weight pair ', key, value,
+                             'has weight value out of bounds of ', self.min_weight, self.max_weight))
         found_key, ndx = self._find_key(key) 
         if not found_key:
             self.items = np.insert(self.items, ndx, key)
@@ -79,7 +79,7 @@ class MockSamplableSet:
         return len(self.items)
 
     def __contains__(self,key):
-        return self._find_key(key) is not None
+        return self._find_key(key)[0]
 
     def total_weight(self):
         return self._total_weight
@@ -121,4 +121,5 @@ if __name__ == "__main__":
         print(item, weight)
 
     print(0 in s)
+    print(45 in s)
 

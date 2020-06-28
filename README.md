@@ -74,7 +74,7 @@ Get the Jacobian
 >>> SIRS.jacobian()
 ```
 
-![Jacobian](https://github.com/benmaier/epipack/raw/master/img/jacobian.png){:height="50%" width="50%"}
+![Jacobian](https://github.com/benmaier/epipack/raw/master/img/jacobian.png)
 
 Find the fixed points
 

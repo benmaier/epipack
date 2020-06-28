@@ -3,17 +3,19 @@ Contains a general base class to define
 stochastic epidemiological models in
 populations of constant size.
 """
-import numpy as np
 
+import warnings
+
+import numpy as np
 
 # Try to import the original SamplableSet,
 # but if that doesn't work, use the mock version
 # that's implemented in this package
 try:
     from SamplableSet import SamplableSet
-except ImportError as e:
+except ModuleNotFoundError as e:
+    warnings.warn("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
     from epipack.mock_samplable_set import MockSamplableSet as SamplableSet
-    raise ImportWarning("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
 
 #from MockSamplableSet import MockSamplableSet as SamplableSet
 

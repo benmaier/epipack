@@ -70,9 +70,17 @@ Print the ODE system in a Jupyter notebook
 
 Get the Jacobian
 
-![Jacobian](https://github.com/benmaier/epipack/raw/master/img/jacobian.png)
+```python
+>>> SIRS.jacobian()
+```
+
+![Jacobian](https://github.com/benmaier/epipack/raw/master/img/jacobian.png){:height="50%" width="50%"}
 
 Find the fixed points
+
+```python
+>>> SIRS.find_fixed_points()
+```
 
 ![fixedpoints](https://github.com/benmaier/epipack/raw/master/img/fixed_points.png)
 

@@ -65,7 +65,7 @@ SIRS.set_processes([
 
 SIRS.set_initial_conditions({S:1-0.01, I:0.01})
 
-t = np.linspace(0,100,1000) 
+t = np.linspace(0,40,1000) 
 result = SIRS.integrate(t)
 ```
 
@@ -102,7 +102,7 @@ SIRS.set_node_transition_processes([
 ])
 
 SIRS.set_random_initial_conditions({S:N-int(1e-2*N), I:int(1e-2*N)})
-t_s, result_s = SIRS.simulate(100)
+t_s, result_s = SIRS.simulate(40)
 ```
 ![integrated-ODEs](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
 

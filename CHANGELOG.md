@@ -9,13 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - nothing yet
 
-## [v0.0.1] - 2020-04-13
-### Added
-- all the stuff
+## [v0.0.2] - 2020-06-29
+### Changed
+- Catching ModuleNotFoundError properly
 
-## [v0.0.0] - 2020-03-30
+## [v0.0.1] - 2020-06-25
+### Added
+- Working package
+
+## [v0.0.0] - 2020-06-22
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.0.1...HEAD
-[v0.1.4]: https://github.com/benmaier/epipack/compare/v0.0.0...v0.0.1
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.0.2...HEAD
+[v0.0.2]: https://github.com/benmaier/epipack/compare/v0.0.1...v0.0.2]
+[v0.0.1]: https://github.com/benmaier/epipack/compare/v0.0.0...v0.0.1]

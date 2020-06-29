@@ -133,7 +133,7 @@ SIRS.set_processes([
 
 Print the ODE system in a Jupyter notebook
 
-```
+```python
 >>> SIRS.ODEs_jupyter()
 ```
 

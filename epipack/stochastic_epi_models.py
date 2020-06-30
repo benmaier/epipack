@@ -109,6 +109,7 @@ class StochasticEpiModel():
         self.link_transmission_events = None
         self.node_and_link_events = None
         self.conditional_link_transmission_events = None
+        self.transitioning_compartments = None
 
         # check whether to initiate as a network or well-mixed simulation
         if edge_weight_tuples is not None:
@@ -459,6 +460,7 @@ class StochasticEpiModel():
         Concatenate link and node events.
         """
         self.node_and_link_events = [ None for n in range(self.N_comp) ]
+        self.transitioning_compartments = set()
 
         # for each compartment, concatenate node and link event lists
         for comp in range(self.N_comp):
@@ -486,6 +488,15 @@ class StochasticEpiModel():
                 indices = [len(node_events[_RATES]), len(node_events[_RATES]) + len(link_events[_RATES])]
 
             self.node_and_link_events[comp] = [ events, rates, indices ]
+
+            # save the compartments that can change their status.
+            # This is important because it might happen that nodes
+            # have a non-zero reaction rate but no targets left
+            # at which point the simulation does never halt.
+            for infecting, transitioning, _ in events:
+                self.transitioning_compartments.add(transitioning)
+
+        self.transitioning_compartments = np.array(list(self.transitioning_compartments),dtype=int)
 
     def set_random_initial_conditions(self, initial_conditions):
         """
@@ -642,6 +653,45 @@ class StochasticEpiModel():
         """
         return self.all_node_events.total_weight()
 
+    def get_true_total_event_rate(self):
+        """
+        Get the true total event rate.
+        """
+
+        total_rate = 0
+
+        for node, max_rate in self.all_node_events:
+            status = self.node_status[node]
+
+            node_and_link_events = self.node_and_link_events[status]
+            events = node_and_link_events[_EVENTS]
+            rates = node_and_link_events[_RATES]
+            l0, l1 = node_and_link_events[_LINK_PROCESS_INDICES]
+
+            has_link_processes = l1 > 0
+
+            if not has_link_processes:
+                total_rate += max_rate
+            else:
+                total_rate += rates[0:l0].sum()
+                coupling_compartments = np.array([ e[_AFFECTED_SOURCE_COMPARTMENT] for e in events[l0:l1] ])
+                these_rates = rates[l0:l1]
+
+                for n in self.graph[node]:
+
+                    try:
+                        n = n[0]
+                    except IndexError as e:
+                        pass
+
+                    neigh_status = self.node_status[n]
+
+                    ndx = np.where(coupling_compartments == neigh_status)[0]
+                    total_rate += these_rates[ndx].sum()
+
+        return total_rate
+
+
     def get_reacting_node(self):
         """
         Get a reacting node with probability proportional to its reaction rate.
@@ -792,7 +842,7 @@ class StochasticEpiModel():
 
         return compartment_changes
 
-    def simulate(self,tmax,return_compartments=None,sampling_dt=None):
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -800,6 +850,30 @@ class StochasticEpiModel():
 
         If ``return_compartments`` is None, all compartments will
         be returned.
+
+        Parameters
+        ----------
+        tmax : float
+            maximum length of the simulation
+        return_compartments : list of compartments, default = None:
+            The compartments for which to return time series.
+            If ``None``, all compartments will be returned.
+        sampling_dt : float, default = None
+            Temporal distance between samples of the compartment counts.
+            If ``None``, every change will be returned.
+        max_unsuccessful : int, default = None.
+            The number of unsusccessful events after which the
+            true total event rate will be evaluated (it might happen
+            that a network becomes effectively disconnected while
+            nodes are still associated with a maximum event rate).
+            If ``None``, this number will be set equal to the number of nodes.
+
+        Returns
+        -------
+        t : numpy.ndarray
+            times at which compartment counts have been sampled
+        result : dict
+            Dictionary mapping a compartment to a time series of its count.
         """
 
         if return_compartments is None:
@@ -811,7 +885,20 @@ class StochasticEpiModel():
 
         t = 0.0
         time = [0.0]
-        while t < tmax and self.get_total_event_rate() > 0:
+
+        if max_unsuccessful is None:
+            max_unsuccessful = self.N_nodes
+            unsuccessful = 0
+
+        total_event_rate = self.get_total_event_rate()
+
+        # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
+        # This is important because it might happen that nodes
+        # have a non-zero reaction rate but no targets left
+        # at which point the simulation does never halt.
+        while t < tmax and \
+              total_event_rate > 0 and \
+              current_state[self.transitioning_compartments].sum() > 0:
 
             # sample and advance time according to current total rate
             tau = np.random.exponential(1/self.get_total_event_rate())
@@ -847,6 +934,16 @@ class StochasticEpiModel():
                 if sampling_dt is None:
                     time.append(t)
                     compartments.append(current_state.copy())
+
+                unsuccessful = 0
+                total_event_rate = self.get_total_event_rate()
+            else:
+                unsuccessful += 1
+                if unsuccessful > max_unsuccessful:
+                    total_event_rate = self.get_true_total_event_rate()
+                    unsuccessful = 0
+                else:
+                    total_event_rate = self.get_total_event_rate()
 
 
             # advance time

@@ -8,6 +8,8 @@ import warnings
 
 import numpy as np
 
+from itertools import groupby
+
 # Try to import the original SamplableSet,
 # but if that doesn't work, use the mock version
 # that's implemented in this package
@@ -393,13 +395,13 @@ class StochasticEpiModel():
             event = (_c0, _s, _t)
             self.conditional_link_transmission_events[event] = {}
 
-
+            # check triggered events for correct format
             for triggered_event in triggered_events:
-                # link event
-                if len(triggered_event) != 5:
-                    raise ValueError("Only link transmission events are allowed to trigger conditional link transmission events (invalid event:", triggered_event)
 
-                coupling0, coupling1, _, affected0, affected1 = triggered_event
+                if len(triggered_event) != 5:
+                    raise ValueError("Only link transmission events are allowed to be triggered (invalid event:", triggered_event)
+
+                coupling0, coupling1, probability, affected0, affected1 = triggered_event
 
                 if coupling0 != affected0:
                     raise ValueError("In process",
@@ -415,12 +417,40 @@ class StochasticEpiModel():
                                       "the triggering event", triggering_event, " but is not."
                                       )
 
-                _c0 = self.get_compartment_id(coupling0)
-                _s = self.get_compartment_id(coupling1)
-                _t = self.get_compartment_id(affected1)
+                                
+            # group the triggered events by the same source compartment.
+            triggered_events = sorted(triggered_events,key=lambda x: x[1])
+            for source, triggered_event_group in groupby(triggered_events, key=lambda x: x[1]):
+                probabilities = []
+                these_events = []
                 
-                this_triggered_event = (_c0, _s, _t)
-                self.conditional_link_transmission_events[event][_s] = this_triggered_event
+                for coupling0, coupling1, probability, affected0, affected1 in triggered_event_group:
+
+                    try:
+                        probability = float(probability)
+                    except ValueError as e:
+                        probability = 1.0
+
+
+                    _c0 = self.get_compartment_id(coupling0)
+                    _s = self.get_compartment_id(coupling1)
+                    _t = self.get_compartment_id(affected1)
+                
+                    this_triggered_event = (_c0, _s, _t)
+                    these_events.append(this_triggered_event)
+                    probabilities.append(probability)
+
+                sum_p = sum(probabilities)
+                if sum_p - 1.0 > 1e14:
+                    raise ValueError("probabilities sum to values larger than one for the event group above.")
+                elif sum_p < 1.0:
+                    probabilities.append(1-sum_p)
+                    these_events.append((_c0, _s, _s))
+                    
+                probabilities = np.array(probabilities)
+                probabilities /= probabilities.sum()
+
+                self.conditional_link_transmission_events[event][_s] = ( probabilities, these_events )
 
         return self
 
@@ -482,6 +512,10 @@ class StochasticEpiModel():
         # iterate through all initial conditions
         for compartment, amount in initial_conditions:
 
+            # ignore nullified initial conditions
+            if amount == 0:
+                continue
+
             # count the number of nodes in this compartment
             total += amount
             comp_id = self.get_compartment_id(compartment)
@@ -520,6 +554,11 @@ class StochasticEpiModel():
         if len(node_status) != self.N_nodes:
             raise ValueError("`node_status` must carry N_nodes values")
 
+        if self.link_transmission_events is None:
+            self.set_link_transmission_processes([])
+        if self.node_transition_events is None:
+            self.set_node_transition_processes([])
+
         # filter out the minimally possible rate (other than zero) and the maximally
         # possible rate 
         kmax = self.out_degree.max()
@@ -530,6 +569,7 @@ class StochasticEpiModel():
             for rate in rates:
                 compartment_mins[compartment] += rate
                 compartment_maxs[compartment] += rate
+
         for compartment, (event, rates) in enumerate(self.link_transmission_events):
             for rate in rates:
                 compartment_mins[compartment] += rate * kmin
@@ -550,6 +590,12 @@ class StochasticEpiModel():
         # set each node status according to the passed node_status array
         for node, status in enumerate(self.node_status):
             self.set_node_status(node, status)
+
+        y0 = np.zeros(self.N_comp)
+        for c in range(self.N_comp):
+            y0[c] += np.count_nonzero(self.node_status == c)
+
+        self.y0 = y0
 
         return self
 
@@ -719,11 +765,28 @@ class StochasticEpiModel():
                     # let this conditional event happen to the neighbor, as triggered
                     # by the affected node
                     try:
-                        conditional_transmission_event = conditional_events[self.node_status[n]]
-                        these_compartment_changes = self.make_node_event(affected_node, conditional_transmission_event, neighbor = n)
-                        compartment_changes.extend(these_compartment_changes)
+                        probabilities, conditional_transmission_events = conditional_events[self.node_status[n]]
                     except KeyError as e:
-                        pass
+                        continue
+
+                    # check whether the list of proposed conditional reactions for this event
+                    # is longer than one. if not, let this single event take place with the given probability
+                    if len(probabilities) == 1 and (probabilities[0] == 1.0 or probabilities[0] > np.random.random()):
+                        these_compartment_changes = self.make_node_event(affected_node, conditional_transmission_events[0], neighbor = n)
+                        compartment_changes.extend(these_compartment_changes)
+                    else:
+                        # if there's a list of proposed events, each associated with a probability,
+                        # choose from the list uniform at random
+                        event_index = np.random.choice(len(probabilities),p=probabilities)
+                        conditional_transmission_event = conditional_transmission_events[event_index]
+
+                        # check wether this is an event where nothing happens
+                        if conditional_transmission_event[_AFFECTED_SOURCE_COMPARTMENT] != \
+                                conditional_transmission_event[_AFFECTED_TARGET_COMPARTMENT]:
+                            # if something happens, let it happen
+                            these_compartment_changes = self.make_node_event(affected_node, conditional_transmission_event, neighbor = n)
+                            compartment_changes.extend(these_compartment_changes)
+
 
         compartment_changes.append((losing_compartment, gaining_compartment))
 

@@ -1,9 +1,41 @@
 
 ![logo](https://github.com/benmaier/epipack/raw/master/img/logo_medium.png)
 
-## epipack
+# epipack
 
 Fast prototyping of epidemiological models based on reaction equations. Analyze the ODEs analytically or numerically, or run stochastic simulations on networks/well-mixed systems.
+
+* repository: https://github.com/benmaier/epipack/
+* documentation: https://epipack.readthedocs.io/
+
+## Idea
+
+Simple compartmental models of infectious diseases are useful
+to investigate effects of certain processes on disease dissemination.
+Using pen and paper, quickly adding/removing compartments and transition processes
+is easy, yet the analytical and numerical analysis or stochastic simulations
+can be tedious to set up and debug—especially when the model changes (even slightly).
+`epipack` aims to streamline this process
+such that all the analysis steps can be performed in an efficient manner,
+simply by defining processes based on reaction equations. `epipack` provides
+three base classes to accomodate different problems.
+
+* `DeterministicEpiModel`: Define a model based on transition, birth, 
+  death, fission, fusion, or transmission reactions and integrate the 
+  ordinary differential equations (ODEs) of the corresponding well-mixed system
+  numerically.
+* `SymbolicEpiModel`: Define a model based on transition, birth, 
+  death, fission, fusion, or transmission reactions. Obtain the ODEs,
+  fixed points, Jacobian, and the Jacobian's eigenvalues at fixed points
+  as symbolic expressions.
+* `StochasticEpiModel`: Define a model based on node transition and
+  link transmission reactions. Add conditional link transmission reactions.
+  Simulate your model on any (un-/)directed, (un-/)weighted static network,
+  or in a well-mixed system.
+
+Check out the [Example](#examples) section for some demos.
+
+## Install
 
     git clone git@github.com:benmaier/epipack.git
     pip install ./epipack
@@ -104,7 +136,7 @@ SIRS.set_node_transition_processes([
 SIRS.set_random_initial_conditions({S:N-int(1e-2*N), I:int(1e-2*N)})
 t_s, result_s = SIRS.simulate(40)
 ```
-![integrated-ODEs](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
+![stochastic-simulation](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
 
 
 ### Symbolic evaluations

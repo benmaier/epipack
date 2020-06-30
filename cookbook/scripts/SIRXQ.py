@@ -1,5 +1,5 @@
 import numpy as np
-from epipack.DeterministicEpiModels import EpiModel
+from epipack import DeterministicEpiModel
 
 
 
@@ -54,7 +54,7 @@ def mean_field_SIRX_tracing(kw):
     k0 = kw['k0']
 
 
-    model = EpiModel(list("SIXRQ"))
+    model = DeterministicEpiModel(list("SIXRQ"))
     model.add_transition_processes([
            ( "Q", waning_quarantine_rate,"S"), 
            ( "I", recovery_rate,"R"),

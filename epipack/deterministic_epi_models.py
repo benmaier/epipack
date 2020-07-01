@@ -535,7 +535,7 @@ class DeterministicEpiModel():
 
 class DeterministicSIModel(DeterministicEpiModel):
     """
-    An SI model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SI model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, infection_rate, population_size=1.0):
@@ -550,7 +550,7 @@ class DeterministicSIModel(DeterministicEpiModel):
 
 class DeterministicSISModel(DeterministicEpiModel):
     """
-    An SIS model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIS model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
 
     Parameters
     ----------
@@ -579,7 +579,7 @@ class DeterministicSISModel(DeterministicEpiModel):
 
 class DeterministicSIRModel(DeterministicEpiModel):
     """
-    An SIR model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIR model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, population_size=1.0):
@@ -598,7 +598,7 @@ class DeterministicSIRModel(DeterministicEpiModel):
 
 class DeterministicSIRXModel(DeterministicEpiModel):
     """
-    An SIRX model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIRX model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, quarantine_rate, containment_rate, population_size=1.0):
@@ -619,7 +619,7 @@ class DeterministicSIRXModel(DeterministicEpiModel):
 
 class DeterministicSEIRXModel(DeterministicEpiModel):
     """
-    An SEIRX model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SEIRX model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, quarantine_rate, containment_rate, population_size=1.0):
@@ -641,7 +641,7 @@ class DeterministicSEIRXModel(DeterministicEpiModel):
 
 class DeterministicSIRSModel(DeterministicEpiModel):
     """
-    An SIRS model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SIRS model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, waning_immunity_rate, population_size=1.0):
@@ -661,7 +661,7 @@ class DeterministicSIRSModel(DeterministicEpiModel):
 
 class DeterministicSEIRModel(DeterministicEpiModel):
     """
-    An SEIR model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SEIR model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, population_size=1.0):
@@ -681,7 +681,7 @@ class DeterministicSEIRModel(DeterministicEpiModel):
 
 class DeterministicSEIRSModel(DeterministicEpiModel):
     """
-    An SEIRS model derived from :class:`metapop.epi.DeterministicEpiModel`.
+    An SEIRS model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, waning_immunity_rate, population_size=1.0):

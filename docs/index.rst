@@ -16,13 +16,29 @@ epipack
 
 .. raw:: latex
 
-   \part{Workflow}
+   \part{Tutorial}
 
 .. toctree::
    :maxdepth: 2
-   :caption: Workflow
+   :caption: Tutorial
 
-   workflow/prereq.rst
+   tutorial/intro.rst
+   tutorial/deterministics.rst
+   tutorial/stochastics.rst
+   tutorial/symbolics.rst
+
+.. raw:: latex
+
+   \part{Dev Guide}
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Dev Guide
+
+   devguide/process_rates_events.rst
+   devguide/deterministics.rst
+   devguide/stochastics.rst
+   devguide/testing.rst
 
 .. raw:: latex
 

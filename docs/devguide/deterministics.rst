@@ -12,10 +12,10 @@ ordinary differential equations (ODEs) as
     \frac{d}{dt}Y_i = \sum_{j,k} \alpha_{ijk} Y_jY_k + \sum_j \beta_{ij} Y_j + \gamma_i.
 
 To this end, :class:`epipack.deterministic_epi_models.DeterministicEpiModel` contains three
-parameter-carrying linear algebra objects, the numpy array ``birth_rates`` that is equal to the vector :math:`gamma`,
-the scipy sparse matrix ``linear_rates`` that is equal to the matrix :math:`beta` and a list
+parameter-carrying linear algebra objects, the numpy array ``birth_rates`` that is equal to the vector :math:`\gamma`,
+the scipy sparse matrix ``linear_rates`` that is equal to the matrix :math:`\beta` and a list
 of scipy sparse matrices ``quadratic_rates`` that contains a scipy sparse matrix in each of 
-its entries `i`, which makes it correspond to the tensor :math:`alpha`.
+its entries `i`, which makes it correspond to the tensor :math:`\alpha`.
 
 Choice of Data Structures
 =========================

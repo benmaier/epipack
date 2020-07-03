@@ -175,7 +175,7 @@ def fission_processes_to_rates(process_list):
         _t1 = target1
         
         # source compartment loses an entity
-        # target compartment gains one
+        # target compartments gains one each
         linear_rates.append((_s, _s, -rate))
         linear_rates.append((_s, _t0, +rate))
         linear_rates.append((_s, _t1, +rate))
@@ -215,7 +215,10 @@ def fusion_processes_to_rates(process_list):
     quad_rates = []
     
     for source0, source1, rate, target in process_list:
+        
+        # target compartment gains one entity
         quad_rates.append((source0, source1, target, rate))
+        # source compartments lose one entity each
         quad_rates.append((source0, source1, source0, -rate))
         quad_rates.append((source0, source1, source1, -rate))
 
@@ -273,21 +276,10 @@ def transmission_processes_to_rates(process_list):
 
     """
 
-    # each compartment is associated with a list of events that it can be
-    # involved in (event = first entry)
-    # Each event is associated with a rate (rate = second entry)
     rate_list = []
 
     # iterate through processes
     for coupling0, coupling1, rate, affected0, affected1 in process_list:
-
-        #if coupling0 != affected0:
-        #    raise ValueError(" ".join("In process ",
-        #                      coupling0, coupling1, " -> ", affected0, affected1,
-        #                      "The source (infecting) compartment", coupling0, "and first affected compartment (here: ", affected0,
-        #                      "), must be equal on both sides of the reaction equation but are not.",
-        #                      ))
-
 
         _s0 = coupling0
         _s1 = coupling1
@@ -302,9 +294,6 @@ def transmission_processes_to_rates(process_list):
                              str((coupling0, coupling1, rate, affected0, affected1)) +\
                              " leaves system unchanged")
         elif len(constant) == 1:
-            #print("reactants", reactants)
-            #print("constant", constant)
-            #print("products", products)
             constant = next(iter(constant))
             reactants.remove(constant)
             products.remove(constant)
@@ -312,19 +301,22 @@ def transmission_processes_to_rates(process_list):
             _s1 = reactants[0]
             _t1 = products[0]
 
+            # if one compartment (_s0) remains constant,
+            # there's no changes in counts of this compartment.
+            # Rather the source compartment of the other reactant
+            # loses one entity, while the target compartment
+            # of this reactant gains one.
             rate_list.append( (_s0, _s1, _s1, -rate) )
             rate_list.append( (_s0, _s1, _t1, +rate) )
-            #print(rate_list)
         else:
 
+            # when no reactant remains constant,
+            # all source compartments lose one entity
+            # and all target compartments gain one
             rate_list.append( (_s0, _s1, _s1, -rate) )
             rate_list.append( (_s0, _s1, _t1, +rate) )
             rate_list.append( (_s0, _s1, _s0, -rate) )
             rate_list.append( (_s0, _s1, _t0, +rate) )
-        #rate_list.append( (_s0, _s1, _s1, -rate) )
-        #rate_list.append( (_s0, _s1, _t1, +rate) )
-        #rate_list.append( (_s0, _s1, _s0, -rate) )
-        #rate_list.append( (_s0, _s1, _t0, +rate) )
 
 
     return rate_list

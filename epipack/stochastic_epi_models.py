@@ -338,10 +338,20 @@ class StochasticEpiModel():
             .. code:: python
 
                 {  
-                    conditional_reaction: [
-                        ("source_compartment", 
+                    ( "source_base", "->", "target_base" ): [
+                        ("target_base", 
                          "target_compartment_initial",
-                         "source_compartment", 
+                         probability
+                         "target_base", 
+                         "target_compartment_final", 
+                         ),
+                    ...
+                   ],
+                    ( "infecting", "source_base", "->", "infecting", "target_base" ): [
+                        ("target_base", 
+                         "target_compartment_initial",
+                         "->"
+                         "target_base", 
                          "target_compartment_final", 
                          ),
                     ...
@@ -353,14 +363,16 @@ class StochasticEpiModel():
 
         When an `I`-node recovers (to `R`), scan all of the newly-recovered node's
         neighbors. If the neighbor is an `S`, transition the neighbor
-        to `X`. If the neighbor is an `I`, transition the neighbor to `Q`.
+        to `X`. If the neighbor is an `I`, transition the neighbor to `Q` with
+        probability :math:`p` (implying that nothing happens to this neighbor
+        with probability :math:`1-p`.
 
         .. code:: python
 
             epi.set_conditional_link_transmission_processes({
                 ( "I", "->", "R" ) : [
                     ("R", "S", "->", "R", "X" ),
-                    ("R", "I", "->", "R", "Q" ),
+                    ("R", "I", p, "R", "Q" ),
                 ]
             })
 

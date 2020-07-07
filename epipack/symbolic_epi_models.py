@@ -346,6 +346,8 @@ class SymbolicEpiModel(DeterministicEpiModel):
 
         if disease_free_state is None:
             S = sympy.symbols("S")
+            if S not in self.compartments:
+                raise ValueError("Disease free state was not provided to the method. I tried to assume the disease free state is at S = 1, but no `S`-compartment was found.")
             disease_free_state = {S:1}
 
         return self.get_eigenvalues_at_fixed_point(disease_free_state)
@@ -555,3 +557,12 @@ if __name__=="__main__":
     print(GS.ODEs())
 
     print(GS.find_fixed_points())
+
+    print("==========")
+    x = sympy.symbols("x")
+    SIS = SymbolicEpiModel([x,I])
+    SIS.set_processes([
+            (I, x, eta/(1-I), I, I),
+            (I, rho, x),
+        ])
+    print(SIS.get_eigenvalues_at_disease_free_state())

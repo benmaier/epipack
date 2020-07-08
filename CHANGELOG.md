@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - SymbolicEpiModel: raise error when `disease_free_state` is not given explicitly and no S-compartment can be found
+- allow non-unity initial conditions for SymbolicEpiModel and DeterministicEpiModel
+
+### Fixed
+- fixed bug where fission processes were converted to quadratic rates
 
 ## [v0.0.3] - 2020-06-30
 ### Added

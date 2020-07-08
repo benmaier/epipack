@@ -130,8 +130,8 @@ class DeterministicEpiModel():
         """
 
         quadratic_rates, linear_rates = processes_to_rates(process_list, self.compartments,ignore_rate_position_checks)
-        self.set_linear_rates(linear_rates)
-        self.set_quadratic_rates(quadratic_rates)
+        self.set_linear_rates(linear_rates,allow_nonzero_column_sums=allow_nonzero_column_sums)
+        self.set_quadratic_rates(quadratic_rates,allow_nonzero_column_sums=allow_nonzero_column_sums)
 
         return self
 
@@ -475,7 +475,7 @@ class DeterministicEpiModel():
 
 
 
-    def set_initial_conditions(self, initial_conditions):
+    def set_initial_conditions(self, initial_conditions,allow_nonzero_column_sums=False):
         """
         """
 
@@ -491,7 +491,7 @@ class DeterministicEpiModel():
             else:
                 self.y0[self.get_compartment_id(compartment)] = amount
 
-        if np.abs(total-self.population_size)/self.population_size > 1e-14:
+        if np.abs(total-self.population_size)/self.population_size > 1e-14 and not allow_nonzero_column_sums:
             raise ValueError('Sum of initial conditions does not equal unity.')        
 
         return self

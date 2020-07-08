@@ -64,7 +64,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
 
             if process[1] not in compartments:
                 # it's a fission process
-                quadratic_rates.extend(fission_processes_to_rates([process]))
+                linear_rates.extend(fission_processes_to_rates([process]))
             elif process[2] not in compartments:
                 # it's a fusion process
                 quadratic_rates.extend(fusion_processes_to_rates([process]))

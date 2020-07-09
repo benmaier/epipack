@@ -5,10 +5,9 @@ populations of constant size.
 """
 
 import warnings
+from itertools import groupby
 
 import numpy as np
-
-from itertools import groupby
 
 # Try to import the original SamplableSet,
 # but if that doesn't work, use the mock version
@@ -95,7 +94,6 @@ class StochasticEpiModel():
     def __init__(self,compartments,N,edge_weight_tuples=None,directed=False,well_mixed_mean_contact_number=1):
         """
         """
-
 
         # initial conditions
         self.y0 = None
@@ -517,8 +515,9 @@ class StochasticEpiModel():
         Parameters
         ----------
         initial_conditions : dict
-            A dictionary that maps a compartment string to a number of nodes
+            A dictionary that maps a compartment to a number of nodes
             that should be sampled to be in this compartment initially.
+            Unset compartmens are assumed to have an initial condition of zero.
         """
 
         if type(initial_conditions) == dict:
@@ -1106,7 +1105,7 @@ if __name__ == "__main__":
     for comp, series in result.items():
         pl.plot(t, series, label=comp)
 
-    from tacoma.epidemics import SIR_weighted
+    from epipack.tests.SIR_weighted import SIR_weighted
 
     start = time()
     model = SIR_weighted(N,weighted_edge_tuples,infection_rate=R0/k_norm*mu,recovery_rate=mu,number_of_initially_infected=I0)

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SymbolicEpiModel: raise error when `disease_free_state` is not given explicitly and no S-compartment can be found
 - allow non-unity initial conditions for SymbolicEpiModel and DeterministicEpiModel
 - `population_size` is now explicitly regarded in SymbolicEpiModel
+- in DeterministicEpiModel, instead of raising errors, warnings are raised for nonzero column sums
 
 ### Fixed
 - fixed bug where fission processes were converted to quadratic rates

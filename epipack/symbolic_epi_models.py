@@ -214,7 +214,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
         
         ynew = self.linear_rates * y + self.birth_rates
         for c in self.affected_by_quadratic_process:
-            ynew[c] += (y.T * self.quadratic_rates[c] * y)[0,0]
+            ynew[c] += (y.T * self.quadratic_rates[c] * y)[0,0] / self.population_size
 
         return ynew
             
@@ -557,6 +557,15 @@ if __name__=="__main__":
     print(GS.ODEs())
 
     print(GS.find_fixed_points())
+
+    print("===========")
+
+
+    N = sympy.symbols("N")
+    epi = SymbolicSIRSModel(eta, rho, omega, population_size=N)
+    print()
+    print(epi.ODEs())
+    print(epi.find_fixed_points())
 
     print("==========")
     x = sympy.symbols("x")

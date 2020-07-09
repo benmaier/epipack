@@ -5,6 +5,8 @@ Provides an API to define deterministic epidemiological models.
 import numpy as np 
 import scipy.sparse as sprs
 
+import warnings
+
 from epipack.integrators import integrate_dopri5
 from epipack.process_conversions import (
             processes_to_rates,
@@ -187,7 +189,7 @@ class DeterministicEpiModel():
             test = linear_rates.sum(axis=0) + birth_rates
             test_sum = test.sum()
             if np.abs(test_sum) > 1e-15:
-                raise ValueError("Rates do not sum to zero for each column:" + str(test_sum))
+                warnings.warn("Rates do not sum to zero for each column:" + str(test_sum))
 
         self.linear_rates = linear_rates
         self.birth_rates = birth_rates
@@ -441,7 +443,7 @@ class DeterministicEpiModel():
 
         if np.abs(total_sum) > 1e-14:
             if not allow_nonzero_column_sums:
-                raise ValueError("Rates do not sum to zero. Sum = "+ str(total_sum))
+                warnings.warn("Rates do not sum to zero. Sum = "+ str(total_sum))
 
         self.affected_by_quadratic_process = sorted(list(set(all_affected)))
         self.quadratic_rates = matrices
@@ -477,6 +479,18 @@ class DeterministicEpiModel():
 
     def set_initial_conditions(self, initial_conditions,allow_nonzero_column_sums=False):
         """
+        Set the initial conditions for integration
+
+        Parameters
+        ----------
+        initial_conditions : dict
+            A dictionary that maps compartments to a fraction
+            of the population. Compartments that are not
+            set in this dictionary are assumed to have an initial condition
+            of zero.
+        allow_nonzero_column_sums : bool, default = False
+            If True, an error is raised when the initial conditions do not
+            sum to the population size.
         """
 
         if type(initial_conditions) == dict:
@@ -487,12 +501,12 @@ class DeterministicEpiModel():
         for compartment, amount in initial_conditions:
             total += amount
             if self.y0[self.get_compartment_id(compartment)] != 0:
-                raise ValueError('Double entry in initial conditions for compartment '+str(compartment))
+                warnings.warn('Double entry in initial conditions for compartment '+str(compartment))
             else:
                 self.y0[self.get_compartment_id(compartment)] = amount
 
         if np.abs(total-self.population_size)/self.population_size > 1e-14 and not allow_nonzero_column_sums:
-            raise ValueError('Sum of initial conditions does not equal unity.')        
+            warnings.warn('Sum of initial conditions does not equal unity.')
 
         return self
 

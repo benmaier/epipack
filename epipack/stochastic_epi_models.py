@@ -688,11 +688,16 @@ class StochasticEpiModel():
                 coupling_compartments = np.array([ e[_AFFECTED_SOURCE_COMPARTMENT] for e in events[l0:l1] ])
                 these_rates = rates[l0:l1]
 
-                for n in self.graph[node]:
+                try:
+                    neighs = self.graph[node]
+                except AttributeError as e:
+                    neighs = set(range(self.N_nodes)) - set([node])
+
+                for n in neighs:
 
                     try:
                         n = n[0]
-                    except IndexError as e:
+                    except (IndexError, TypeError) as e:
                         pass
 
                     neigh_status = self.node_status[n]

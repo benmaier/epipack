@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - allow non-unity initial conditions for SymbolicEpiModel and DeterministicEpiModel
 - `population_size` is now explicitly regarded in SymbolicEpiModel
 - in DeterministicEpiModel, instead of raising errors, warnings are raised for nonzero column sums
+- in StochasticEpiModel, save the current state after the end of the simulation
+
+### Added
+- in StochasticEpiModel, a callback function can be passed that's called whenever a sample is taken during the simimulation
 
 ### Fixed
 - fixed bug where fission processes were converted to quadratic rates

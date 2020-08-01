@@ -9,7 +9,8 @@ if __name__=="__main__":
     N_side = 200
     N = N_side*N_side
 
-    links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=True)
+    #links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=True)
+    links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=False)
 
     network = get_grid_layout(range(N),links,windowwidth=400)
 
@@ -29,7 +30,7 @@ if __name__=="__main__":
     infection_rate = R0 * (recovery_rate) / k0
     model.set_node_transition_processes([
             ("I",recovery_rate,"R"),
-            ("I",quarantine_rate,"T"),
+            #("I",quarantine_rate,"T"),
             ("T",tracing_rate,"X"),
             ("Q",waning_immunity_rate,"S"),
             ("X",recovery_rate,"R"),
@@ -48,6 +49,6 @@ if __name__=="__main__":
     visualize(model,network,sampling_dt,
               ignore_plot_compartments=['S','R'],
               quarantine_compartments=['X', 'T', 'Q'],
-              config={'draw_nodes_as_rectanlges':True,'draw_links':False}
+              config={'draw_nodes_as_rectangles':True,'draw_links':False}
               )
 

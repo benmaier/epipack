@@ -6,8 +6,8 @@ if __name__=="__main__":
     from epipack import StochasticEpiModel
     import networkx as nx
 
-    N = 400*400
-    network = get_grid_layout(range(N))
+    N = 31
+    network = get_grid_layout(N)
 
     edge_list = [ ( link['source'], link['target'], 1.0 ) for link in network['links'] ]
     k0 = 25
@@ -45,6 +45,6 @@ if __name__=="__main__":
     visualize(model,network,sampling_dt,
               ignore_plot_compartments=['S'],
               quarantine_compartments=['X', 'T', 'Q'],
-              config={'draw_nodes_as_rectanlges':True}
+              config={'draw_nodes_as_rectangles':True}
               )
 

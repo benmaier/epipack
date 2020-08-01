@@ -12,7 +12,7 @@ if __name__=="__main__":
     #links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=True)
     links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=False)
 
-    network = get_grid_layout(range(N),links,windowwidth=400)
+    network = get_grid_layout(N,links,windowwidth=400)
 
     k0 = 2 * len(links) / N
 

@@ -408,8 +408,8 @@ def get_network_batch(stylized_network,
                 r = node['radius']
                 disks[node['id']] = \
                         shapes.Rectangle(
-                                      node['x_canvas']-r,
-                                      node['y_canvas']+yoffset-r,
+                                      node['x_canvas'],
+                                      node['y_canvas']+yoffset,
                                       2*r,
                                       2*r,
                                       color=tuple(bytes.fromhex(node['color'][1:])),# + [int(255*stylized_network['linkAlpha'])]),
@@ -434,10 +434,10 @@ _default_config = {
             'draw_nodes_as_rectangles':False,
         }
 
-def get_grid_layout(nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
+def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
 
     w = h = windowwidth
-    N = len(nodes)
+    N = N_nodes
     N_side = int(np.ceil(np.sqrt(N)))
     dx = w / N_side
     radius = dx/2
@@ -456,6 +456,7 @@ def get_grid_layout(nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
                 'y_canvas': j*dx + 0.5,
                 'radius': radius
               } for i in range(N_side) for j in range(N_side) ]
+    nodes = nodes[:N_nodes]
     links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
 
     stylized_network['nodes'] = nodes

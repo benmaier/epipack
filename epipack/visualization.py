@@ -45,6 +45,15 @@ class App(pyglet.window.Window):
         # Initialize OpenGL context
         #self.init_gl(width, height)
 
+        self.orig_left = self.left
+        self.orig_right = self.right
+        self.orig_bottom = self.bottom
+        self.orig_top = self.top
+        self.orig_zoom_level = self.zoom_level
+        self.orig_zoomed_width = self.zoomed_width
+        self.orig_zoomed_height = self.zoomed_height
+
+
     def add_batch(self,batch,prefunc=None):
         self.batches.append(batch)
         self.batch_funcs.append(prefunc)
@@ -109,6 +118,23 @@ class App(pyglet.window.Window):
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
         glOrtho( self.left, self.right, self.bottom, self.top, 1, -1 )
+
+    
+    def on_key_press(self, symbol, modifiers):
+        if symbol & key.BACKSPACE:
+            self.left = self.orig_left
+            self.right = self.orig_right
+            self.bottom = self.orig_bottom
+            self.top = self.orig_top
+            self.zoom_level = self.orig_zoom_level
+            self.zoomed_width = self.orig_zoomed_width
+            self.zoomed_height = self.orig_zoomed_height
+
+            glMatrixMode( GL_PROJECTION )
+            glLoadIdentity()
+            glOrtho( self.left, self.right, self.bottom, self.top, 1, -1 )
+
+    
 
 class Scale():
 

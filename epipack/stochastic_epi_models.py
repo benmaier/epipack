@@ -853,7 +853,7 @@ class StochasticEpiModel():
 
         return compartment_changes
 
-    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None):
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None,sampling_callback=None):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -872,12 +872,14 @@ class StochasticEpiModel():
         sampling_dt : float, default = None
             Temporal distance between samples of the compartment counts.
             If ``None``, every change will be returned.
-        max_unsuccessful : int, default = None.
+        max_unsuccessful : int, default = None
             The number of unsusccessful events after which the
             true total event rate will be evaluated (it might happen
             that a network becomes effectively disconnected while
             nodes are still associated with a maximum event rate).
             If ``None``, this number will be set equal to the number of nodes.
+        sampling_callback : funtion, default = None
+            A function that's called when a sample is taken
 
         Returns
         -------
@@ -889,6 +891,9 @@ class StochasticEpiModel():
 
         if return_compartments is None:
             return_compartments = self.compartments
+
+        if sampling_callback is not None and sampling_dt is None:
+            raise ValueError('A sampling callback function can only be set if sampling_dt is set, as well.')
 
         ndx = [self.get_compartment_id(C) for C in return_compartments]
         current_state = self.y0.copy()
@@ -902,6 +907,9 @@ class StochasticEpiModel():
             unsuccessful = 0
 
         total_event_rate = self.get_total_event_rate()
+
+        if sampling_callback is not None:
+            sampling_callback()
 
         # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
         # This is important because it might happen that nodes
@@ -935,6 +943,8 @@ class StochasticEpiModel():
                     for idt in range(1,int(np.ceil((new_t-last_sample_dt)/sampling_dt))):
                         time.append(last_sample_dt+idt*sampling_dt)
                         compartments.append(current_state.copy())
+                        if sampling_callback is not None:
+                            sampling_callback()
 
                 # write losses and gains into the current state vector
                 for losing, gaining in changing_compartments:
@@ -945,6 +955,8 @@ class StochasticEpiModel():
                 if sampling_dt is None:
                     time.append(t)
                     compartments.append(current_state.copy())
+                    if sampling_callback is not None:
+                        sampling_callback()
 
                 unsuccessful = 0
                 total_event_rate = self.get_total_event_rate()
@@ -964,6 +976,12 @@ class StochasticEpiModel():
         # convert to result dictionary
         time = np.array(time)
         result = np.array(compartments)
+
+        if sampling_callback is not None:
+            sampling_callback()
+
+        # save current state
+        self.y0 = current_state.copy()
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
 

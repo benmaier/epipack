@@ -17,11 +17,49 @@ from pyglet import shapes
 from pyglet.window import key, mouse, Window
 from pyglet.gl import *
 
-_colors = [ [38,70,83], [231,111,81], [42,157,143],[131,227,119], [233,196,106], [100,100,100] ] * 2
+dark_colors = [ [38,70,83], [231,111,81], [42,157,143],[131,227,119], [233,196,106], [100,100,100] ] * 2
+light_colors = [ [255,250,220], [243,114,44], [67,170,139],[144,190,109], [249,199,79], [140,140,140] ] * 2
+light_colors = [
+                "f29e4c",
+                "0db39e",
+                "54478c",
+                #"efea5a",
+                #"f1c453",
+                "048ba8",
+                #"16db93",
+                "aaaaaa",
+                "048ba8",
+                "2c699a",
+                "16db93",
+                "83e377",
+                "b9e769",
+                "f1c453",
+                ]
+light_colors = [[255,250,220]] + [ list(bytes.fromhex(l)) for l in light_colors ]
+#light_colors = [ [255,250,220], [255,173,173], [255,198,255], [202,255,191], [155,246,255], [140,140,140] ] * 2
+_colors = light_colors
+_colors = dark_colors
+
+#[174,217,224],
+
+class SimulationStatus():
+
+    def __init__(self,N,sampling_dt):
+        self.old_node_status = -1e300*np.ones((N,))
+        self.simulation_ended = False
+        self.sampling_dt = sampling_dt
+        self.paused = False
+
+    def update(self,old_node_status):
+        self.old_node_status = np.array(old_node_status)
+
+    def set_simulation_status(self,simulation_ended):
+        self.simulation_ended = simulation_ended
+
 
 class App(pyglet.window.Window):
 
-    def __init__(self, width, height, *args, **kwargs):
+    def __init__(self, width, height, simulation_status, *args, **kwargs):
         #conf = Config(sample_buffers=1,
         #              samples=4,
         #              depth_size=16,
@@ -53,6 +91,8 @@ class App(pyglet.window.Window):
         self.orig_zoomed_width = self.zoomed_width
         self.orig_zoomed_height = self.zoomed_height
 
+        self.simulation_status = simulation_status
+
 
     def add_batch(self,batch,prefunc=None):
         self.batches.append(batch)
@@ -68,6 +108,10 @@ class App(pyglet.window.Window):
             batch.draw()
 
         #glPopMatrix()
+
+    #def on_close(self):
+    #    self.clear()        
+    #    self.close()
 
     def init_gl(self, width, height):
         # Set viewport
@@ -121,7 +165,8 @@ class App(pyglet.window.Window):
 
     
     def on_key_press(self, symbol, modifiers):
-        if symbol & key.BACKSPACE:
+        #if symbol & key.BACKSPACE or (symbol & key._0 and (modifiers & MOD_COMMAND or modifiers & MOD_CTRL)):
+        if symbol == key.BACKSPACE:
             self.left = self.orig_left
             self.right = self.orig_right
             self.bottom = self.orig_bottom
@@ -133,6 +178,12 @@ class App(pyglet.window.Window):
             glMatrixMode( GL_PROJECTION )
             glLoadIdentity()
             glOrtho( self.left, self.right, self.bottom, self.top, 1, -1 )
+        elif symbol == key.UP:
+            self.simulation_status.sampling_dt *= 1.2
+        elif symbol == key.DOWN:
+            self.simulation_status.sampling_dt /= 1.2
+        elif symbol == key.SPACE:
+            self.simulation_status.paused = not self.simulation_status.paused
 
     
 
@@ -314,14 +365,6 @@ class Curve():
 
         self.scale.check_bounds(self.xmin,self.xmax,self.ymin,self.ymax)
 
-class StatusSaver():
-
-    def __init__(self,N):
-        self.old_node_status = -1e300*np.ones((N,))
-
-    def update(self,old_node_status):
-        self.old_node_status = np.array(old_node_status)
-
 def get_network_batch(stylized_network,
                       yoffset,
                       draw_links=True,
@@ -432,7 +475,18 @@ _default_config = {
             'bound_increase_factor':1.0,
             'update_dt':0.04,
             'draw_nodes_as_rectangles':False,
+            'show_legend': True,
+            'legend_font_color':'#fafaef',
+            'legend_font_size':10,
+            'legend_padding':10,
         }
+
+# light colors
+#_default_config.update({
+#            'bgcolor':'#fafaef',
+#            'link_color': '#8e9aaf',
+#            'node_stroke_color':'#000000',
+#        })
 
 def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
 
@@ -472,9 +526,11 @@ def visualize(model,
               config=None,
               ):
 
+    # update the config and compute some helper variables
     cfg = deepcopy(_default_config)
     if config is not None:
         cfg.update(config)
+    bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
         
     width = network['xlim'][1] - network['xlim'][0]
     height = network['ylim'][1] - network['ylim'][0]
@@ -482,16 +538,91 @@ def visualize(model,
     with_plot = set(ignore_plot_compartments) != set(model.compartments)
 
     if with_plot:
-        size = (width, height+cfg['plot_height'])
-    else:
-        size = (width, height)
+        height += cfg['plot_height']
 
+    with_legend = cfg['show_legend']
+
+    if with_legend:
+        legend_batch = pyglet.graphics.Batch()
+        #x, y = legend.get_location()
+        #legend.set_location(x - width, y)
+        test_label = pyglet.text.Label('Ag')
+        dy = test_label.content_height * 1.1
+        del(test_label)
+
+        legend_circle_radius = dy/2/2
+        distance_between_circle_and_label = 2*legend_circle_radius
+        legend_height = len(model.compartments) * dy + cfg['legend_padding']
+        if with_plot:
+            legend_y_offset = legend_height + cfg['plot_height']
+        else:
+            legend_y_offset = legend_height            
+
+        max_text_width = 0
+        legend_objects = [] # this is a hack so that the garbage collector doesn't delete our stuff 
+        for iC, C in enumerate(model.compartments):
+            this_y = legend_y_offset - iC * dy - cfg['legend_padding']
+            this_x = width + cfg['legend_padding'] + legend_circle_radius
+            label = pyglet.text.Label(C,
+                              font_name='Helvetica',
+                              font_size=cfg['legend_font_size'],
+                              x=this_x + legend_circle_radius+distance_between_circle_and_label, 
+                              y=this_y,
+                              anchor_x='left', anchor_y='top',
+                              color = list(bytes.fromhex(cfg['legend_font_color'][1:])) + [255],
+                              batch = legend_batch
+                              )
+            legend_objects.append(label)
+
+            #if not cfg['draw_nodes_as_rectangles']:
+            if True:
+                disk = shapes.Circle(this_x,
+                                      this_y - (dy-1.25*legend_circle_radius)/2,
+                                      legend_circle_radius,
+                                      segments=64,
+                                      color = _colors[iC],
+                                      batch=legend_batch,
+                                      )
+                        
+                circle = shapes.Arc(this_x,
+                                      this_y - (dy-1.25*legend_circle_radius)/2,
+                                      legend_circle_radius,
+                                      segments=64+1,
+                                      color=list(bytes.fromhex(cfg['legend_font_color'][1:])),
+                                      batch=legend_batch,
+                                      )
+
+                legend_objects.extend([disk,circle])
+            #else:
+            #    rect = shapes.Rectangle(this_x,
+            #                          this_y - (dy-1.5*legend_circle_radius)/2,
+            #                          2*legend_circle_radius,
+            #                          2*legend_circle_radius,
+            #                          color = _colors[iC],
+            #                          batch=legend_batch,
+            #                          )
+            #    legend_objects.append(rect)
+
+            max_text_width = max(max_text_width, label.content_width)
+
+        legend_width =   2*cfg['legend_padding'] \
+                       + 2*legend_circle_radius \
+                       + distance_between_circle_and_label \
+                       + max_text_width
+
+        width += legend_width
+
+    size = (width, height)
+
+
+    # overwrite network style with the epipack default style
     network['linkColor'] = cfg['link_color']
     network['nodeStrokeColor'] = cfg['node_stroke_color']
     for node in network['nodes']:
         node['color'] = cfg['node_color']
     N = len(network['nodes'])
 
+    # get the OpenGL shape objects that comprise the network
     network_batch = get_network_batch(network,
                                       cfg['plot_height'],
                                       cfg['draw_links'],
@@ -505,10 +636,15 @@ def visualize(model,
     node_to_lines = network_batch['node_to_lines']
     batch = network_batch['batch']
 
-    window = App(*size,resizable=True)
-    bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
+    # initialize a simulation state that has to passed to the app
+    # so the app can change simulation parameters
+    simstate = SimulationStatus(len(network['nodes']), sampling_dt)
+
+    # intialize app
+    window = App(*size,simulation_status=simstate,resizable=True)
     glClearColor(*bgcolor)
 
+    # handle different strokewidths
     if 'nodeStrokeWidth' in network:
         node_stroke_width = network['nodeStrokeWidth'] 
     else:
@@ -520,21 +656,35 @@ def visualize(model,
     def _set_linewidth_curves():
         glLineWidth(cfg['curve_stroke_width'])
 
+    def _set_linewidth_legend():
+        glLineWidth(1.0)
+
+    # add the network batch with the right function to set the linewidth
+    # prior to drawing
     window.add_batch(batch,prefunc=_set_linewidth_nodes)
 
-    discrete_plot = cfg['plot_sampled_curve']
-    quarantined = set(model.get_compartment_id(C) for C in quarantine_compartments)
-    #not_quarantined = set(model.compartments) - quarantined
+    if with_legend:
+        # add the legend batch with the right function to set the linewidth
+        # prior to drawing
+        window.add_batch(legend_batch,prefunc=_set_linewidth_legend)
 
+    # decide whether to plot all measured changes or only discrete-time samples
+    discrete_plot = cfg['plot_sampled_curve']
+
+    # find quarantined compartment ids and the maximal value of the
+    # compartments that are meant to be plotted. 
+    # These sets are needed for filtering later on.
+    quarantined = set(model.get_compartment_id(C) for C in quarantine_compartments)
     maxy = max([ model.y0[model.get_compartment_id(C) ]for C in (set(model.compartments) - set(ignore_plot_compartments))])
 
-    saver = StatusSaver(len(network['nodes']))
+    # initialize time arrays
     t = 0
     discrete_time = [t]
 
+    # initialize curves
     if with_plot:
         scl = Scale(bound_increase_factor=cfg['bound_increase_factor'])\
-                .extent(0,window.get_size()[0],cfg['plot_height']-10,10)\
+                .extent(0,width,cfg['plot_height']-10,10)\
                 .domain(0,20*sampling_dt,0,maxy)
         curves = {}
         for iC, C in enumerate(model.compartments):
@@ -546,44 +696,88 @@ def visualize(model,
             curve = Curve(discrete_time,y,_colors[iC],scl,_batch)
             curves[C] = curve
 
+    # define the pyglet-App update function that's called on every clock cycle
     def update(dt):
-        
-        sim_time, sim_result = model.simulate(sampling_dt)
 
-        ndx = np.where(model.node_status != saver.old_node_status)[0]
-
-        if len(ndx) == 0 and model.get_true_total_event_rate() == 0.0:
+        # skip if nothing remains to be done
+        if simstate.simulation_ended or simstate.paused:
             return
 
-        this_time = (discrete_time[-1] + sim_time).tolist() + [discrete_time[-1] + sampling_dt]
+        # get sampling_dt
+        sampling_dt = simstate.sampling_dt
+        
+        # Advance the simulation until time sampling_dt.
+        # sim_time is a numpy array including all time values at which
+        # the system state changed. The first entry is the initial state
+        # of the simulation at t = 0 which we will discard later on
+        # the last entry at `sampling_dt` will be missing so we
+        # have to add it later on.
+        # `sim_result` is a dictionary that maps a compartment
+        # to a numpy array containing the compartment counts at
+        # the corresponding time.
+        sim_time, sim_result = model.simulate(sampling_dt)
+
+        # compare the new node statuses with the old node statuses
+        # and find the nodes that have changed status
+        ndx = np.where(model.node_status != simstate.old_node_status)[0]
+
+        # if nothing changed, evaluate the true total event rate
+        # and if it's zero, do not do anything anymore
+        did_simulation_end = len(ndx) == 0 and model.get_true_total_event_rate() == 0.0
+        simstate.set_simulation_status(did_simulation_end)
+        if simstate.simulation_ended:
+            return
+
+        # advance the current time as described above.
+        # we save both all time values as well as just the sampled times.
+        this_time = (discrete_time[-1] + sim_time[1:]).tolist() + [discrete_time[-1] + sampling_dt]
         discrete_time.append(discrete_time[-1] + sampling_dt)
 
+        # if curves are plotted
         if with_plot:
+
+            # iterate through result array
             for k, v in sim_result.items():
+                # skip curves that should be ignored
                 if k in ignore_plot_compartments:
                     continue
+                # count occurrences of this compartment
                 val = np.count_nonzero(model.node_status==model.get_compartment_id(k))
                 if discrete_plot:
+                    # in case only sampled curves are of interest,
+                    # just add this single value
                     curves[k].append_single_value(discrete_time[-1], v[-1])
                 else:
-                    val = (v.tolist() + [v[-1]])
+                    # otherwise, append the current value to the exact simulation list
+                    # and append the whole dataset
+                    val = (v[1:].tolist() + [v[-1]])
                     curves[k].append_list(this_time, val)
                 
 
-
+        # iterate through the nodes that have to be updated
         for node in ndx:
-            status = model.node_status[node]
-            disks[node].color = _colors[status]
+            status = model.node_status[node]    
+            if cfg['draw_nodes']:
+                disks[node].color = _colors[status]
+
+            # if a node becomes quarantined,
+            # iterate through its attached links (lines)
+            # and switch them off
             if status in quarantined:
                 for neigh, linkid in node_to_lines[node]:
                     lines[linkid].visible = False
-            elif saver.old_node_status[node] in quarantined:
+            # if it became unquarantined
+            elif simstate.old_node_status[node] in quarantined:
+                # check of the neighbor is unquarantined
+                # and switch on the link if this is the case
                 for neigh, linkid in node_to_lines[node]:
                     if model.node_status[neigh] not in quarantined:
                         lines[linkid].visible = True
 
-        saver.update(model.node_status)
+        # save the current node statuses
+        simstate.update(model.node_status)
 
+    # schedule the app clock and run the app
     pyglet.clock.schedule_interval(update, cfg['update_dt'])
     pyglet.app.run()
 
@@ -607,7 +801,7 @@ if __name__=="__main__":
     Reff = 3
     R0 = 3
     recovery_rate = 1/8
-    quarantine_rate = 1/32
+    quarantine_rate = 1/16
     tracing_rate = 1/2
     waning_immunity_rate = 1/14
     infection_rate = Reff * (recovery_rate+quarantine_rate) / k0
@@ -622,8 +816,8 @@ if __name__=="__main__":
     model.set_link_transmission_processes([("I","S",infection_rate,"I","I")])
     model.set_conditional_link_transmission_processes({
         ("T", "->", "X") : [
-                 ("X","I",0.4,"X","T"),
-                 ("X","S",0.4,"X","Q"),
+                 ("X","I",0.5,"X","T"),
+                 #("X","S",0.5,"X","Q"),
                  ],
         })
     model.set_random_initial_conditions({'I':20,'S':N-20})

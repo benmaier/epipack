@@ -9,8 +9,8 @@ if __name__=="__main__":
     N_side = 200
     N = N_side*N_side
 
-    #links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=True)
-    links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=False)
+    links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=True)
+    #links = get_2D_lattice_links(N_side,periodic=True,diagonal_links=False)
 
     network = get_grid_layout(N,links,windowwidth=400)
 
@@ -21,7 +21,7 @@ if __name__=="__main__":
                                 edge_weight_tuples=links,
                                )
     Reff = 3
-    R0 = 4
+    R0 = 10
     recovery_rate = 1/8
     quarantine_rate = 1/32
     tracing_rate = 1/2
@@ -38,17 +38,21 @@ if __name__=="__main__":
     model.set_link_transmission_processes([("I","S",infection_rate,"I","I")])
     model.set_conditional_link_transmission_processes({
         ("T", "->", "X") : [
-                 ("X","I",0.0,"X","T"),
-                 ("X","S",0.0,"X","Q"),
+                 ("X","I",1,"X","T"),
+                 ("X","S",1,"X","Q"),
                  ],
         })
     model.set_random_initial_conditions({'I':20,'S':N-20})
 
-    sampling_dt = 0.5
+    sampling_dt = 0.1
 
     visualize(model,network,sampling_dt,
               ignore_plot_compartments=['S','R'],
               quarantine_compartments=['X', 'T', 'Q'],
-              config={'draw_nodes_as_rectangles':True,'draw_links':False}
+              config={'draw_nodes_as_rectangles':True,
+                  'draw_links':False,
+                      #'draw_nodes':False
+                      'plot_sampled_curve':True,
+                      }
               )
 

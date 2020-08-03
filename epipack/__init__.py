@@ -19,6 +19,8 @@ from .deterministic_epi_models import (
 
 from .stochastic_epi_models import (
         StochasticEpiModel,
+        StochasticSIRModel,
+        StochasticSISModel,
         )
 
 from .symbolic_epi_models import (

@@ -1,4 +1,4 @@
-from epipack import visualize, get_grid_layout
+from epipack.vis import visualize, get_grid_layout
 
 
 if __name__=="__main__":

@@ -1,4 +1,5 @@
-from epipack import visualize, get_grid_layout, get_2D_lattice_links
+from epipack.vis import visualize, get_grid_layout
+from epipack import get_2D_lattice_links
 
 
 if __name__=="__main__":

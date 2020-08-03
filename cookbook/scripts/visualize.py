@@ -1,4 +1,4 @@
-from epipack import visualize
+from epipack.vis import visualize
 
 
 if __name__=="__main__":

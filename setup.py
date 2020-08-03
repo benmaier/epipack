@@ -21,6 +21,7 @@ setup(
                 'numpy>=1.17',
                 'scipy>=1.3',
                 'sympy==1.6',
+                'pyglet<1.6',
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],

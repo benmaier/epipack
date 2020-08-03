@@ -1,4 +1,4 @@
-Network models
+Network Models
 --------------
 
 .. automodule:: epipack.network_models

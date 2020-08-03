@@ -3,7 +3,7 @@
 
 # epipack
 
-Fast prototyping of epidemiological models based on reaction equations. Analyze the ODEs analytically or numerically, or run stochastic simulations on networks/well-mixed systems.
+Fast prototyping of epidemiological models based on reaction equations. Analyze the ODEs analytically or numerically, or run/animate stochastic simulations on networks/well-mixed systems.
 
 * repository: https://github.com/benmaier/epipack/
 * documentation: https://epipack.readthedocs.io/
@@ -33,6 +33,9 @@ three base classes to accomodate different problems.
   Simulate your model on any (un-/)directed, (un-/)weighted static network,
   or in a well-mixed system.
 
+Additionally, epipack provides a visualization framework to animate
+stochastic simulations on networks, lattices,  or well-mixed systems.
+
 Check out the [Example](#examples) section for some demos.
 
 ## Install
@@ -53,6 +56,7 @@ So far, the package's functionality was tested on Mac OS X only.
 * `numpy>=1.17`
 * `scipy>=1.3`
 * `sympy==1.6`
+* `pyglet<1.6`
 
 Please note that **fast network simulations are only available if you install** 
 

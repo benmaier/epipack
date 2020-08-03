@@ -83,13 +83,13 @@ One may introduce several events for ``source``-neighbors, each with certain pro
     {
         (source_base, "->", target_base) : [
             (target_base, source, p, target_base, target) # case A
-            (target_base, source, p**2, target_base, target) # case A
+            (target_base, source, q, target_base, target) # case B
         ]
     }
 
 In this case, ``epipack`` adds a "nothing happens"-process ``(target_base, source, 1-p-p**2, target_base, target)`` automatically such 
-that any of the possible processes happens to the ``source``-neighbor (with corresponding probability :math:`p`, :math:`p^2`, or
-:math:`1-p-p^2`).
+that any of the possible processes happens to the ``source``-neighbor (with corresponding probability :math:`p`, :math:`q`, or
+:math:`1-p-q`).
 
 Rates
 =====
@@ -105,6 +105,10 @@ quadratic rates look like this:
 .. code:: python
 
     ( coupling_compartment0, coupling_compartment_1, affected_compartment, rate_value ).
+
+The reasoning here is that, sometimes, you just want to create a model by
+copying an existing ODE system. Then, it's easier to directly set the rates
+instead of converting them to reaction processes in your head.
 
 
 Events

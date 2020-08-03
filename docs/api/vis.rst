@@ -1,7 +1,7 @@
 Visualization
 -------------
 
-.. automodule:: epipack.visualization
+.. automodule:: epipack.vis
     :members:
     :undoc-members:
     :show-inheritance:

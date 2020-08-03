@@ -87,13 +87,14 @@ class App(pyglet.window.Window):
     A pyglet Window class that makes zooming and panning convenient
     and tracks user input.
 
-    Adapted from https://stackoverflow.com/a/19453006/4177832
+    Adapted from Peter Varo's solution
+    at https://stackoverflow.com/a/19453006/4177832
 
     Parameters
     ==========
     width : float
         Width of the app window
-    heigh : float
+    height : float
         Height of the app window
     simulation_status : SimulationStatus
         An object that tracks the simulation. Here,
@@ -696,7 +697,8 @@ def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
 
         .. code:: python
 
-            [ (0, 1, 1.0) ]
+            [ (0, "1", 1.0) ]
+
     windowwidth : float, default = 400
         The width of the network visualization
     linkwidth : float, default = 1.0 
@@ -759,26 +761,27 @@ def visualize(model,
         .. code:: python
 
             stylized_network = {
-                'xlim': [0, 833],
-                'ylim': [0, 833],
-                'linkAlpha': 0.5,
-                'nodeStrokeWidth': 0.75,
-                'links': [
-                    {'source': 0, 'target': 1, 'width': 3.0 },
+                \"xlim\": [0, 833],
+                \"ylim\": [0, 833],
+                \"linkAlpha\": 0.5,
+                \"nodeStrokeWidth\": 0.75,
+                \"links\": [
+                    {\"source\": 0, \"target\": 1, \"width\": 3.0 }
                 ],
-                'nodes': [
-                    {'id': 0,
-                     'x_canvas': 436.0933431058901,
-                     'y_canvas': 431.72418500564186,
-                     'radius': 20,
+                \"nodes\": [
+                    {\"id\": 0,
+                     \"x_canvas\": 436.0933431058901,
+                     \"y_canvas\": 431.72418500564186,
+                     \"radius\": 20
                      },
-                    {'id': 1,
-                     'x_canvas': 404.62184898400426,
-                     'y_canvas': 394.8158724310507,
-                     'radius': 20,
-                     },
+                    {\"id\": 1,
+                     \"x_canvas\": 404.62184898400426,
+                     \"y_canvas\": 394.8158724310507,
+                     \"radius\": 20
+                     }
                 ]
             }
+
     sampling_dt : float 
         The amount of simulation time that's supposed to pass
         with a single update.
@@ -816,8 +819,9 @@ def visualize(model,
                         'legend_font_color':'#fafaef',
                         'legend_font_size':10,
                         'padding':10,
-                        'compartment_colors':_colors,
+                        'compartment_colors':_colors
                     }
+
     """
 
     # update the config and compute some helper variables
@@ -1108,9 +1112,9 @@ if __name__=="__main__":
     edge_list = [ ( link['source'], link['target'], 1.0 ) for link in network['links'] ]
     k0 = 2*len(edge_list)/len(network['nodes'])
 
-    
-    model = StochasticEpiModel(list("SIRXTQ"),N=len(network['nodes']),
-                               edge_weight_tuples=edge_list
+    model = StochasticEpiModel(list("SIRXTQ"),
+                               N=len(network['nodes']),
+                               edge_weight_tuples=edge_list,
                                )
     Reff = 3
     R0 = 3

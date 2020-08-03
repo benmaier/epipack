@@ -1,2 +1,4 @@
 pip>=18.0
+-e git+git@github.com:sphinx-contrib/video.git@d5e64ea43b3715e733724a8382c419aa2437783d#egg=sphinxcontrib_video
+sphinxcontrib-websupport==1.1.0
 

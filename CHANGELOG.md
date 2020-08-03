@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- in StochasticEpiModel and during visualization, a more efficient mechanism checks for whether the simulation has ended for good
+
+### Added
+- StochasticSIRModel, StochasticSISModel
+
 ## [v0.0.4] - 2020-08-03
 ### Changed
 - SymbolicEpiModel: raise error when `disease_free_state` is not given explicitly and no S-compartment can be found

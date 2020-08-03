@@ -26,6 +26,7 @@ epipack
    tutorial/deterministics.rst
    tutorial/stochastics.rst
    tutorial/symbolics.rst
+   tutorial/visualizations.rst 
 
 .. raw:: latex
 
@@ -39,6 +40,7 @@ epipack
    devguide/deterministics.rst
    devguide/stochastics.rst
    devguide/testing.rst
+   devguide/visualization.rst
 
 .. raw:: latex
 

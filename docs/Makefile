@@ -227,7 +227,7 @@ show:
 adev:
 	make clean
 	make html
-	python -m "http.server" 1313
+	cd _build/html; python -m "http.server" 1313
 
 dev:
 	make html

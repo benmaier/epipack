@@ -2,17 +2,12 @@
 Visualizations of stochastic simulations with pyglet.
 """
 
-try:
-    import pyglet
-except ModuleNotFoundError as e:
-    print("Please install pyglet>=1.5. It's not installed automatically.")
-    raise e
-
 from copy import deepcopy
 from itertools import chain
 
 import numpy as np
 
+import pyglet
 from pyglet import shapes
 from pyglet.window import key, mouse, Window
 from pyglet.gl import *
@@ -856,7 +851,7 @@ def visualize(model,
 
         legend_circle_radius = dy/2/2
         distance_between_circle_and_label = 2*legend_circle_radius
-        legend_height = len(model.compartments) * dy + 2*cfg['padding']
+        legend_height = len(model.compartments) * dy + cfg['padding']
 
         # if legend is shown in concurrence to the plot,
         # move the legend to be on the right hand side of the plot,

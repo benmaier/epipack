@@ -115,6 +115,8 @@ class StochasticEpiModel():
         else:
             self.set_well_mixed(N,well_mixed_mean_contact_number)
 
+        self._simulation_ended = False
+
     def set_network(self,N_nodes,edge_weight_tuples,directed=False):
         """
         Define the model to run on a network.
@@ -619,6 +621,8 @@ class StochasticEpiModel():
 
         self.y0 = y0
 
+        self._simulation_ended = False
+
         return self
 
     def set_node_status(self,node,status):
@@ -669,7 +673,7 @@ class StochasticEpiModel():
         Get the true total event rate.
         """
 
-        total_rate = 0
+        total_rate = 0.0
 
         for node, max_rate in self.all_node_events:
             status = self.node_status[node]
@@ -688,25 +692,41 @@ class StochasticEpiModel():
                 coupling_compartments = np.array([ e[_AFFECTED_SOURCE_COMPARTMENT] for e in events[l0:l1] ])
                 these_rates = rates[l0:l1]
 
-                try:
+                if self.is_network_model:
                     neighs = self.graph[node]
-                except AttributeError as e:
-                    neighs = set(range(self.N_nodes)) - set([node])
 
-                for n in neighs:
+                    for n in neighs:
 
-                    try:
-                        n = n[0]
-                    except (IndexError, TypeError) as e:
-                        pass
+                        try:
+                            n = n[0]
+                        except (IndexError, TypeError) as e:
+                            pass
 
-                    neigh_status = self.node_status[n]
+                        neigh_status = self.node_status[n]
 
-                    ndx = np.where(coupling_compartments == neigh_status)[0]
-                    total_rate += these_rates[ndx].sum()
+                        ndx = np.where(coupling_compartments == neigh_status)[0]
+                        total_rate += these_rates[ndx].sum()
+                else:
+                    for C in coupling_compartments:
+                        nodes_of_this_compartment = self.y0[C]
+                        total_rate += nodes_of_this_compartment / (self.N_nodes - 1)
+
+        if total_rate == 0.0:
+            self.set_simulation_has_ended()
 
         return total_rate
 
+    def simulation_has_ended(self):
+        """
+        Check wether the simulation can be continued in its current state.
+        """
+        return self._simulation_ended
+
+    def set_simulation_has_ended(self):
+        self._simulation_ended = True
+
+    def set_simulation_has_not_ended(self):
+        self._simulation_ended = False
 
     def get_reacting_node(self):
         """
@@ -921,6 +941,7 @@ class StochasticEpiModel():
         # have a non-zero reaction rate but no targets left
         # at which point the simulation does never halt.
         while t < tmax and \
+              not self.simulation_has_ended() and\
               total_event_rate > 0 and \
               current_state[self.transitioning_compartments].sum() > 0:
 
@@ -965,6 +986,9 @@ class StochasticEpiModel():
 
                 unsuccessful = 0
                 total_event_rate = self.get_total_event_rate()
+
+                # save current state
+                self.y0 = current_state.copy()
             else:
                 unsuccessful += 1
                 if unsuccessful > max_unsuccessful:
@@ -978,6 +1002,7 @@ class StochasticEpiModel():
             t = new_t
 
 
+
         # convert to result dictionary
         time = np.array(time)
         result = np.array(compartments)
@@ -985,10 +1010,47 @@ class StochasticEpiModel():
         if sampling_callback is not None:
             sampling_callback()
 
-        # save current state
-        self.y0 = current_state.copy()
-
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
+
+class StochasticSIRModel(StochasticEpiModel):
+    """
+    An SIR model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+    """
+
+    def __init__(self, N, R0, recovery_rate, *args, **kwargs):
+
+        StochasticEpiModel.__init__(self, list("SIR"), N, *args, **kwargs)
+
+        k0 = self.out_degree.mean() 
+        infection_rate = R0 * recovery_rate / k0
+
+        self.set_node_transition_processes([
+                ("I", recovery_rate, "R"),
+            ])
+
+        self.set_link_transmission_processes([
+                ("I", "S", infection_rate, "I", "I"),
+            ])
+
+class StochasticSISModel(StochasticEpiModel):
+    """
+    An SIS model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+    """
+
+    def __init__(self, N, R0, recovery_rate, *args, **kwargs):
+
+        StochasticEpiModel.__init__(self, list("SI"), N, *args, **kwargs)
+
+        k0 = self.out_degree.mean() 
+        infection_rate = R0 * recovery_rate / k0
+
+        self.set_node_transition_processes([
+                ("I", recovery_rate, "S"),
+            ])
+
+        self.set_link_transmission_processes([
+                ("I", "S", infection_rate, "I", "I"),
+            ])
 
 if __name__ == "__main__":
 

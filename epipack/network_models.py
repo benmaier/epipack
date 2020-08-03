@@ -3,6 +3,18 @@ Some network models.
 """
 
 def get_2D_lattice_links(N_side,periodic=False,diagonal_links=False):
+    """
+    Return the links of a square 2D lattice
+
+    Parameters
+    ==========
+    N_side : int
+        Number of nodes per side of the square
+    periodic : bool, default = False
+        Whether or not to apply periodic boundary conditions
+    diagonal_links : bool, default = False
+        Whether or not to connect to diagonal neighbors, too.
+    """
 
     links = []
     for i in range(N_side):

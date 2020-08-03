@@ -52,8 +52,10 @@ epipack
    api/symbolic_epi_models
    api/stochastic_epi_models   
    api/process_conversions
+   api/visualization 
    api/mock_samplable_set
    api/integrators
+   api/network_models 
 
 .. .. toctree::
 ..    :maxdepth: 2

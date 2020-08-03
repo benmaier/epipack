@@ -53,6 +53,7 @@ if __name__=="__main__":
                   'draw_links':False,
                       #'draw_nodes':False
                       'plot_sampled_curve':True,
+                      'show_curves':False,
                       }
               )
 

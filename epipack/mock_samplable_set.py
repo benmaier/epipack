@@ -86,40 +86,49 @@ class MockSamplableSet:
 
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    # pragma: no cover
 
     s = MockSamplableSet(1.0,2.0,{0:1.2,3:1.8,})
 
+    print('===========')
     print(s.items)
     print(s.weights)
     print(len(s))
     print(s.total_weight())
 
+    np.random.seed(1)
+    print('===========')
     for _ in range(5):
         print(s.sample())
 
 
+    print('===========')
     print(s[0])
     print(s[0])
 
     s[0] = 2
+    print('===========')
     print(s.items)
     print(s.weights)
     print(s.total_weight())
 
     s[1] = 1.3
+    print('===========')
     print(s.items)
     print(s.weights)
     print(s.total_weight())
 
     del s[3]
+    print('===========')
     print(s.items)
     print(s.weights)
     print(s.total_weight())
 
+    print('===========')
     for item, weight in s:
         print(item, weight)
 
+    print('===========')
     print(0 in s)
     print(45 in s)
 

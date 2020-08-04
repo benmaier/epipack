@@ -7,7 +7,11 @@ import scipy.sparse as sprs
 
 import warnings
 
-from epipack.integrators import integrate_dopri5
+from epipack.integrators import (
+            integrate_dopri5,
+            integrate_euler,
+        )
+
 from epipack.process_conversions import (
             processes_to_rates,
             transition_processes_to_rates,
@@ -69,6 +73,7 @@ class DeterministicEpiModel():
         self.affected_by_quadratic_process = None
 
         self.compartments = list(compartments)
+        self.compartment_ids = { C: iC for iC, C in enumerate(compartments) }
         self.population_size = population_size
         self.N_comp = len(self.compartments)
         self.birth_rates = np.zeros((self.N_comp,),dtype=np.float64)
@@ -78,7 +83,7 @@ class DeterministicEpiModel():
 
     def get_compartment_id(self,C):
         """Get the integer ID of a compartment ``C``"""
-        return self.compartments.index(C)
+        return self.compartment_ids[C]
 
     def get_compartment(self,iC):
         """Get the compartment, given an integer ID ``iC``"""
@@ -167,10 +172,15 @@ class DeterministicEpiModel():
         """
 
         if reset_rates:
-            linear_rates = sprs.lil_matrix((self.N_comp, self.N_comp),dtype=np.float64) 
+            row = []
+            col = []
+            data = []
             birth_rates = np.zeros((self.N_comp,),dtype=np.float64)
         else:
-            linear_rates = self.linear_rates.tolil()
+            linear_rates = self.linear_rates.tocoo()
+            row = linear_rates.row.tolist()
+            col = linear_rates.col.tolist()
+            data = linear_rates.data.tolist()
             birth_rates = self.birth_rates.copy()
 
         for acting_compartment, affected_compartment, rate in rate_list:
@@ -180,9 +190,11 @@ class DeterministicEpiModel():
                 birth_rates[_t] += rate
             else:
                 _s = self.get_compartment_id(acting_compartment)
-                linear_rates[_t, _s] += rate
+                row.append(_t)
+                col.append(_s)
+                data.append(rate)
 
-
+        linear_rates = sprs.coo_matrix((data, (row, col)),shape=(self.N_comp, self.N_comp),dtype=np.float64)
         linear_rates = linear_rates.tocsr()
 
         if not allow_nonzero_column_sums:
@@ -414,18 +426,18 @@ class DeterministicEpiModel():
         an increase in "E" proportional to :math:`S\times I` and rate +1/time_unit."
         """
 
+        matrices = [ [[], [], []] for c in self.compartments]
         if reset_rates:
-
-            matrices = [None for c in self.compartments]
-            for c in range(self.N_comp):
-                matrices[c] = sprs.lil_matrix(
-                                    (self.N_comp, self.N_comp),
-                                    dtype=np.float64,
-                                   )
-
             all_affected = []
         else:
-            matrices =  [ M.tolil() for M in self.quadratic_rates ]
+            for iC, _M in enumerate(self.quadratic_rates):
+                if _M.count_nonzero() > 0:
+                    M = _M.tocoo()
+                    matrices[iC][0] = M.row.tolist()
+                    matrices[iC][1] = M.col.tolist()
+                    matrices[iC][2] = M.data.tolist()
+                else:
+                    matrices[iC] = [ [], [], [] ]
             all_affected = self.affected_by_quadratic_process if self.affected_by_quadratic_process is not None else []
         
         for coupling0, coupling1, affected, rate in rate_list:
@@ -433,13 +445,24 @@ class DeterministicEpiModel():
             c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
             a = self.get_compartment_id(affected)
 
-            matrices[a][c0,c1] += rate
+            matrices[a][0].append(c0)
+            matrices[a][1].append(c1)
+            matrices[a][2].append(rate)
             all_affected.append(a)
 
         total_sum = 0
         for c in range(self.N_comp):
-            matrices[c] = matrices[c].tocsr()
-            total_sum += matrices[c].sum(axis=0).sum()
+            row = matrices[c][0]
+            col = matrices[c][1]
+            data = matrices[c][2]
+            if len(row) > 0:
+                matrices[c] = sprs.coo_matrix((data,(row, col)),
+                                               shape=(self.N_comp, self.N_comp),
+                                               dtype=np.float64,
+                                              ).tocsr()
+                total_sum += matrices[c].sum(axis=0).sum()
+            else:
+                matrices[c] = sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64)
 
         if np.abs(total_sum) > 1e-14:
             if not allow_nonzero_column_sums:
@@ -510,35 +533,81 @@ class DeterministicEpiModel():
 
         return self
 
-    def integrate_and_return_by_index(self,time_points,return_compartments=None):
-        """
+    def integrate_and_return_by_index(self,
+                                      time_points,
+                                      return_compartments=None,
+                                      integrator='dopri5',
+                                      adopt_final_state=False,
+                                      ):
+        r"""
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
         ``(return_compartments), len(time_points)``.
 
-        If ``return_compartments`` is None, all compartments will
-        be returned.
+        Parameters
+        ==========
+        time_points : np.ndarray
+            An array of time points at which the compartment values
+            should be evaluated and returned.
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        integrator : str, default = 'dopri5'
+            Which method to use for integration. Currently supported are
+            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
+            :math:`\delta t` will be determined by the difference
+            of consecutive entries in ``time_points``.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
         """
 
-        if return_compartments is None:
-            return_compartments = self.compartments
-        result = integrate_dopri5(self.dydt, time_points, self.y0)
+        if integrator == 'dopri5':
+            result = integrate_dopri5(self.dydt, time_points, self.y0)
+        else:
+            result = integrate_euler(self.dydt, time_points, self.y0)
 
-        ndx = [self.get_compartment_id(C) for C in return_compartments]
+        if adopt_final_state:
+            self.y0 = result[:,-1]
 
-        return result[ndx,:]
+        if return_compartments is not None:
+            ndx = [self.get_compartment_id(C) for C in return_compartments]
+            result = result[ndx,:]
 
-    def integrate(self,time_points,return_compartments=None):
-        """
+        return result
+
+    def integrate(self,
+                  time_points,
+                  return_compartments=None,
+                  *args,
+                  **kwargs,
+                  ):
+        r"""
         Returns values of the given compartments at the demanded
         time points (as a dictionary).
 
-        If ``return_compartments`` is None, all compartments will
-        be returned.
+        Parameters
+        ==========
+        time_points : np.ndarray
+            An array of time points at which the compartment values
+            should be evaluated and returned.
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        integrator : str, default = 'dopri5'
+            Which method to use for integration. Currently supported are
+            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
+            :math:`\delta t` will be determined by the difference
+            of consecutive entries in ``time_points``.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
+            as new initial conditions.
         """
         if return_compartments is None:
             return_compartments = self.compartments
-        result = self.integrate_and_return_by_index(time_points, return_compartments)
+
+        result = self.integrate_and_return_by_index(time_points, return_compartments,*args,**kwargs)
 
         result_dict = {}
         for icomp, compartment in enumerate(return_compartments):
@@ -715,7 +784,7 @@ class DeterministicSEIRSModel(DeterministicEpiModel):
             ])
 
 
-if __name__=="__main__":
+if __name__=="__main__":    # pragma: no cover
     epi = DeterministicEpiModel(list("SEIR"))
     print(epi.compartments)
     print()

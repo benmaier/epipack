@@ -472,7 +472,7 @@ class StochasticEpiModel():
         Concatenate link and node events.
         """
         self.node_and_link_events = [ None for n in range(self.N_comp) ]
-        self.transitioning_compartments = set()
+        transitioning_compartments = set()
 
         # for each compartment, concatenate node and link event lists
         for comp in range(self.N_comp):
@@ -506,9 +506,9 @@ class StochasticEpiModel():
             # have a non-zero reaction rate but no targets left
             # at which point the simulation does never halt.
             for infecting, transitioning, _ in events:
-                self.transitioning_compartments.add(transitioning)
+                transitioning_compartments.add(transitioning)
 
-        self.transitioning_compartments = np.array(list(self.transitioning_compartments),dtype=int)
+        self.transitioning_compartments = np.array(list(transitioning_compartments),dtype=int)
 
     def set_random_initial_conditions(self, initial_conditions):
         """
@@ -1052,7 +1052,7 @@ class StochasticSISModel(StochasticEpiModel):
                 ("I", "S", infection_rate, "I", "I"),
             ])
 
-if __name__ == "__main__":
+if __name__ == "__main__":     # pragma: no cover
 
     model = StochasticEpiModel(list("SI"),3)
 

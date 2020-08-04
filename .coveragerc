@@ -1,0 +1,9 @@
+[run]
+omit =
+    epipack/tests/vis.py
+    epipack/tests/SIR_weighted.py
+    epipack/vis.py
+
+[report]
+exclude_lines =
+    if __name__ == .__main__.:

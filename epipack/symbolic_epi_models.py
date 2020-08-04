@@ -128,7 +128,10 @@ class SymbolicEpiModel(DeterministicEpiModel):
         return self
 
     def _check_rate_for_functional_dependency(self,rate):
-        self.has_functional_rates |= any([ compartment in rate.free_symbols for compartment in self.compartments])
+        try:
+            self.has_functional_rates |= any([ compartment in rate.free_symbols for compartment in self.compartments])
+        except AttributeError as e:
+            return
 
 
     def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
@@ -473,7 +476,7 @@ class SymbolicSIRSModel(SymbolicEpiModel):
                 (R, waning_immunity_rate, S),
             ])
 
-if __name__=="__main__":
+if __name__=="__main__":    # pragma: no cover
     eta, rho = sympy.symbols("eta rho")
     epi = SymbolicSIRModel(eta, rho)
     print(epi.linear_rates)

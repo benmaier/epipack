@@ -1,5 +1,6 @@
 import numpy as np
 from epipack import StochasticEpiModel
+from tqdm import tqdm
 
 S, I, A, B, C0, C1, D, E, F = "S I A B C0 C1 D E F".split(" ")
 
@@ -45,9 +46,9 @@ print(model.node_transition_events)
 
 counts = np.zeros(model.N_comp,dtype=int)
 
-N_measurements = 10000
+N_measurements = 20000
 
-for meas in range(N_measurements):
+for meas in tqdm(range(N_measurements)):
     model.set_node_statuses(statuses)
 
     _ = model.simulate(1e9)

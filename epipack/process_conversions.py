@@ -54,7 +54,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
 
         if len(process) == 3:
             # it's either a transition process or a birth process:
-            if process[1] not in compartments or ignore_rate_position_checks:
+            if ignore_rate_position_checks or process[1] not in compartments:
                 linear_rates.extend(transition_processes_to_rates([process]))
             else:
                 raise TypeError("Process " + str(process) + " is not understood.")
@@ -74,7 +74,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
         elif len(process) == 5:
 
             # it's a transmission process
-            if process[2] not in compartments or ignore_rate_position_checks:
+            if ignore_rate_position_checks or process[2] not in compartments:
                 quadratic_rates.extend(transmission_processes_to_rates([process]))
             else:
                 raise TypeError("Process " + str(process) + " is not understood.")

@@ -106,6 +106,10 @@ class App(pyglet.window.Window):
         #              samples=4,
         #              depth_size=16,
         #              double_buffer=True)
+        self.left   = 0
+        self.right  = width
+        self.bottom = 0
+        self.top    = height
         super().__init__(width, height, *args, **kwargs)
         self.batches = []
         self.batch_funcs = []
@@ -132,7 +136,11 @@ class App(pyglet.window.Window):
         self.orig_zoomed_height = self.zoomed_height
 
         self.simulation_status = simulation_status
+        self.name = np.array(list("dfsodfisivunsougns"))[np.random.randint(15,size=5)]
 
+
+        print("I was initiated...")
+        print(self.name)
 
     def add_batch(self,batch,prefunc=None):
         """
@@ -159,15 +167,20 @@ class App(pyglet.window.Window):
         # Set viewport
         glMatrixMode( GL_PROJECTION )
         glLoadIdentity()
+        #try:
         glOrtho( self.left, self.right, self.bottom, self.top, 1, -1 )
+        #except AttributeError as e:
+        #    print(self.name) 
 
     def on_resize(self, width, height):
         """Rescale."""
         # Set window values
         self.width  = width
         self.height = height
+
         # Initialize OpenGL context
         self.init_gl(width, height)
+        print("I was asked to resize...")
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Pan."""
@@ -641,8 +654,8 @@ def get_network_batch(stylized_network,
                 r = node['radius']
                 disks[node['id']] = \
                         shapes.Rectangle(
-                                      node['x_canvas'],
-                                      node['y_canvas']+yoffset,
+                                      node['x_canvas']-r,
+                                      node['y_canvas']+yoffset-r,
                                       2*r,
                                       2*r,
                                       color=tuple(bytes.fromhex(node['color'][1:])),
@@ -697,7 +710,7 @@ def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
 
         .. code:: python
 
-            [ (0, "1", 1.0) ]
+            [ (0, 1, 1.0) ]
 
     windowwidth : float, default = 400
         The width of the network visualization
@@ -726,10 +739,70 @@ def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
 
     nodes = [ {
                 'id': i*N_side + j,
-                'x_canvas': i*dx + 0.5,
-                'y_canvas': j*dx + 0.5,
+                'x_canvas': (i+0.5)*dx,
+                'y_canvas': (j+0.5)*dx,
                 'radius': radius
               } for i in range(N_side) for j in range(N_side) ]
+    nodes = nodes[:N_nodes]
+    links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
+
+    stylized_network['nodes'] = nodes
+    stylized_network['links'] = links
+
+    return stylized_network
+
+def get_random_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
+    """
+    Returns a stylized network dictionary that puts 
+    nodes in a random layout.
+
+    Parameters
+    ==========
+    N_nodes : int
+        The number of nodes in the network
+    edge_weight_tuples : list, default = []
+        A list of tuples. Each tuple describes an edge
+        with the first entry being the source node index,
+        the second entry being the target node indes
+        and the third entry being the weight, e.g.
+
+        .. code:: python
+
+            [ (0, "1", 1.0) ]
+
+    windowwidth : float, default = 400
+        The width of the network visualization
+    linkwidth : float, default = 1.0 
+        All links get the same width.
+
+    Returns
+    =======
+    network : dict
+        A stylized network dictionary in netwulf-format.
+    """
+
+    w = h = windowwidth
+    N = N_nodes
+    N_side = int(np.ceil(np.sqrt(N)))
+    dx = w / N_side
+    radius = dx/4
+
+    network = {}
+    stylized_network = {
+        'xlim': [0, w],
+        'ylim': [0, h],
+        'linkAlpha': 0.5,
+        'nodeStrokeWidth': 0.0001,
+    }
+
+    pos = (np.random.rand(N, 2) * w).tolist()
+
+    nodes = [ {
+                'id': i,
+                'x_canvas': pos[0],
+                'y_canvas': pos[1],
+                'radius': radius
+              } for i, pos in enumerate(pos)]
     nodes = nodes[:N_nodes]
     links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
 
@@ -761,23 +834,23 @@ def visualize(model,
         .. code:: python
 
             stylized_network = {
-                \"xlim\": [0, 833],
-                \"ylim\": [0, 833],
-                \"linkAlpha\": 0.5,
-                \"nodeStrokeWidth\": 0.75,
-                \"links\": [
-                    {\"source\": 0, \"target\": 1, \"width\": 3.0 }
+                "xlim": [0, 833],
+                "ylim": [0, 833],
+                "linkAlpha": 0.5,
+                "nodeStrokeWidth": 0.75,
+                "links": [
+                    {"source": 0, "target": 1, "width": 3.0 }
                 ],
-                \"nodes\": [
-                    {\"id\": 0,
-                     \"x_canvas\": 436.0933431058901,
-                     \"y_canvas\": 431.72418500564186,
-                     \"radius\": 20
+                "nodes": [
+                    {"id": 0,
+                     "x_canvas": 436.0933431058901,
+                     "y_canvas": 431.72418500564186,
+                     "radius": 20
                      },
-                    {\"id\": 1,
-                     \"x_canvas\": 404.62184898400426,
-                     \"y_canvas\": 394.8158724310507,
-                     \"radius\": 20
+                    {"id": 1,
+                     "x_canvas": 404.62184898400426,
+                     "y_canvas": 394.8158724310507,
+                     "radius": 20
                      }
                 ]
             }
@@ -1098,9 +1171,211 @@ def visualize(model,
     # schedule the app clock and run the app
     pyglet.clock.schedule_interval(update, cfg['update_dt'])
     pyglet.app.run()
+    #pyglet.clock.unschedule(update)
+    #window.close()
+    #del(window)
+    #print(pyglet.app.platform_event_loop)
+    #pyglet.app.exit()
+    #print("called exit..")
 
 
-if __name__=="__main__":
+def visualize_reaction_diffusion(
+              model,
+              network, 
+              sampling_dt,
+              node_compartment_indices,
+              integrator='euler',
+              n_integrator_midpoints=0,
+              config=None,
+              ):
+    """
+    Start a visualization of a reaction-diffusion simulation.
+
+    Parameters
+    ==========
+    model : epipack.stochastic_epi_models.StochasticEpiModel
+        An initialized StochasticEpiModel.
+    network: dict
+        A stylized network in the netwulf-format
+        (see https://netwulf.readthedocs.io/en/latest/python_api/post_back.html)
+        where instead of 'x' and 'y', node positions are saved in 'x_canvas'
+        and 'y_canvas'. Example:
+
+        .. code:: python
+
+            stylized_network = {
+                "xlim": [0, 833],
+                "ylim": [0, 833],
+                "linkAlpha": 0.5,
+                "nodeStrokeWidth": 0.75,
+                "links": [
+                    {"source": 0, "target": 1, "width": 3.0 }
+                ],
+                "nodes": [
+                    {"id": 0,
+                     "x_canvas": 436.0933431058901,
+                     "y_canvas": 431.72418500564186,
+                     "radius": 20
+                     },
+                    {"id": 1,
+                     "x_canvas": 404.62184898400426,
+                     "y_canvas": 394.8158724310507,
+                     "radius": 20
+                     }
+                ]
+            }
+
+    sampling_dt : float 
+        The amount of simulation time that's supposed to pass
+        with a single update.
+    ignore_plot_compartments : list, default = []
+        List of compartment objects that are supposed to be
+        ignored when plotted.
+    quarantine_compartments : list, default = []
+        List of compartment objects that are supposed to be
+        resemble quarantine (i.e. temporarily 
+        losing all connections)
+    config : dict, default = None
+        A dictionary containing all possible configuration
+        options. Entries in this dictionary will overwrite
+        the default config which is 
+
+        .. code:: python
+
+            _default_config = {
+                        'plot_sampled_curve': True,
+                        'draw_links':True,            
+                        'draw_nodes':True,
+                        'n_circle_segments':16,
+                        'plot_height':120,
+                        'bgcolor':'#253237',
+                        'curve_stroke_width':4.0,
+                        'node_stroke_width':1.0,
+                        'link_color': '#4b5a62',
+                        'node_stroke_color':'#000000',
+                        'node_color':'#264653',
+                        'bound_increase_factor':1.0,
+                        'update_dt':0.04,
+                        'show_curves':True,
+                        'draw_nodes_as_rectangles':False,
+                        'show_legend': True,
+                        'legend_font_color':'#fafaef',
+                        'legend_font_size':10,
+                        'padding':10,
+                        'compartment_colors':_colors
+                    }
+
+    """
+
+    # update the config and compute some helper variables
+    cfg = deepcopy(_default_config)
+    if config is not None:
+        cfg.update(config)
+    bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
+        
+    width = network['xlim'][1] - network['xlim'][0]
+    height = network['ylim'][1] - network['ylim'][0]
+
+    size = (width, height)
+
+
+    # overwrite network style with the epipack default style
+    network['linkColor'] = cfg['link_color']
+    network['nodeStrokeColor'] = cfg['node_stroke_color']
+    for node in network['nodes']:
+        node['color'] = cfg['legend_font_color']
+    N = len(network['nodes'])
+
+    # get the OpenGL shape objects that comprise the network
+    network_batch = get_network_batch(network,
+                                      yoffset=0,
+                                      draw_links=cfg['draw_links'],
+                                      draw_nodes=cfg['draw_nodes'],
+                                      draw_nodes_as_rectangles=cfg['draw_nodes_as_rectangles'],
+                                      n_circle_segments=cfg['n_circle_segments'],
+                                      )
+    lines = network_batch['lines']
+    disks = network_batch['disks']
+    circles = network_batch['circles']
+    node_to_lines = network_batch['node_to_lines']
+    batch = network_batch['batch']
+
+    # initialize a simulation state that has to passed to the app
+    # so the app can change simulation parameters
+    simstate = SimulationStatus(len(network['nodes']), sampling_dt)
+
+    # intialize app
+    window = App(*size,simulation_status=simstate,resizable=True)
+    glClearColor(*bgcolor)
+
+    # handle different strokewidths
+    if 'nodeStrokeWidth' in network:
+        node_stroke_width = network['nodeStrokeWidth'] 
+    else:
+        node_stroke_width = cfg['node_stroke_width']
+
+    def _set_linewidth_nodes():
+        glLineWidth(node_stroke_width)
+
+    # add the network batch with the right function to set the linewidth
+    # prior to drawing
+    window.add_batch(batch,prefunc=_set_linewidth_nodes)
+
+    # initialize time arrays
+    t = 0
+    discrete_time = [t]
+
+    for node, idx in node_compartment_indices:
+        concentration = model.y0[idx]
+        disks[node].opacity = int(255*concentration)
+
+    # define the pyglet-App update function that's called on every clock cycle
+    def update(dt):
+
+        # skip if nothing remains to be done
+        if simstate.simulation_ended or simstate.paused:
+            return
+
+        # get sampling_dt
+        sampling_dt = simstate.sampling_dt
+        
+        # Advance the simulation until time sampling_dt.
+        # sim_time is a numpy array including all time values at which
+        # the system state changed. The first entry is the initial state
+        # of the simulation at t = 0 which we will discard later on
+        # the last entry at `sampling_dt` will be missing so we
+        # have to add it later on.
+        # `sim_result` is a dictionary that maps a compartment
+        # to a numpy array containing the compartment counts at
+        # the corresponding time.
+        this_t = np.linspace(0, sampling_dt, n_integrator_midpoints+2)
+        sim_result = model.integrate_and_return_by_index(
+                            this_t,
+                            integrator=integrator
+                            )
+        model.y0 = sim_result[:,-1]
+        result = model.y0
+
+        # if nothing changed, evaluate the true total event rate
+        # and if it's zero, do not do anything anymore
+        #did_simulation_end = len(ndx) == 0 and model.get_true_total_event_rate() == 0.0
+        #simstate.set_simulation_status(did_simulation_end)
+        #if simstate.simulation_ended:
+        #    return
+
+        # iterate through the nodes that have to be updated
+        for node, idx in node_compartment_indices:
+            concentration = result[idx]
+            if cfg['draw_nodes']:
+                disks[node].opacity = int(255*concentration)
+
+
+    # schedule the app clock and run the app
+    pyglet.clock.schedule_interval(update, cfg['update_dt'])
+    pyglet.app.run()
+
+
+if __name__=="__main__":     # pragma: no cover
 
     import netwulf as nw
     from epipack import StochasticEpiModel
@@ -1117,7 +1392,7 @@ if __name__=="__main__":
                                edge_weight_tuples=edge_list,
                                )
     Reff = 3
-    R0 = 3
+    R0 = 10
     recovery_rate = 1/8
     quarantine_rate = 1/16
     tracing_rate = 1/2

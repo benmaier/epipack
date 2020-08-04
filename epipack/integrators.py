@@ -52,7 +52,53 @@ def integrate_dopri5(dydt, t, y0, *args):
 
     return result
 
-if __name__ == "__main__":
+def integrate_euler(dydt, t, y0, *args):
+    """
+    Integrate an ODE system with Euler's method.
+
+    Parameters
+    ----------
+    dydt : function
+        A function returning the momenta of the ODE system.
+    t : numpy.ndarray of float
+        Array of time points at which the functions should
+        be evaluated.
+    y0 : numpy.ndarray
+        Initial conditions
+    *args : :obj:`list`
+        List of parameters that will be passed to the
+        momenta function.
+    """
+
+    # get copy
+    y0 = np.array(y0,dtype=float)
+    t = np.array(t,dtype=float)
+
+    t0 = t[0]
+
+
+    # initiate integrator
+    result = np.zeros((len(y0),len(t)+1))
+    result[:,0] = y0
+    old_t = t0
+
+
+    # loop through all demanded time points
+    for it, t_ in enumerate(t):
+
+            # get result of ODE integration
+            dt = t_ - old_t
+            y = result[:,it] + dt*dydt(old_t, result[:,it], *args) 
+
+            # write result to result vector
+            result[:,it+1] = y
+
+            old_t = t_
+
+    return result
+
+
+if __name__ == "__main__":     # pragma: no cover
 
     from epipack import DeterministicSISModel
 

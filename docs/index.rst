@@ -27,6 +27,7 @@ epipack
    tutorial/stochastics.rst
    tutorial/symbolics.rst
    tutorial/visualizations.rst 
+   tutorial/reaction_diffusion.rst
 
 .. raw:: latex
 

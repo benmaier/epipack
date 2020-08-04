@@ -2,23 +2,27 @@ from epipack import DeterministicEpiModel, get_2D_lattice_links
 from epipack.vis import visualize_reaction_diffusion, get_grid_layout
 import numpy as np
 
+import netwulf as nw
+
 from time import time
 
 start = time()
 
-N_side = 30
-N = N_side**2
-links = get_2D_lattice_links(N_side,periodic=False,diagonal_links=False)
-network = get_grid_layout(N)
+network, config, _ = nw.load('MHRN.json')
+
+# get the network properties
+N = len(network['nodes'])
+links = [ ( link['source'], link['target'], 1.0 ) for link in network['links'] ]
+
 
 base_compartments = "SIR"
 
 compartments = [ (node, C) for node in range(N) for C in base_compartments ]
 model = DeterministicEpiModel(compartments)
 
-infection_rate = 2
+infection_rate = 3
 recovery_rate = 1
-mobility_rate = 0.1
+mobility_rate = 0.05
 
 quadratic_processes = []
 linear_processes = []
@@ -44,23 +48,17 @@ for u, v, w in links:
 
 print("set processes")
 
-model.set_processes(quadratic_processes+linear_processes,allow_nonzero_column_sums=False)
+model.set_processes(quadratic_processes+linear_processes,allow_nonzero_column_sums=True)
 
 initial_conditions = { ( node, "S" ): 1.0 for node in range(N) } 
-initial_conditions[(0, "S")] = 0.99
-initial_conditions[(0, "I")] = 0.01
+initial_conditions[(0, "S")] = 0.8
+initial_conditions[(0, "I")] = 0.2
 model.set_initial_conditions(initial_conditions,allow_nonzero_column_sums=True)
 
 t = np.linspace(0,20,100)
 
-plot_node_indices = [ (node, "I") for node in range(N) ]
+node_compartments = [ (node, "I" ) for node in range(N) ]
 
-dt = 0.3
-
-visualize_reaction_diffusion(model, network, dt, plot_node_indices, 
-                        value_extent=[0,0.2],
-                        config={
-                                'draw_nodes_as_rectangles':True,
-                                'draw_links':False
-                                })
+dt = 0.04
+visualize_reaction_diffusion(model, network, dt, node_compartments, value_extent=[0,0.3])
 

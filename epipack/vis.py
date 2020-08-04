@@ -136,11 +136,7 @@ class App(pyglet.window.Window):
         self.orig_zoomed_height = self.zoomed_height
 
         self.simulation_status = simulation_status
-        self.name = np.array(list("dfsodfisivunsougns"))[np.random.randint(15,size=5)]
 
-
-        print("I was initiated...")
-        print(self.name)
 
     def add_batch(self,batch,prefunc=None):
         """
@@ -180,7 +176,6 @@ class App(pyglet.window.Window):
 
         # Initialize OpenGL context
         self.init_gl(width, height)
-        print("I was asked to resize...")
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Pan."""
@@ -1183,7 +1178,8 @@ def visualize_reaction_diffusion(
               model,
               network, 
               sampling_dt,
-              node_compartment_indices,
+              node_compartments,
+              value_extent=[0.0,1.0],
               integrator='euler',
               n_integrator_midpoints=0,
               config=None,
@@ -1193,8 +1189,8 @@ def visualize_reaction_diffusion(
 
     Parameters
     ==========
-    model : epipack.stochastic_epi_models.StochasticEpiModel
-        An initialized StochasticEpiModel.
+    model : epipack.deterministic_epi_models.DeterministicEpiModel
+        An initialized DeterministicEpiModel.
     network: dict
         A stylized network in the netwulf-format
         (see https://netwulf.readthedocs.io/en/latest/python_api/post_back.html)
@@ -1228,13 +1224,15 @@ def visualize_reaction_diffusion(
     sampling_dt : float 
         The amount of simulation time that's supposed to pass
         with a single update.
-    ignore_plot_compartments : list, default = []
-        List of compartment objects that are supposed to be
-        ignored when plotted.
-    quarantine_compartments : list, default = []
+    quarantine_compartments: list
         List of compartment objects that are supposed to be
         resemble quarantine (i.e. temporarily 
         losing all connections)
+    node_compartments: list
+        The compartments for which to display the concentrations.
+        Each entry `m` in this list is expected to be a compartment
+        associated with node `m`. this list should therefore
+        be as long as the number of nodes.
     config : dict, default = None
         A dictionary containing all possible configuration
         options. Entries in this dictionary will overwrite
@@ -1325,9 +1323,21 @@ def visualize_reaction_diffusion(
     t = 0
     discrete_time = [t]
 
+    cmin, cmax = value_extent
+    def _get_opacity(val):
+        opacity = (val-cmin)/(cmax-cmin) + cmin
+        if opacity > 1.0:
+            opacity = 1.0        
+        if opacity < 0.0:
+            opacity = 0.0
+        return int(255*opacity)
+
+    node_compartment_indices = np.array([ [node, model.get_compartment_id(C)]\
+                                            for node, C in enumerate(node_compartments) ])
+
     for node, idx in node_compartment_indices:
         concentration = model.y0[idx]
-        disks[node].opacity = int(255*concentration)
+        disks[node].opacity = _get_opacity(concentration)
 
     # define the pyglet-App update function that's called on every clock cycle
     def update(dt):
@@ -1351,10 +1361,10 @@ def visualize_reaction_diffusion(
         this_t = np.linspace(0, sampling_dt, n_integrator_midpoints+2)
         sim_result = model.integrate_and_return_by_index(
                             this_t,
-                            integrator=integrator
+                            integrator=integrator,
+                            adopt_final_state=True,
                             )
-        model.y0 = sim_result[:,-1]
-        result = model.y0
+        result = sim_result[:,-1]
 
         # if nothing changed, evaluate the true total event rate
         # and if it's zero, do not do anything anymore
@@ -1367,7 +1377,7 @@ def visualize_reaction_diffusion(
         for node, idx in node_compartment_indices:
             concentration = result[idx]
             if cfg['draw_nodes']:
-                disks[node].opacity = int(255*concentration)
+                disks[node].opacity = _get_opacity(concentration)
 
 
     # schedule the app clock and run the app

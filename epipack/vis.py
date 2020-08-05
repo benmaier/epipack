@@ -1323,21 +1323,32 @@ def visualize_reaction_diffusion(
     t = 0
     discrete_time = [t]
 
-    cmin, cmax = value_extent
-    def _get_opacity(val):
-        opacity = (val-cmin)/(cmax-cmin) + cmin
+    _cmin, _cmax = value_extent
+    if not callable(_cmin):
+        cmin = lambda _: _cmin
+    else:
+        cmin = _cmin
+    if not callable(_cmax):
+        cmax = lambda _: _cmax
+    else:
+        cmax = _cmax
+    def _get_opacity(val,this_cmin,this_cmax):
+        opacity = (val-this_cmin)/(this_cmax-this_cmin) + this_cmin
         if opacity > 1.0:
             opacity = 1.0        
         if opacity < 0.0:
             opacity = 0.0
         return int(255*opacity)
 
-    node_compartment_indices = np.array([ [node, model.get_compartment_id(C)]\
-                                            for node, C in enumerate(node_compartments) ])
+    try:
+        node_compartment_indices = np.array([ model.get_compartment_id(C) for C in node_compartments ])
+    except AttributeError as e:
+        node_compartment_indices = np.array(node_compartments)
 
-    for node, idx in node_compartment_indices:
+    this_cmin, this_cmax = cmin(model.y0), cmax(model.y0)
+    for node, idx in enumerate(node_compartment_indices):
         concentration = model.y0[idx]
-        disks[node].opacity = _get_opacity(concentration)
+        disks[node].opacity = _get_opacity(concentration, this_cmin, this_cmax)
 
     # define the pyglet-App update function that's called on every clock cycle
     def update(dt):
@@ -1350,21 +1361,22 @@ def visualize_reaction_diffusion(
         sampling_dt = simstate.sampling_dt
         
         # Advance the simulation until time sampling_dt.
-        # sim_time is a numpy array including all time values at which
-        # the system state changed. The first entry is the initial state
-        # of the simulation at t = 0 which we will discard later on
-        # the last entry at `sampling_dt` will be missing so we
-        # have to add it later on.
-        # `sim_result` is a dictionary that maps a compartment
-        # to a numpy array containing the compartment counts at
-        # the corresponding time.
+        # `sim_result` is a two-dimensional array
+        # where index sim_result[iC, iT] gives the
+        # concentration of compartment iC at time iT
         this_t = np.linspace(0, sampling_dt, n_integrator_midpoints+2)
         sim_result = model.integrate_and_return_by_index(
                             this_t,
                             integrator=integrator,
                             adopt_final_state=True,
                             )
-        result = sim_result[:,-1]
+
+        # it might happen that an external model only returns
+        # the final state instead of for each time point
+        if len(sim_result.shape) > 1:
+            result = sim_result[node_compartment_indices,-1]
+        else:
+            result = sim_result[node_compartment_indices]
 
         # if nothing changed, evaluate the true total event rate
         # and if it's zero, do not do anything anymore
@@ -1372,12 +1384,22 @@ def visualize_reaction_diffusion(
         #simstate.set_simulation_status(did_simulation_end)
         #if simstate.simulation_ended:
         #    return
+        this_cmin, this_cmax = cmin(result), cmax(result)
+
+        # detect significant changes (relative change)
+        rel_change = np.abs(result-simstate.old_node_status)
+        ndx = np.where(rel_change>1e-3)[0]
+        #ndx = np.where(rel_change>0)[0]
+        result = result[ndx]
 
         # iterate through the nodes that have to be updated
-        for node, idx in node_compartment_indices:
-            concentration = result[idx]
-            if cfg['draw_nodes']:
-                disks[node].opacity = _get_opacity(concentration)
+        #for node, idx in enumerate(node_compartment_indices):
+        if cfg['draw_nodes']:
+            for node, concentration in zip(ndx, result):
+                    disks[node].opacity = _get_opacity(concentration,this_cmin,this_cmax)
+
+        simstate.old_node_status[ndx] = result
+        #simstate.update(result)
 
 
     # schedule the app clock and run the app

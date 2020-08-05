@@ -104,8 +104,7 @@ class VisTest(unittest.TestCase):
 
         sampling_dt = 0.08
 
-        test = visualize(model,network,sampling_dt,ignore_plot_compartments=['S'],quarantine_compartments=['X', 'T', 'Q'])
-        gc.collect()
+        visualize(model,network,sampling_dt,ignore_plot_compartments=['S'],quarantine_compartments=['X', 'T', 'Q'])
 
 
 if __name__ == "__main__":
@@ -114,5 +113,3 @@ if __name__ == "__main__":
     T.test_network()
     T.test_lattice()
     T.test_grid_well_mixed()
-
-    pyglet.app.run()

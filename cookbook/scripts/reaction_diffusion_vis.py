@@ -5,9 +5,9 @@ import numpy as np
 from time import time
 
 start = time()
-N_side = 20
+N_side = 30
 N = N_side**2
-links = get_2D_lattice_links(N_side,periodic=False,diagonal_links=True)
+links = get_2D_lattice_links(N_side,periodic=False,diagonal_links=False)
 network = get_grid_layout(N)
 graph = [[] for node in range(N)]
 degree = [ 0.0 for node in range(N)]
@@ -39,7 +39,7 @@ for node in range(N):
 
     linear_processes.extend([
               ( (node, "I"), recovery_rate, (node, "R") ), 
-              ( (node, "R"), recovery_rate, (node, "S") ) 
+              #( (node, "R"), recovery_rate, (node, "S") ) 
         ])
 
 #for u, v, w in links:
@@ -77,11 +77,12 @@ model.set_initial_conditions(initial_conditions,allow_nonzero_column_sums=True)
 
 
 
-plot_node_indices = [ (node, model.get_compartment_id(( node, "S" ))) for node in range(N) ]
+plot_node_indices = [ ( node, "I" ) for node in range(N) ]
 
 dt = 0.5
 
 visualize_reaction_diffusion(model, network, dt, plot_node_indices, 
+                        value_extent=[0,0.2],
                         config={
                                 'draw_nodes_as_rectangles':True,
                                 'draw_links':False

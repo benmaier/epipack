@@ -64,7 +64,7 @@ model.set_initial_conditions(initial_conditions,allow_nonzero_column_sums=True)
 
 t = np.linspace(0,20,100)
 
-plot_node_indices = [ (node, model.get_compartment_id(( node, "R" ))) for node in range(N) ]
+plot_node_indices = [ (node, "R" ) for node in range(N) ]
 
 dt = 0.02
 

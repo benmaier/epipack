@@ -286,6 +286,11 @@ class SymbolicEpiTest(unittest.TestCase):
         result = epi.integrate(tt)
         assert(np.isclose(result[R][-1],(1-_rho/_eta)/(1+_omega/_rho)))
 
+    def test_ODEs_jupyter(self):
+        
+        eta = sympy.symbols("eta")
+        epi = SymbolicSIModel(eta)
+        epi.ODEs_jupyter()
 
 if __name__ == "__main__":
 
@@ -301,3 +306,4 @@ if __name__ == "__main__":
     T.test_time_dependent_rates()
     T.test_exceptions()
     T.test_custom_models()
+    T.test_ODEs_jupyter()

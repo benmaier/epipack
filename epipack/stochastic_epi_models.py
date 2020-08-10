@@ -454,7 +454,7 @@ class StochasticEpiModel():
                     probabilities.append(probability)
 
                 sum_p = sum(probabilities)
-                if sum_p - 1.0 > 1e14:
+                if sum_p - 1.0 > 1e-14:
                     raise ValueError("probabilities sum to values larger than one for the event group above.")
                 elif sum_p < 1.0:
                     probabilities.append(1-sum_p)

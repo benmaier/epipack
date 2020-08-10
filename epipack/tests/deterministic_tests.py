@@ -8,6 +8,7 @@ from epipack.deterministic_epi_models import (
             DeterministicSISModel,
             DeterministicSIModel,
             DeterministicSIRModel,
+            DeterministicSEIRModel,
             DeterministicSIRSModel,
         )
 
@@ -126,10 +127,19 @@ class DeterministicEpiTest(unittest.TestCase):
         epi.set_initial_conditions({S:S0, I:1-S0})
         R0 = eta/rho
         Rinf = lambda x: 1-x-S0*np.exp(-x*R0)
-        res = epi.integrate([0,1000])
+        res = epi.integrate([0,100])
 
-        theory = root(Rinf,0.5)
-        assert(np.isclose(res[R][-1],theory.x[0]))
+        SIR_theory = root(Rinf,0.5).x[0]
+        assert(np.isclose(res[R][-1],SIR_theory))
+
+
+        omega = 1
+        epi = DeterministicSEIRModel(eta,rho,omega)
+        epi.set_initial_conditions({S:S0, I:1-S0})
+        res = epi.integrate([0,100])
+        assert(np.isclose(res[R][-1],SIR_theory))
+        #======================
+
 
         epi = DeterministicSISModel(eta, rho, population_size=100)
 
@@ -139,7 +149,6 @@ class DeterministicEpiTest(unittest.TestCase):
         result = epi.integrate(tt)
         assert(np.isclose(result[S][-1],50))
 
-        omega = 1
         epi = DeterministicSIRSModel(eta, rho, omega)
 
         epi.set_initial_conditions({S: 0.99, I:0.01 })
@@ -147,6 +156,76 @@ class DeterministicEpiTest(unittest.TestCase):
         tt = np.linspace(0,1000,2)
         result = epi.integrate(tt)
         assert(np.isclose(result[R][-1],(1-rho/eta)/(1+omega/rho)))
+
+    def test_birth_death(self):
+
+        epi = DeterministicEpiModel(list("SIR"))
+
+        R0 = 2
+        rho = 1
+        mu = 0.2
+        eta = R0 * rho
+
+        with self.assertWarns(UserWarning):
+            epi.set_processes([
+                    ("S", "I", eta, "I", "I"),
+                    ("I", rho, "R"),  
+                    (None, mu, "S"),
+                    ("S", mu, None),
+                    ("R", mu, None),
+                    ("I", mu, None),
+                ])
+        epi.set_initial_conditions({'S': 0.8, 'I':0.2 })
+
+        t = [0,1000]
+        res = epi.integrate(t)
+        assert(np.isclose(res['S'][-1],(mu+rho)/eta))
+        assert(np.isclose(res['I'][-1],mu/eta*(eta-mu-rho)/(mu+rho)))
+
+
+    def test_fusion_and_adding_rates(self):
+
+        A, B, C = list("ABC")
+
+        epi = DeterministicEpiModel(list("ABC"))
+
+        # this should not raise a warning that rates do not sum to zero
+        # as it will be actively suppressed
+        epi.add_fusion_processes([
+                (A, B, 1, C),
+            ])
+
+        with self.assertWarns(UserWarning):
+            # this should raise a warning that rates do not sum to zero
+            epi.add_quadratic_rates([
+                    (A, B, C, -1),
+                    (A, B, A, +1),
+                ])
+        # now rates should sum to zero
+        epi.add_quadratic_rates([
+                    (A, B, B, +1),
+                    ])
+
+        with self.assertWarns(UserWarning):
+            # this should raise a warning that rates do not sum to zero
+            epi.add_linear_rates([
+                   (A, B, -1) 
+                ])
+
+    def test_initial_condition_warnings(self):
+
+        A, B, C = list("ABC")
+
+        epi = DeterministicEpiModel(list("ABC"))
+
+        with self.assertWarns(UserWarning):
+            # this should raise a warning that rates do not sum to zero
+            epi.set_initial_conditions({A:0.1,B:0.2})
+
+        with self.assertWarns(UserWarning):
+            # this should raise a warning that initial conditions were set twice
+            epi.set_initial_conditions([(A,0.1),(A,0.2)])
+
 
 
 if __name__ == "__main__":
@@ -160,3 +239,6 @@ if __name__ == "__main__":
     T.test_SIS_with_simulation_restart_and_euler()
     T.test_repeated_simulation()
     T.test_custom_models()
+    T.test_birth_death()
+    T.test_fusion_and_adding_rates()
+    T.test_initial_condition_warnings()

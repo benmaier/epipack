@@ -12,6 +12,103 @@ class StochasticEpiTest(unittest.TestCase):
     def test_compartments(self):
         epi = StochasticEpiModel(list("SEIR"),10)
         assert(all([ i == epi.get_compartment_id(C) for i, C in enumerate("SEIR") ]))
+        assert(epi.get_compartment_id("E") == 1)
+        assert(epi.get_compartment(1) == "E")
+
+    def test_mean_contact_number(self):
+        self.assertRaises(TypeError,StochasticEpiModel,list("SEIR"),10,well_mixed_mean_contact_number=0.5)
+
+    def test_errors(self):
+        epi = StochasticEpiModel(list("SEIR"),10)
+        self.assertRaises(ValueError,epi.set_link_transmission_processes,[("S","I",1.0,"I","I")])
+
+        # error: first compartment has to be infecting compartment
+        self.assertRaises(ValueError,epi.set_conditional_link_transmission_processes,
+                    { ("S", "I", "->", "I", "I") :
+                        [
+                            ("I", "R", "->", "I", "I"),
+                        ]
+                    }
+                )
+
+        # error: 4-length tuples are invalid processes
+        self.assertRaises(ValueError,epi.set_conditional_link_transmission_processes,
+                    { ("S", "I", "I", "I") :
+                        [
+                            ("I", "R", "->", "I", "I"),
+                        ]
+                    }
+                )
+
+        # error triggered events can only be of type transmission
+        self.assertRaises(ValueError,epi.set_conditional_link_transmission_processes,
+                    { ("I", "S", "->", "I", "I") :
+                        [
+                            ("R", "->", "I"),
+                        ]
+                    }
+                )
+
+        # error: target compartment of triggering event has to be first source compartment
+        # of triggered event
+        self.assertRaises(ValueError,epi.set_conditional_link_transmission_processes,
+                    { ("I", "S", "->", "I", "I") :
+                        [
+                            ("R", "I", "->", "I", "I"),
+                        ]
+                    }
+                )
+            
+        # error: "The source (infecting) compartment", coupling0, "must be equal to the affected (target) compartment of",
+
+        #"the triggering event", triggering_event, " but is not."
+        self.assertRaises(ValueError,epi.set_conditional_link_transmission_processes,
+                    { ("I", "S", "->", "I", "I") :
+                        [
+                            ("R", "S", "->", "R", "I"),
+                        ]
+                    }
+                )
+
+        #probabilities sum to value large than one
+        self.assertRaises(ValueError,epi.set_conditional_link_transmission_processes,
+                    { ("I", "S", "->", "I", "I") :
+                        [
+                            ("I", "R", 0.6, "I", "E"),
+                            ("I", "R", 0.6, "I", "S"),
+                        ]
+                    }
+                )
+
+        # error: double entry
+        self.assertRaises(ValueError,epi.set_random_initial_conditions,
+                    [ ("S",2),("S",1) ]
+                    )
+
+        # error: sum of initial conditions
+        self.assertRaises(ValueError,epi.set_random_initial_conditions,
+                    [ ("S",5),("I",1) ]
+                    )
+
+        # error: not the right amount of node statuses
+        self.assertRaises(ValueError,epi.set_node_statuses,[0,1])
+
+        self.assertRaises(ValueError,epi.simulate,10,sampling_callback=lambda x: x)
+
+    def test_random_initial_conditions(self):
+        epi = StochasticEpiModel(list("SEIR"),10)
+        epi.set_node_transition_processes([("I",1,"R")])
+        epi.set_random_initial_conditions({
+                "S": 4,
+                "I": 6,
+                "R": 0,
+            })
+
+        assert(np.count_nonzero(epi.node_status==0) == 4)
+        assert(np.count_nonzero(epi.node_status==2) == 6)
+        assert(np.count_nonzero(epi.node_status==3) == 0)
+
+
 
     def test_rate_evaluation(self):
         S, S0,S1, I, A, B, C0, C1, D, E, F = "S S0 S1 I A B C0 C1 D E F".split(" ")
@@ -225,6 +322,9 @@ if __name__ == "__main__":
 
     T = StochasticEpiTest()
     T.test_compartments()
+    T.test_mean_contact_number()
+    T.test_errors()
+    T.test_random_initial_conditions()
     T.test_rate_evaluation()
     T.test_conditional_transitions()
     T.test_conditional_transmissions()

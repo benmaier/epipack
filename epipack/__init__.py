@@ -12,9 +12,6 @@ from .deterministic_epi_models import (
         DeterministicSIRModel,
         DeterministicSIRSModel,
         DeterministicSEIRModel,
-        DeterministicSEIRSModel,
-        DeterministicSEIRXModel,
-        DeterministicSIRXModel,
         )
 
 from .stochastic_epi_models import (

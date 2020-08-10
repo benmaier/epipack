@@ -14,7 +14,7 @@ import numpy as np
 # that's implemented in this package
 try:
     from SamplableSet import SamplableSet
-except ModuleNotFoundError as e:
+except ModuleNotFoundError as e: # pragma: no cover
     warnings.warn("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
     from epipack.mock_samplable_set import MockSamplableSet as SamplableSet
 
@@ -736,6 +736,20 @@ class StochasticEpiModel():
     def set_simulation_has_not_ended(self):
         self._simulation_ended = False
 
+    def get_time_leap(self):
+        """
+        Sample a time leap from an exponential distribution
+        according to the current total event rate
+        """
+        return np.random.exponential(1/self.get_total_event_rate())
+
+    def get_compartment_changes(self, new_time):
+        """
+        Let an event take place according to the new time and return the change in compartment counts.
+        """
+        reacting_node = self.get_reacting_node()
+        return self.make_random_node_event(reacting_node)
+
     def get_reacting_node(self):
         """
         Get a reacting node with probability proportional to its reaction rate.
@@ -954,7 +968,7 @@ class StochasticEpiModel():
               current_state[self.transitioning_compartments].sum() > 0:
 
             # sample and advance time according to current total rate
-            tau = np.random.exponential(1/self.get_total_event_rate())
+            tau = self.get_time_leap()
             new_t = t+tau
 
             # break if simulation time is reached
@@ -962,11 +976,9 @@ class StochasticEpiModel():
                 break
 
             # sample a reacting node from the reaction set
-            reacting_node = self.get_reacting_node()
-
             # let the event take place and get all the compartments
             # that are associated with changes
-            changing_compartments = self.make_random_node_event(reacting_node)
+            changing_compartments = self.get_compartment_changes(new_t)
 
             # only save compartment counts if anything changed
             if len(changing_compartments) > 0:

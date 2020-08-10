@@ -1,10 +1,14 @@
 import unittest
 
 import numpy as np
+from scipy.optimize import root
 
 from epipack.deterministic_epi_models import (
             DeterministicEpiModel,
             DeterministicSISModel,
+            DeterministicSIModel,
+            DeterministicSIRModel,
+            DeterministicSIRSModel,
         )
 
 class DeterministicEpiTest(unittest.TestCase):
@@ -103,6 +107,47 @@ class DeterministicEpiTest(unittest.TestCase):
 
         assert(np.isclose(result[0,-1],N/2))
 
+    def test_custom_models(self):
+
+        S, I, R = list("SIR")
+
+        eta = 1
+        epi = DeterministicSIModel(eta)
+        epi.set_initial_conditions({"S":0.99, "I":0.01})
+        epi.integrate([0,1000],adopt_final_state=True)
+        assert(np.isclose(epi.y0[0],0))
+
+
+        
+        eta = 2
+        rho = 1
+        epi = DeterministicSIRModel(eta,rho)
+        S0 = 0.99
+        epi.set_initial_conditions({S:S0, I:1-S0})
+        R0 = eta/rho
+        Rinf = lambda x: 1-x-S0*np.exp(-x*R0)
+        res = epi.integrate([0,1000])
+
+        theory = root(Rinf,0.5)
+        assert(np.isclose(res[R][-1],theory.x[0]))
+
+        epi = DeterministicSISModel(eta, rho, population_size=100)
+
+        epi.set_initial_conditions({S: 99, I:1 })
+
+        tt = np.linspace(0,1000,2)
+        result = epi.integrate(tt)
+        assert(np.isclose(result[S][-1],50))
+
+        omega = 1
+        epi = DeterministicSIRSModel(eta, rho, omega)
+
+        epi.set_initial_conditions({S: 0.99, I:0.01 })
+
+        tt = np.linspace(0,1000,2)
+        result = epi.integrate(tt)
+        assert(np.isclose(result[R][-1],(1-rho/eta)/(1+omega/rho)))
+
 
 if __name__ == "__main__":
 
@@ -114,3 +159,4 @@ if __name__ == "__main__":
     T.test_adding_quadratic_processes()
     T.test_SIS_with_simulation_restart_and_euler()
     T.test_repeated_simulation()
+    T.test_custom_models()

@@ -57,7 +57,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
             if ignore_rate_position_checks or process[1] not in compartments:
                 linear_rates.extend(transition_processes_to_rates([process]))
             else:
-                raise TypeError("Process " + str(process) + " is not understood.")
+                raise TypeError("Process " + str(tuple(process)) + " is not understood.")
 
         elif len(process) == 4:
             # it's either a fission process or a fusion process
@@ -69,7 +69,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
                 # it's a fusion process
                 quadratic_rates.extend(fusion_processes_to_rates([process]))
             else:
-                raise TypeError("Process " + str(process) + " is not understood.")
+                raise TypeError("Process " + str(tuple(process)) + " is not understood.")
 
         elif len(process) == 5:
 
@@ -77,10 +77,10 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
             if ignore_rate_position_checks or process[2] not in compartments:
                 quadratic_rates.extend(transmission_processes_to_rates([process]))
             else:
-                raise TypeError("Process " + str(process) + " is not understood.")
+                raise TypeError("Process " + str(tuple(process)) + " is not understood.")
 
         else:
-            raise TypeError("Process " + str(process) + " is not understood.")
+            raise TypeError("Process " + str(tuple(process)) + " is not understood.")
 
     return quadratic_rates, linear_rates
 
@@ -118,9 +118,13 @@ def transition_processes_to_rates(process_list):
     linear_rates = []
 
     for source, rate, target in process_list:
-
         if source is None and target is None:
             raise ValueError("The reaction" + str((source, rate, target)) + " is meaningless because there are no reactants.")
+        elif source == target:
+            raise ValueError("Process "+\
+                             str((source, rate, target)) +\
+                             " leaves system unchanged")
+
         elif source is None and target is not None:
             #birth process
             linear_rates.append( (None, target, rate) )
@@ -149,7 +153,7 @@ def fission_processes_to_rates(process_list):
         .. code:: python
 
             [
-                ("source_compartment", rate, "target_compartment_0", "target_compartment_1" ),
+                (source_compartment, rate, target_compartment_0, target_compartment_1 ),
                 ...
             ]
 
@@ -195,7 +199,7 @@ def fusion_processes_to_rates(process_list):
         .. code:: python
 
             [
-                ("coupling_compartment_0", "coupling_compartment_1", rate, "target_compartment_0" ),
+                (coupling_compartment_0, coupling_compartment_1, rate, target_compartment_0 ),
                 ...
             ]
 
@@ -254,11 +258,11 @@ def transmission_processes_to_rates(process_list):
         .. code:: python
 
             [
-                ("source_compartment", 
-                 "target_compartment_initial",
+                (source_compartment, 
+                 target_compartment_initial,
                  rate 
-                 "source_compartment", 
-                 "target_compartment_final", 
+                 source_compartment, 
+                 target_compartment_final, 
                  ),
                 ...
             ]

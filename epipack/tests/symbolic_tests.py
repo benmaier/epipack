@@ -4,9 +4,15 @@ import numpy as np
 import sympy
 from sympy import symbols, Matrix, Eq, sqrt, FiniteSet, Derivative
 
-from epipack.symbolic_epi_models import (
+from scipy.optimize import root
+
+from epipack import (
             SymbolicEpiModel,
             SymbolicSISModel,
+            SymbolicSIRModel,
+            SymbolicSIRSModel,
+            SymbolicSIModel,
+            DeterministicSISModel,
         )
 
 class SymbolicEpiTest(unittest.TestCase):
@@ -172,6 +178,114 @@ class SymbolicEpiTest(unittest.TestCase):
         expected = {-f: 1, -f - k: 1}
         assert(all([v == expected[k] for k, v in eig.items()]))
 
+    def test_numerical(self):
+
+        S, I, eta, rho = sympy.symbols("S I eta rho")
+
+        epi = SymbolicSISModel(eta, rho)
+
+        epi.set_initial_conditions({S: 1-0.01, I:0.01 })
+        epi.set_parameter_values({eta:2})
+
+        self.assertRaises(ValueError, epi.integrate,
+                    [0,1]
+                    )
+
+        epi = SymbolicSISModel(eta, rho)
+
+        epi.set_initial_conditions({S: 1-0.01, I:0.01 })
+        epi.set_parameter_values({eta:2,rho:1})
+
+        tt = np.linspace(0,10,1000)
+        result = epi.integrate(tt)
+
+        epi2 = DeterministicSISModel(2, 1)
+
+        epi2.set_initial_conditions({"S": 1-0.01, "I":0.01 })
+
+        tt = np.linspace(0,10,1000)
+        result2 = epi2.integrate(tt)
+
+        for c0, res0 in result.items():
+            assert(np.allclose(res0, result2[str(c0)]))
+
+
+
+
+    def test_time_dependent_rates(self):
+
+        B, t = sympy.symbols("B t")
+        epi = SymbolicEpiModel([B])
+        epi.add_fission_processes([
+                (B, t, B, B),
+            ])
+        epi.set_initial_conditions({B:1})
+        result = epi.integrate([0,3],adopt_final_state=True)
+        assert(np.isclose(epi.y0[0], np.exp(3**2/2)))
+        epi.set_initial_conditions({B:1})
+        result = epi.integrate(np.linspace(0,3,10000),integrator='euler',adopt_final_state=True)
+        eul = epi.y0[0]
+        real = np.exp(3**2/2)
+        assert(np.abs(1-eul/real)<1e-2)
+
+    def test_exceptions(self):
+
+        B, mu, t = sympy.symbols("B mu t")
+        epi = SymbolicEpiModel([B])
+        epi.add_fission_processes([
+                (B, mu, B, B),
+            ])
+        epi.set_initial_conditions({B:1})
+
+        self.assertRaises(ValueError,epi.integrate,[0,1])
+
+        self.assertRaises(ValueError,SymbolicEpiModel,[t])
+
+        self.assertRaises(ValueError,epi.get_eigenvalues_at_disease_free_state)
+
+    def test_custom_models(self):
+        eta = sympy.symbols("eta")
+        epi = SymbolicSIModel(eta)
+        epi.set_parameter_values({eta:1})
+        epi.set_initial_conditions({epi.compartments[0]:0.99, epi.compartments[1]:0.01})
+        epi.integrate([0,1000],adopt_final_state=True)
+        assert(np.isclose(epi.y0[0],0))
+
+
+        S, I, R, eta, rho = sympy.symbols("S I R eta rho")
+        epi = SymbolicSIRModel(eta,rho)
+        epi.set_parameter_values({eta:2,rho:1})
+        S0 = 0.99
+        epi.set_initial_conditions({S:S0, I:1-S0})
+        R0 = 2
+        Rinf = lambda x: 1-x-S0*np.exp(-x*R0)
+        res = epi.integrate([0,1000])
+
+        theory = root(Rinf,0.5)
+        assert(np.isclose(res[R][-1],theory.x[0]))
+
+        epi = SymbolicSISModel(eta, rho, population_size=100)
+
+        epi.set_initial_conditions({S: 99, I:1 })
+        epi.set_parameter_values({eta:2,rho:1})
+
+        tt = np.linspace(0,1000,2)
+        result = epi.integrate(tt)
+        assert(np.isclose(result[S][-1],50))
+
+        S, I, R, eta, rho, omega = sympy.symbols("S I R eta rho omega")
+        epi = SymbolicSIRSModel(eta, rho, omega)
+        _eta = 2
+        _rho = 1
+        _omega = 1
+
+        epi.set_initial_conditions({S: 0.99, I:0.01 })
+        epi.set_parameter_values({eta:_eta, rho:_rho, omega:_omega})
+
+        tt = np.linspace(0,1000,2)
+        result = epi.integrate(tt)
+        assert(np.isclose(result[R][-1],(1-_rho/_eta)/(1+_omega/_rho)))
+
 
 if __name__ == "__main__":
 
@@ -183,3 +297,7 @@ if __name__ == "__main__":
     T.test_adding_quadratic_processes()
     T.test_basic_analytics()
     T.test_functional_rates()
+    T.test_numerical()
+    T.test_time_dependent_rates()
+    T.test_exceptions()
+    T.test_custom_models()

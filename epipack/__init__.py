@@ -25,6 +25,10 @@ from .stochastic_epi_models import (
 
 from .symbolic_epi_models import (
         SymbolicEpiModel,
+        SymbolicSIModel,
+        SymbolicSISModel,
+        SymbolicSIRModel,
+        SymbolicSIRSModel,
         )
 
 from .network_models import (

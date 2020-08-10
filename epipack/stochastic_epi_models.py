@@ -18,7 +18,7 @@ except ModuleNotFoundError as e:
     warnings.warn("Couldn't find the efficient implementation of `SamplableSet` (see github.com/gstonge/SamplableSet). Proceeding with less efficient implementation.")
     from epipack.mock_samplable_set import MockSamplableSet as SamplableSet
 
-#from MockSamplableSet import MockSamplableSet as SamplableSet
+from epipack.mock_samplable_set import choice as _choice
 
 # define some integer pointers to positions in lists/tuples
 
@@ -666,7 +666,15 @@ class StochasticEpiModel():
         """
         Get the total event rate.
         """
-        return self.all_node_events.total_weight()
+        # sometimes, it happens after many deletions and inserts,
+        # numerical errors add up and the set has non-zero total weight
+        # but is not empty. We have to catch these events.
+        if len(self.all_node_events) > 0:
+            return self.all_node_events.total_weight()
+        else:
+            self.all_node_events.clear()
+            return 0.0
+
 
     def get_true_total_event_rate(self):
         """
@@ -759,7 +767,7 @@ class StochasticEpiModel():
 
         # sample the index of the event that happens according to the node probabilities
         # and get the corresponding event
-        event_index = np.random.choice(len(node_event_probabilities),p=node_event_probabilities)
+        event_index = _choice(len(node_event_probabilities),p=node_event_probabilities)
         event = self.node_and_link_events[status][_EVENTS][event_index]
 
         return self.make_node_event(reacting_node, tuple(event))
@@ -801,7 +809,7 @@ class StochasticEpiModel():
                     neighbor, _ = self.graph[reacting_node].sample()
                 else:
                     # in well-mixed, sample any other node
-                    neighbor = np.random.choice(self.N_nodes-1)
+                    neighbor = np.random.randint(self.N_nodes-1)
                     if neighbor >= reacting_node:
                         neighbor += 1
             # if the sampled neighbor is of the affected compartment,
@@ -863,7 +871,7 @@ class StochasticEpiModel():
                     else:
                         # if there's a list of proposed events, each associated with a probability,
                         # choose from the list uniform at random
-                        event_index = np.random.choice(len(probabilities),p=probabilities)
+                        event_index = _choice(len(probabilities),p=probabilities)
                         conditional_transmission_event = conditional_transmission_events[event_index]
 
                         # check wether this is an event where nothing happens

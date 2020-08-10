@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from epipack.mock_samplable_set import MockSamplableSet
+from epipack.mock_samplable_set import MockSamplableSet, choice
 
 class   MSSTest(unittest.TestCase):
 
@@ -62,8 +62,23 @@ class   MSSTest(unittest.TestCase):
         assert(0 in s)
         assert(45 not in s)
 
+    def test_choice(self):
+        N = 5
+        a = np.arange(N)
+        p = np.arange(N,dtype=float)
+        p /= p.sum()
+        N_samples = 200000
+        samples = np.array([ choice(a,p) for _ in range(N_samples) ])
+        count = np.around([ np.count_nonzero(samples==elem)/N_samples for elem in a ],2)
+        assert(np.allclose(count,p))
+        samples = np.array([ choice(N,p) for _ in range(N_samples) ])
+        count = np.around([ np.count_nonzero(samples==elem)/N_samples for elem in a ],2)
+        assert(np.allclose(count,p))
+
+
 
 if __name__ == "__main__":
 
     T = MSSTest()
     T.test_all()
+    T.test_choice()

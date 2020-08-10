@@ -271,7 +271,6 @@ Now, set up everything as above and simulate on a lattice:
 .. video:: ../_static/reac_diff_lattice.mp4
     :width: 500
 
-Lattices
 .. _cMHRN: https://github.com/benmaier/cMHRN
 
 

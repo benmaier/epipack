@@ -70,7 +70,7 @@ class DeterministicEpiModel():
         """
 
         self.y0 = None
-        self.affected_by_quadratic_process = None
+        self.affected_by_quadratic_process = []
 
         self.compartments = list(compartments)
         self.compartment_ids = { C: iC for iC, C in enumerate(compartments) }
@@ -438,7 +438,7 @@ class DeterministicEpiModel():
                     matrices[iC][2] = M.data.tolist()
                 else:
                     matrices[iC] = [ [], [], [] ]
-            all_affected = self.affected_by_quadratic_process if self.affected_by_quadratic_process is not None else []
+            all_affected = self.affected_by_quadratic_process if len(self.affected_by_quadratic_process)>0 else []
         
         for coupling0, coupling1, affected, rate in rate_list:
 
@@ -778,8 +778,8 @@ class DeterministicSEIRSModel(DeterministicEpiModel):
                 ("S", "I", "E", +infection_rate),
             ])
         self.add_transition_processes([
-                ("E", symptomatic_rate      , "I"),
-                ("I", recovery_rate         , "R"),
+                ("E", symptomatic_rate     , "I"),
+                ("I", recovery_rate        , "R"),
                 ("R", waning_immunity_rate , "S"),
             ])
 

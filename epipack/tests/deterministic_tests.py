@@ -12,6 +12,8 @@ class DeterministicEpiTest(unittest.TestCase):
     def test_compartments(self):
         epi = DeterministicEpiModel(list("SEIR"))
         assert(all([ i == epi.get_compartment_id(C) for i, C in enumerate("SEIR") ]))
+        assert(epi.get_compartment_id("E") == 1)
+        assert(epi.get_compartment(1) == "E")
 
     def test_linear_rates(self):
 

@@ -232,3 +232,7 @@ adev:
 dev:
 	make html
 	python -m "http.server" 1313
+
+publish:
+	scp -r _build/html/* epipack@ava.biologie.hu-berlin.de:public_html/
+

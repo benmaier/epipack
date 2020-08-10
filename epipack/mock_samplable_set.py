@@ -5,6 +5,14 @@ github.com/gstonge/SamplableSet but is less efficient.
 
 import numpy as np
 
+def choice(arr,p):
+    ndx = np.argwhere(np.random.rand()<np.cumsum(p))[0][0]
+    try:
+        return arr[ndx]
+    except TypeError as e:
+        return ndx
+
+
 class MockSamplableSet:
 
     def __init__(self,min_weight,max_weight,weighted_elements=[],cpp_type='int'):
@@ -29,7 +37,9 @@ class MockSamplableSet:
             raise ValueError("There are weights above the limit.")
 
     def sample(self):
-        ndx = np.random.choice(len(self.items),p=self.weights/self._total_weight)
+        #ndx = np.random.choice(len(self.items),p=self.weights/self._total_weight)
+        #ndx = np.argwhere(np.random.rand()<np.cumsum(self.weights/self._total_weight))[0][0]
+        ndx = choice(len(self.items),p=self.weights/self._total_weight)
         return self.items[ndx], self.weights[ndx]
 
     def __getitem__(self,key):
@@ -83,6 +93,9 @@ class MockSamplableSet:
 
     def total_weight(self):
         return self._total_weight
+
+    def clear(self):
+        pass
 
 
 

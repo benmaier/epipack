@@ -7,7 +7,7 @@ import scipy.sparse as sprs
 
 import sympy
 
-from epipack.integrators import integrate_dopri5
+from epipack.integrators import integrate_dopri5, integrate_euler
 from epipack.process_conversions import (
             processes_to_rates,
             transition_processes_to_rates,
@@ -191,7 +191,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
             self.has_functional_rates = False
         else:
             matrices =  [ sympy.Matrix(M) for M in self.quadratic_rates ]
-            all_affected = self.affected_by_quadratic_process if self.affected_by_quadratic_process is not None else []
+            all_affected = self.affected_by_quadratic_process if len(self.affected_by_quadratic_process)>0 else []
         
         for coupling0, coupling1, affected, rate in rate_list:
 
@@ -429,8 +429,6 @@ class SymbolicEpiModel(DeterministicEpiModel):
         param_symbols = set([_p[0] for _p in params])
 
         odes = [ ode.subs(params) for ode in self.dydt() ]
-
-        print(odes)
 
         not_set = []
         for ode in odes:

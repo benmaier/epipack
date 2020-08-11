@@ -20,7 +20,94 @@ from epipack.process_conversions import (
             transmission_processes_to_rates,
         )
 
-class DeterministicEpiModel():
+class IntegrationMixin():
+
+    def integrate_and_return_by_index(self,
+                                      time_points,
+                                      return_compartments=None,
+                                      integrator='dopri5',
+                                      adopt_final_state=False,
+                                      ):
+        r"""
+        Returns values of the given compartments at the demanded
+        time points (as a numpy.ndarray of shape 
+        ``(return_compartments), len(time_points)``.
+
+        Parameters
+        ==========
+        time_points : np.ndarray
+            An array of time points at which the compartment values
+            should be evaluated and returned.
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        integrator : str, default = 'dopri5'
+            Which method to use for integration. Currently supported are
+            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
+            :math:`\delta t` will be determined by the difference
+            of consecutive entries in ``time_points``.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
+        """
+
+        dydt = self.get_numerical_dydt()
+
+        if integrator == 'dopri5':
+            result = integrate_dopri5(dydt, time_points, self.y0)
+        else:
+            result = integrate_euler(dydt, time_points, self.y0)
+
+        if adopt_final_state:
+            self.y0 = result[:,-1]
+
+        if return_compartments is not None:
+            ndx = [self.get_compartment_id(C) for C in return_compartments]
+            result = result[ndx,:]
+
+        return result
+
+    def integrate(self,
+                  time_points,
+                  return_compartments=None,
+                  *args,
+                  **kwargs,
+                  ):
+        r"""
+        Returns values of the given compartments at the demanded
+        time points (as a dictionary).
+
+        Parameters
+        ==========
+        time_points : np.ndarray
+            An array of time points at which the compartment values
+            should be evaluated and returned.
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        integrator : str, default = 'dopri5'
+            Which method to use for integration. Currently supported are
+            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
+            :math:`\delta t` will be determined by the difference
+            of consecutive entries in ``time_points``.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
+            as new initial conditions.
+        """
+        if return_compartments is None:
+            return_compartments = self.compartments
+
+        result = self.integrate_and_return_by_index(time_points, return_compartments,*args,**kwargs)
+
+        result_dict = {}
+        for icomp, compartment in enumerate(return_compartments):
+            result_dict[compartment] = result[icomp,:]
+
+        return result_dict
+
+
+class DeterministicEpiModel(IntegrationMixin):
     """
     A general class to define standard 
     mean-field compartmental
@@ -473,7 +560,7 @@ class DeterministicEpiModel():
 
         return self
 
-    def dydt(self,t,y,quadratic_global_factor=None):
+    def dydt(self,t,y):
         """
         Compute the current momenta of the epidemiological model.
 
@@ -485,20 +572,19 @@ class DeterministicEpiModel():
             The first entry is equal to the population size.
             The remaining entries are equal to the current fractions
             of the population of the respective compartments
-        quadratic_global_factor : :obj:`func`, default : None
-            A function that takes the current state as an
-            input and returns a global factor with which
-            the quadratic rates will be modulated.
         """
         
         ynew = self.linear_rates.dot(y) + self.birth_rates
-        f = quadratic_global_factor(y) if quadratic_global_factor is not None else 1.0
         for c in self.affected_by_quadratic_process:
-            ynew[c] += f*y.T.dot(self.quadratic_rates[c].dot(y)) / self.population_size
+            ynew[c] += y.T.dot(self.quadratic_rates[c].dot(y)) / self.population_size
             
         return ynew
 
-
+    def get_numerical_dydt(self):
+        """
+        Return a function that obtains t and y as an input and returns dydt of this system
+        """
+        return self.dydt
 
     def set_initial_conditions(self, initial_conditions,allow_nonzero_column_sums=False):
         """
@@ -532,88 +618,6 @@ class DeterministicEpiModel():
             warnings.warn('Sum of initial conditions does not equal unity.')
 
         return self
-
-    def integrate_and_return_by_index(self,
-                                      time_points,
-                                      return_compartments=None,
-                                      integrator='dopri5',
-                                      adopt_final_state=False,
-                                      ):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
-        ``(return_compartments), len(time_points)``.
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-        """
-
-        if integrator == 'dopri5':
-            result = integrate_dopri5(self.dydt, time_points, self.y0)
-        else:
-            result = integrate_euler(self.dydt, time_points, self.y0)
-
-        if adopt_final_state:
-            self.y0 = result[:,-1]
-
-        if return_compartments is not None:
-            ndx = [self.get_compartment_id(C) for C in return_compartments]
-            result = result[ndx,:]
-
-        return result
-
-    def integrate(self,
-                  time_points,
-                  return_compartments=None,
-                  *args,
-                  **kwargs,
-                  ):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a dictionary).
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-            as new initial conditions.
-        """
-        if return_compartments is None:
-            return_compartments = self.compartments
-
-        result = self.integrate_and_return_by_index(time_points, return_compartments,*args,**kwargs)
-
-        result_dict = {}
-        for icomp, compartment in enumerate(return_compartments):
-            result_dict[compartment] = result[icomp,:]
-
-        return result_dict
 
 
 class DeterministicSIModel(DeterministicEpiModel):

@@ -79,6 +79,10 @@ class SymbolicEpiModel(DeterministicEpiModel):
         self.linear_rates = sympy.zeros(self.N_comp, self.N_comp)
         self.quadratic_rates = [ sympy.zeros(self.N_comp, self.N_comp)\
                                  for c in range(self.N_comp) ]
+        self.birth_events = sympy.zeros(self.N_comp,1)
+        self.linear_events = sympy.zeros(self.N_comp, self.N_comp)
+        self.quadratic_events = [ sympy.zeros(self.N_comp, self.N_comp)\
+                                 for c in range(self.N_comp) ]
         self.parameter_values = {}
 
     def set_linear_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=True):
@@ -394,12 +398,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
         """
         self.parameter_values = parameter_values
         
-    def integrate_and_return_by_index(self,
-                                      time_points,
-                                      return_compartments=None,
-                                      integrator='dopri5',
-                                      adopt_final_state=False,
-                                      ):
+    def get_numerical_dydt(self):
         r"""
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -446,40 +445,7 @@ class SymbolicEpiModel(DeterministicEpiModel):
             these_args = [t] + y.tolist()
             return np.array(F_sympy(*these_args))
 
-        if integrator == 'dopri5':
-            result = integrate_dopri5(dydt, time_points, self.y0)
-        else:
-            result = integrate_euler(dydt, time_points, self.y0)
-
-        if adopt_final_state:
-            self.y0 = result[:,-1]
-
-        if return_compartments is not None:
-            ndx = [self.get_compartment_id(C) for C in return_compartments]
-            result = result[ndx,:]
-
-        return result
-
-        #def set_initial_conditions(self, initial_conditions):
-    #    """
-    #    """
-
-    #    if type(initial_conditions) == dict:
-    #        initial_conditions = list(initial_conditions.items())
-
-    #    self.y0 = np.zeros(self.N_comp)
-    #    total = 0
-    #    for compartment, amount in initial_conditions:
-    #        total += amount
-    #        if self.y0[self.get_compartment_id(compartment)] != 0:
-    #            raise ValueError('Double entry in initial conditions for compartment '+str(compartment))
-    #        else:
-    #            self.y0[self.get_compartment_id(compartment)] = amount
-
-    #    if np.abs(total-self.population_size)/self.population_size > 1e-14:
-    #        raise ValueError('Sum of initial conditions does not equal unity.')        
-
-    #    return self
+        return dydt
 
 class SymbolicSIModel(SymbolicEpiModel):
     """

@@ -69,7 +69,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
                 # it's a fusion process
                 quadratic_rates.extend(fusion_processes_to_rates([process]))
             else:
-                raise TypeError("Process " + str(tuple(process)) + " is not understood.")
+                raise TypeError("Process " + str(tuple(process)) + " is not understood because it's ambiguous in whether it's supposed to be a fission or a fusion process. Please use model.add_fission_processes() or model.add_fusion_processes() to set this process.")
 
         elif len(process) == 5:
 

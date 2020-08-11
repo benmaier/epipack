@@ -63,10 +63,10 @@ class SymbolicEpiModel(DeterministicEpiModel):
 
     """
 
-    def __init__(self,compartments,population_size=1):
+    def __init__(self,compartments,initial_population_size=1,correct_for_dynamical_population_size=False):
         """
         """
-        DeterministicEpiModel.__init__(self, compartments, population_size)
+        DeterministicEpiModel.__init__(self, compartments, initial_population_size, correct_for_dynamical_population_size)
 
 
         self.t = sympy.symbols("t")
@@ -215,14 +215,18 @@ class SymbolicEpiModel(DeterministicEpiModel):
 
     def dydt(self):
         """
-        Obtain the equations of motion for this model in form of a matrix.
+        Obtain the equations of motion for this model in form of a sympy.Matrix.
         """
 
         y = sympy.Matrix(self.compartments)
         
         ynew = self.linear_rates * y + self.birth_rates
+        if self.correct_for_dynamical_population_size:
+            population_size = sum(self.compartments)
+        else:
+            population_size = self.initial_population_size
         for c in self.affected_by_quadratic_process:
-            ynew[c] += (y.T * self.quadratic_rates[c] * y)[0,0] / self.population_size
+            ynew[c] += (y.T * self.quadratic_rates[c] * y)[0,0] / population_size
 
         return ynew
             
@@ -452,11 +456,11 @@ class SymbolicSIModel(SymbolicEpiModel):
     An SI model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
     """
 
-    def __init__(self, infection_rate, population_size=1):
+    def __init__(self, infection_rate, initial_population_size=1):
 
         S, I = sympy.symbols("S I")
 
-        SymbolicEpiModel.__init__(self,[S, I], population_size)
+        SymbolicEpiModel.__init__(self,[S, I], initial_population_size)
 
         self.set_quadratic_rates([
                 (S, I, S, -infection_rate),
@@ -468,11 +472,11 @@ class SymbolicSIRModel(SymbolicEpiModel):
     An SIR model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
     """
 
-    def __init__(self, infection_rate, recovery_rate, population_size=1):
+    def __init__(self, infection_rate, recovery_rate, initial_population_size=1):
 
         S, I, R = sympy.symbols("S I R")
 
-        SymbolicEpiModel.__init__(self,[S, I, R], population_size)
+        SymbolicEpiModel.__init__(self,[S, I, R], initial_population_size)
 
         self.add_transmission_processes([
                 (S, I, infection_rate, I, I),
@@ -487,11 +491,11 @@ class SymbolicSISModel(SymbolicEpiModel):
     An SIS model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
     """
 
-    def __init__(self, infection_rate, recovery_rate, population_size=1):
+    def __init__(self, infection_rate, recovery_rate, initial_population_size=1):
 
         S, I = sympy.symbols("S I")
 
-        SymbolicEpiModel.__init__(self,[S, I], population_size)
+        SymbolicEpiModel.__init__(self,[S, I], initial_population_size)
 
         self.add_transmission_processes([
                 (S, I, infection_rate, I, I),
@@ -506,11 +510,11 @@ class SymbolicSIRSModel(SymbolicEpiModel):
     An SIRS model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
     """
 
-    def __init__(self, infection_rate, recovery_rate, waning_immunity_rate, population_size=1):
+    def __init__(self, infection_rate, recovery_rate, waning_immunity_rate, initial_population_size=1):
 
         S, I, R = sympy.symbols("S I R")
 
-        SymbolicEpiModel.__init__(self,[S, I, R], population_size)
+        SymbolicEpiModel.__init__(self,[S, I, R], initial_population_size)
 
         self.add_transmission_processes([
                 (S, I, infection_rate, I, I),
@@ -610,7 +614,7 @@ if __name__=="__main__":    # pragma: no cover
 
 
     N = sympy.symbols("N")
-    epi = SymbolicSIRSModel(eta, rho, omega, population_size=N)
+    epi = SymbolicSIRSModel(eta, rho, omega, initial_population_size=N)
     print()
     print(epi.ODEs())
     print(epi.find_fixed_points())

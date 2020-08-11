@@ -84,7 +84,7 @@ class DeterministicEpiTest(unittest.TestCase):
 
     def test_SIS_with_simulation_restart_and_euler(self):
         N = 100
-        epi = DeterministicSISModel(R0=2,recovery_rate=1,population_size=N)
+        epi = DeterministicSISModel(R0=2,recovery_rate=1,initial_population_size=N)
         epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
         tt = np.linspace(0,100,2)
         result = epi.integrate(tt,['S'])
@@ -97,7 +97,7 @@ class DeterministicEpiTest(unittest.TestCase):
     def test_repeated_simulation(self):
 
         N = 100
-        epi = DeterministicSISModel(R0=2,recovery_rate=1,population_size=N)
+        epi = DeterministicSISModel(R0=2,recovery_rate=1,initial_population_size=N)
         epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
         tt = np.linspace(0,100,100)
         old_t = tt[0]
@@ -141,7 +141,7 @@ class DeterministicEpiTest(unittest.TestCase):
         #======================
 
 
-        epi = DeterministicSISModel(eta, rho, population_size=100)
+        epi = DeterministicSISModel(eta, rho, initial_population_size=100)
 
         epi.set_initial_conditions({S: 99, I:1 })
 

@@ -152,7 +152,7 @@ class DeterministicEpiModel(IntegrationMixin):
 
     """
 
-    def __init__(self,compartments,population_size=1):
+    def __init__(self,compartments,initial_population_size=1,correct_for_dynamical_population_size=False):
         """
         """
 
@@ -161,7 +161,8 @@ class DeterministicEpiModel(IntegrationMixin):
 
         self.compartments = list(compartments)
         self.compartment_ids = { C: iC for iC, C in enumerate(compartments) }
-        self.population_size = population_size
+        self.initial_population_size = initial_population_size
+        self.correct_for_dynamical_population_size = correct_for_dynamical_population_size
         self.N_comp = len(self.compartments)
         self.birth_rates = np.zeros((self.N_comp,),dtype=np.float64)
         self.linear_rates = sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64) 
@@ -575,8 +576,12 @@ class DeterministicEpiModel(IntegrationMixin):
         """
         
         ynew = self.linear_rates.dot(y) + self.birth_rates
+        if self.correct_for_dynamical_population_size:
+            population_size = y.sum()
+        else:
+            population_size = self.initial_population_size
         for c in self.affected_by_quadratic_process:
-            ynew[c] += y.T.dot(self.quadratic_rates[c].dot(y)) / self.population_size
+            ynew[c] += y.T.dot(self.quadratic_rates[c].dot(y)) / population_size
             
         return ynew
 
@@ -614,7 +619,7 @@ class DeterministicEpiModel(IntegrationMixin):
             else:
                 self.y0[self.get_compartment_id(compartment)] = amount
 
-        if np.abs(total-self.population_size)/self.population_size > 1e-14 and not allow_nonzero_column_sums:
+        if np.abs(total-self.initial_population_size)/self.initial_population_size > 1e-14 and not allow_nonzero_column_sums:
             warnings.warn('Sum of initial conditions does not equal unity.')
 
         return self
@@ -625,9 +630,9 @@ class DeterministicSIModel(DeterministicEpiModel):
     An SI model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
-    def __init__(self, infection_rate, population_size=1.0):
+    def __init__(self, infection_rate, initial_population_size=1.0):
 
-        DeterministicEpiModel.__init__(self, list("SI"), population_size)
+        DeterministicEpiModel.__init__(self, list("SI"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -650,11 +655,11 @@ class DeterministicSISModel(DeterministicEpiModel):
         Number of people in the population.
     """
 
-    def __init__(self, R0, recovery_rate, population_size=1.0):
+    def __init__(self, R0, recovery_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SI"), population_size)
+        DeterministicEpiModel.__init__(self, list("SI"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -669,11 +674,11 @@ class DeterministicSIRModel(DeterministicEpiModel):
     An SIR model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
-    def __init__(self, R0, recovery_rate, population_size=1.0):
+    def __init__(self, R0, recovery_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SIR"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -688,11 +693,11 @@ class DeterministicSIRSModel(DeterministicEpiModel):
     An SIRS model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
-    def __init__(self, R0, recovery_rate, waning_immunity_rate, population_size=1.0):
+    def __init__(self, R0, recovery_rate, waning_immunity_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SIR"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -708,11 +713,11 @@ class DeterministicSEIRModel(DeterministicEpiModel):
     An SEIR model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
     """
 
-    def __init__(self, R0, recovery_rate, symptomatic_rate, population_size=1.0):
+    def __init__(self, R0, recovery_rate, symptomatic_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SEIR"), population_size)
+        DeterministicEpiModel.__init__(self, list("SEIR"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -744,7 +749,7 @@ if __name__=="__main__":    # pragma: no cover
     import matplotlib.pyplot as pl
 
     N = 100
-    epi = DeterministicSISModel(R0=2,recovery_rate=1,population_size=N)
+    epi = DeterministicSISModel(R0=2,recovery_rate=1,initial_population_size=N)
     print(epi.linear_rates)
     epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
     tt = np.linspace(0,10,100)

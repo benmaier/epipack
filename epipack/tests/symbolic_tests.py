@@ -18,13 +18,13 @@ from epipack import (
 class SymbolicEpiTest(unittest.TestCase):
 
     def test_compartments(self):
-        comps = sympy.symbols("S E I R ")
+        comps = sympy.symbols("S E I R")
         epi = SymbolicEpiModel(comps)
         assert(all([ i == epi.get_compartment_id(C) for i, C in enumerate(comps) ]))
 
     def test_linear_rates(self):
 
-        S, E, I, R = sympy.symbols("S E I R ")
+        S, E, I, R = sympy.symbols("S E I R")
         epi = SymbolicEpiModel([S,E,I,R])
         epi.add_transition_processes([
                 (E, 1, I),
@@ -42,7 +42,7 @@ class SymbolicEpiTest(unittest.TestCase):
 
     def test_adding_linear_rates(self):
 
-        S, E, I, R = sympy.symbols("S E I R ")
+        S, E, I, R = sympy.symbols("S E I R")
         epi = SymbolicEpiModel([S,E,I,R])
 
         epi.set_processes([
@@ -64,7 +64,7 @@ class SymbolicEpiTest(unittest.TestCase):
 
     def test_quadratic_processes(self):
 
-        S, E, I, R = sympy.symbols("S E I R ")
+        S, E, I, R = sympy.symbols("S E I R")
         epi = SymbolicEpiModel([S,E,I,R])
         Q = [ sympy.zeros(4,4) for C in epi.compartments ]
         Q[0][0,2] = -1
@@ -264,7 +264,7 @@ class SymbolicEpiTest(unittest.TestCase):
         theory = root(Rinf,0.5)
         assert(np.isclose(res[R][-1],theory.x[0]))
 
-        epi = SymbolicSISModel(eta, rho, population_size=100)
+        epi = SymbolicSISModel(eta, rho, initial_population_size=100)
 
         epi.set_initial_conditions({S: 99, I:1 })
         epi.set_parameter_values({eta:2,rho:1})

@@ -18,6 +18,26 @@ from epipack.process_conversions import (
 
 from epipack.deterministic_epi_models import DeterministicEpiModel
 
+def get_temporal_interpolation(time_data, value_data, interpolation_degree=1):
+    """
+    Obtain a symbolic piecewise function that interpolates between values
+    given in ``value_data`` for the intervals defined in ``time_data``,
+    based on a spline interpolation of degree ``interpolation_degree``.
+    If ``interpolation_degree == 0``, the function changes according to step
+    functions. In this case ``time_data`` needs to have one value more than
+    ``value_data``.
+    """
+    t = sympy.symbols("t")
+    if interpolation_degree == 0:
+        if len(time_data) != len(value_data)+1:
+            raise ValueError("For ``interpolation_degree == 0``, `time_data`` needs to have one value more than ``value_data``.")
+        return sympy.Piecewise(*[
+                    (v, (time_data[i] <= t) & ( t < time_data[i+1])) \
+                    for i, v in enumerate(value_data)
+                ])
+    else:
+        return sympy.interpolating_spline(interpolation_degree, t, time_data, value_data)
+
 class SymbolicEpiModel(DeterministicEpiModel):
     """
     A general class to define standard 

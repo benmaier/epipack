@@ -13,6 +13,7 @@ from epipack import (
             SymbolicSIRSModel,
             SymbolicSIModel,
             DeterministicSISModel,
+            get_temporal_interpolation,
         )
 
 class SymbolicEpiTest(unittest.TestCase):
@@ -292,6 +293,24 @@ class SymbolicEpiTest(unittest.TestCase):
         epi = SymbolicSIModel(eta)
         epi.ODEs_jupyter()
 
+    def test_temporal_interpolation(self):
+
+        self.assertRaises(ValueError, get_temporal_interpolation, [0,1],[0,1],interpolation_degree=0)
+
+        t = sympy.symbols("t")
+        p = sympy.Piecewise((1, (0 <= t) & (t < 1)), (2,(1<=t) & (t<2)))
+        p2 = get_temporal_interpolation([0,1,2],[1,2],0)
+        assert(p.subs(t,0.5)==p2.subs(t,0.5))
+        assert(p.subs(t,1.5)==p2.subs(t,1.5))
+        assert(str(p) == str(p2))
+
+        p = sympy.interpolating_spline(1,t,[0,1,2],[1,2,3])
+        p2 = get_temporal_interpolation([0,1,2],[1,2,3],1)
+        assert(p.subs(t,0.5)==p2.subs(t,0.5))
+        assert(p.subs(t,1.5)==p2.subs(t,1.5))
+        assert(str(p) == str(p2))
+
+
 if __name__ == "__main__":
 
     T = SymbolicEpiTest()
@@ -307,3 +326,4 @@ if __name__ == "__main__":
     T.test_exceptions()
     T.test_custom_models()
     T.test_ODEs_jupyter()
+    T.test_temporal_interpolation()

@@ -26,6 +26,7 @@ from .symbolic_epi_models import (
         SymbolicSISModel,
         SymbolicSIRModel,
         SymbolicSIRSModel,
+        get_temporal_interpolation,
         )
 
 from .network_models import (

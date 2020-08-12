@@ -268,7 +268,7 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
                 linear_rate_functions.append( this_rate )
 
 
-        if not allow_nonzero_column_sums:
+        if not allow_nonzero_column_sums and len(linear_rate_functions)>0:
             _y = np.ones(self.N_comp)
             test = sum([r(0,_y) * dy for dy, r in zip (linear_event_updates, linear_rate_functions)])
             test += sum([r(0,_y) * dy for dy, r in zip (birth_event_updates, birth_rate_functions)])
@@ -528,7 +528,7 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
             quadratic_event_updates.append( dy )
             quadratic_rate_functions.append( this_rate )
 
-        if not allow_nonzero_column_sums:
+        if not allow_nonzero_column_sums and len(quadratic_rate_functions)>0:
             _y = np.ones(self.N_comp)
             test = sum([r(0,_y) * dy for dy, r in zip (quadratic_event_updates, quadratic_rate_functions)])
             test_sum = test.toarray().flatten().sum()

@@ -25,6 +25,56 @@ from epipack.process_conversions import (
             transmission_processes_to_events,
         )
 
+class ConstantBirthRate():
+
+    def __init__(self, rate):
+        self.rate = rate
+
+    def __call__(self, t, y):
+        return self.rate
+
+class DynamicBirthRate():
+
+    def __init__(self, rate):
+        self.rate = rate
+
+    def __call__(self, t, y):
+        return self.rate(t,y)
+
+class ConstantLinearRate:
+    def __init__(self, rate, comp0):
+        self.rate = rate
+        self.comp0 = comp0
+
+    def __call__(self, t, y):
+        return self.rate * y[self.comp0]
+
+class DynamicLinearRate:
+    def __init__(self, rate, comp0):
+        self.rate = rate
+        self.comp0 = comp0
+
+    def __call__(self, t, y):
+        return self.rate(t,y) * y[self.comp0]
+
+class ConstantQuadraticRate:
+    def __init__(self, rate, comp0, comp1):
+        self.rate = rate
+        self.comp0 = comp0
+        self.comp1 = comp1
+
+    def __call__(self, t, y):
+        return self.rate * y[self.comp0] * y[self.comp1]
+
+class DynamicQuadraticRate:
+    def __init__(self, rate, comp0, comp1):
+        self.rate = rate
+        self.comp0 = comp0
+        self.comp1 = comp1
+
+    def __call__(self, t, y):
+        return self.rate(t,y) * y[self.comp0] * y[self.comp1]
+
 class NumericEpiModel(IntegrationMixin,SimulationMixin):    
     """
     A general class to define a standard 
@@ -33,13 +83,11 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
 
     Parameters
     ----------
-
     compartments : :obj:`list` of :obj:`string`
         A list containing compartment strings.
 
     Attributes
     ----------
-
     compartments : :obj:`list` of :obj:`string`
         A list containing strings that describe each compartment,
         (e.g. "S", "I", etc.).
@@ -78,9 +126,11 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
 
         self.compartments = list(compartments)
         self.compartment_ids = { C: iC for iC, C in enumerate(compartments) }
+        self.N_comp = len(self.compartments)
+
         self.initial_population_size = initial_population_size
         self.correct_for_dynamical_population_size = correct_for_dynamical_population_size
-        self.N_comp = len(self.compartments)
+
         self.birth_rate_functions = []
         self.birth_event_updates = []
         self.linear_rate_functions = []
@@ -187,8 +237,10 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
             linear_rate_functions = []
             linear_event_updates = []
         else:
-            linear_events = self.linear_event_updates
-            birth_events = self.birth_event_updates
+            linear_event_updates = self.linear_event_updates
+            birth_event_updates = self.birth_event_updates
+            linear_rate_functions = self.linear_rate_functions
+            birth_rate_functions = self.birth_rate_functions
 
         for acting_compartments, rate, affected_compartments in event_list:
 
@@ -201,17 +253,17 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
 
             if acting_compartments[0] is None:
                 if self._rate_has_functional_dependency(rate):
-                    this_rate = rate
+                    this_rate = DynamicBirthRate(rate)
                 else:
-                    this_rate = lambda t, y: rate
+                    this_rate = ConstantBirthRate(rate)
                 birth_event_updates.append( dy )
                 birth_rate_functions.append( this_rate )
             else:
-                _s = self.get_compartment_id(acting_compartments[0])
+                _s = self.get_compartment_id(acting_compartments[0])                
                 if self._rate_has_functional_dependency(rate):
-                    this_rate = lambda t, y: rate(t,y)*y[_s]
+                    this_rate = DynamicLinearRate(rate, _s)
                 else:
-                    this_rate = lambda t, y: rate*y[_s]
+                    this_rate = ConstantLinearRate(rate, _s)
                 linear_event_updates.append( dy )
                 linear_rate_functions.append( this_rate )
 
@@ -225,6 +277,8 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
                 warnings.warn("events do not sum to zero for each column:" + str(test_sum))
 
         self.linear_event_updates = linear_event_updates
+        self.linear_rate_functions = linear_rate_functions
+        self.birth_event_updates = birth_event_updates
         self.birth_rate_functions = birth_rate_functions
 
         return self
@@ -464,16 +518,15 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
                 col.append(self.get_compartment_id(trg))
                 data.append(change)
                 row.append(0)
-            dy =  sprs.coo_matrix((data,(row,col)),shape=(1,self.N_comp),dtype=float).tocsr()
+            dy = sprs.coo_matrix((data,(row,col)),shape=(1,self.N_comp),dtype=float).tocsr()
 
             if self._rate_has_functional_dependency(rate):
-                this_rate = lambda t, y: rate(t,y) * y[_s0] * y[_s1]
+                this_rate = DynamicQuadraticRate(rate, _s0, _s1)
             else:
-                this_rate = lambda t, y: rate * y[_s0] * y[_s1]
+                this_rate = ConstantQuadraticRate(rate, _s0, _s1)
 
             quadratic_event_updates.append( dy )
             quadratic_rate_functions.append( this_rate )
-
 
         if not allow_nonzero_column_sums:
             _y = np.ones(self.N_comp)
@@ -496,18 +549,17 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         t : :obj:`float`
             Current time
         y : numpy.ndarray
-            The first entry is equal to the population size.
-            The remaining entries are equal to the current fractions
-            of the population of the respective compartments
+            The entries correspond to the compartment frequencies
+            (or counts, depending on population size).
         """
         
-        ynew = sum([r(t,y) * dy for dy, r in zip (self.linear_event_updates, self.linear_rate_functions)])
-        ynew += sum([r(t,y) * dy for dy, r in zip (self.birth_event_updates, self.birth_rate_functions)])
+        ynew = sum([r(t,y) * dy for dy, r in zip(self.linear_event_updates, self.linear_rate_functions)])
+        ynew += sum([r(t,y) * dy for dy, r in zip(self.birth_event_updates, self.birth_rate_functions)])
         if self.correct_for_dynamical_population_size:
             population_size = y.sum()
         else:
             population_size = self.initial_population_size
-        ynew += sum([r(t,y)/population_size * dy for dy, r in zip (self.quadratic_event_updates, self.quadratic_rate_functions)])
+        ynew += sum([r(t,y)/population_size * dy for dy, r in zip(self.quadratic_event_updates, self.quadratic_rate_functions)])
             
         return ynew.toarray().flatten()
 
@@ -517,28 +569,111 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         """
         return self.dydt
 
+class NumericSIModel(NumericEpiModel):
+    """
+    An SI model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    """
 
+    def __init__(self, infection_rate, initial_population_size=1.0):
+
+        NumericEpiModel.__init__(self, list("SI"), initial_population_size)
+
+        self.set_processes([
+                ("S", "I", infection_rate, "I", "I"),
+            ])
+
+
+class NumericSISModel(NumericEpiModel):
+    """
+    An SIS model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+
+    Parameters
+    ----------
+    R0 : float
+        The basic reproduction number. From this, the infection
+        rate is computed as ``infection_rate = R0 * recovery_rate``
+    recovery_rate : float
+        Recovery rate
+    population_size : float, default = 1.0
+        Number of people in the population.
+    """
+
+    def __init__(self, infection_rate, recovery_rate, initial_population_size=1.0):
+
+        NumericEpiModel.__init__(self, list("SI"), initial_population_size)
+
+        self.set_processes([
+                ("S", "I", infection_rate, "I", "I"),
+                ("I", recovery_rate, "S" ),
+            ])
+class NumericSIRModel(NumericEpiModel):
+    """
+    An SIR model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    """
+
+    def __init__(self, infection_rate, recovery_rate, initial_population_size=1.0):
+
+        NumericEpiModel.__init__(self, list("SIR"), initial_population_size)
+
+        self.set_processes([
+                ("S", "I", infection_rate, "I", "I"),
+                ("I", recovery_rate, "R"),
+            ])
+
+class NumericSIRSModel(NumericEpiModel):
+    """
+    An SIRS model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    """
+
+    def __init__(self, infection_rate, recovery_rate, waning_immunity_rate, initial_population_size=1.0):
+
+        NumericEpiModel.__init__(self, list("SIR"), initial_population_size)
+
+        self.set_processes([
+                ("S", "I", infection_rate, "I", "I"),
+                ("I", recovery_rate, "R"),
+                ("R", waning_immunity_rate, "S"),
+            ])
+
+class NumericSEIRModel(NumericEpiModel):
+    """
+    An SEIR model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    """
+
+    def __init__(self, infection_rate, recovery_rate, symptomatic_rate, initial_population_size=1.0):
+
+        NumericEpiModel.__init__(self, list("SEIR"), initial_population_size)
+
+        self.set_processes([
+                ("S", "I", infection_rate, "E", "I"),
+                ("E", symptomatic_rate, "I"),
+                ("I", recovery_rate, "R"),
+            ])
 
 if __name__=="__main__":    # pragma: no cover
     N = 100
     epi = NumericEpiModel(list("SEIR"),100)
-    print(epi.compartments)
-    print()
+    #print(epi.compartments)
+    #print()
     epi.set_processes([
+            ("S", "I", 2.0, "E", "I"),
             ("E", 1.0, "I"),
             ("I", 1.0, "R"),
-            ("S", "I", 2.0, "E", "I"),
             ])
+
+    print("#printing updates")
+    print([dy.toarray() for dy in epi.linear_event_updates])
+    print([dy.toarray() for dy in epi.quadratic_event_updates])
 
     import matplotlib.pyplot as pl
 
     epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
-    tt = np.linspace(0,1000,100)
+    tt = np.linspace(0,20,100)
     result = epi.integrate(tt)
 
     pl.plot(tt, result['S'],label='S')
-    pl.plot(tt, result['I'],label='I')
     pl.plot(tt, result['E'],label='E')
+    pl.plot(tt, result['I'],label='I')
     pl.plot(tt, result['R'],label='R')
     pl.legend()
 

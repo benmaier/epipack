@@ -631,7 +631,7 @@ def transmission_processes_to_events(process_list):
             # Rather the source compartment of the other reactant
             # loses one entity, while the target compartment
             # of this reactant gains one.
-            event_list.append(( (_s0, _s1), rate, [(_s1, -1),(_t1, +rate)]  ))
+            event_list.append(( (_s0, _s1), rate, [(_s1, -1),(_t1, +1)]  ))
         else:
 
             # when no reactant remains constant,

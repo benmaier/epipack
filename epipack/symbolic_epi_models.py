@@ -18,7 +18,192 @@ from epipack.process_conversions import (
 
 from epipack.deterministic_epi_models import DeterministicEpiModel
 
-class SymbolicEpiModel(DeterministicEpiModel):
+class SymbolicMixin():
+
+    def ODEs(self):
+        """
+        Obtain the equations of motion for this model in form of equations.
+        """
+        t = sympy.symbols("t")
+        Eqs = []
+        ynew = self.dydt()
+        for compartment, expr in zip(self.compartments,ynew):
+            dXdt = sympy.Derivative(compartment, t)
+            Eqs.append(sympy.Eq(dXdt, sympy.simplify(expr)))
+        return Eqs
+
+    def ODEs_jupyter(self):
+        """
+        Pretty-print the equations of motion for this model in a Jupyter notebook.
+        """
+
+        from IPython.display import Math, display
+        for ode in self.ODEs():
+            display(Math(sympy.latex(ode)))
+
+    def find_fixed_points(self):
+        """
+        Find states in which this model is stationary (fixed points).
+        """
+        ynew = [expr for expr in self.dydt()]
+        return sympy.nonlinsolve(ynew, self.compartments)
+
+
+    def jacobian(self,simplify=True):
+        """
+        Obtain the Jacobian for this model.
+        """
+
+        try:
+            self.linear_rates
+            has_matrix = True
+        except AttributeError as e:
+            has_matrix = False
+
+        if has_matrix and not self.has_functional_rates:
+            y = sympy.Matrix(self.compartments)
+            J = sympy.Matrix(self.linear_rates) 
+            
+            for i in range(self.N_comp):
+                J[i,:] += (self.quadratic_rates[i] * y + self.quadratic_rates[i].T * y).T
+
+        else:
+            y = sympy.Matrix(self.compartments)
+            J = sympy.zeros(self.N_comp, self.N_comp)
+            dydt = self.dydt()
+            for i in range(self.N_comp):
+                for j in range(self.N_comp):
+                    J[i,j] = sympy.diff(dydt[i], self.compartments[j])
+
+        if simplify:
+            J = sympy.simplify(J)
+
+        return J
+
+    def get_jacobian_at_fixed_point(self,fixed_point_dict,simplify=True):
+        """
+        Obtain the Jacobian at a given fixed point.
+
+        Parameters
+        ----------
+        fixed_point_dict : dict
+            A dictionary where a compartment symbol maps to an expression
+            (the value of this compartment in the fixed point). 
+            If compartments are missing, it is implicitly assumed
+            that this compartment has a value of zero.
+        simplify : bool
+            whether or not to let sympy try to simplify the expressions
+
+        Returns
+        -------
+        J : sympy.Matrix
+            The Jacobian matrix at the given fixed point.
+
+        """
+        
+        fixed_point = self._convert_fixed_point_dict(fixed_point_dict)
+
+        J = self.jacobian(False)
+        
+        for compartment, value in fixed_point:
+            J = J.subs(compartment, value)
+
+        if simplify:
+            J = sympy.simplify(J)
+
+        return J
+
+    def get_eigenvalues_at_fixed_point(self,fixed_point_dict):
+        """
+        Obtain the Jacobian's eigenvalues at a given fixed point.
+
+        Parameters
+        ----------
+        fixed_point_dict : dict
+            A dictionary where a compartment symbol maps to an expression
+            (the value of this compartment in the fixed point). 
+            If compartments are missing, it is implicitly assumed
+            that this compartment has a value of zero.
+
+        Returns
+        -------
+        eigenvalues : dict
+            Each entry maps an eigenvalue expression to its multiplicity.
+
+        """
+        J = self.get_jacobian_at_fixed_point(fixed_point_dict)
+        return J.eigenvals()
+        
+
+    def get_eigenvalues_at_disease_free_state(self,disease_free_state=None):
+        """
+        Obtain the Jacobian's eigenvalues at the disease free state.
+
+        Parameters
+        ----------
+        disease_free_state : dict, default = None
+            A dictionary where a compartment symbol maps to an expression
+            (the value of this compartment in the fixed point). 
+            If compartments are missing, it is implicitly assumed
+            that this compartment has a value of zero.
+
+            If ``None``, the disease_free_state is assumed to be at
+            ``disease_free_state = { S: 1 }``.
+
+        Returns
+        -------
+        eigenvalues : dict
+            Each entry maps an eigenvalue expression to its multiplicity.
+
+        """
+
+        if disease_free_state is None:
+            S = sympy.symbols("S")
+            if S not in self.compartments:
+                raise ValueError("Disease free state was not provided to the method. I tried to assume the disease free state is at S = 1, but no `S`-compartment was found.")
+            disease_free_state = {S:1}
+
+        return self.get_eigenvalues_at_fixed_point(disease_free_state)
+
+    def _convert_fixed_point_dict(self,fixed_point_dict):
+        """
+        Get a fixed point list.
+
+        Parameters
+        ----------
+        fixed_point_dict : dict
+            A dictionary where a compartment symbol maps to an expression
+            (the value of this compartment in the fixed point). 
+            If compartments are missing, it is implicitly assumed
+            that this compartment has a value of zero.
+
+        Returns
+        -------
+        fixed_point : iterator of list of tuple
+            A list that is ``N_comp`` entries long.
+            Each entry contains a compartment symbol and 
+            an expression that corresponds to the value
+            this compartment assumes in the fixed point.
+        """
+        fixed_point = {}
+        for compartment in self.compartments:
+            fixed_point[compartment] = 0
+        fixed_point.update(fixed_point_dict)
+        return fixed_point.items()
+
+    def set_parameter_values(self,parameter_values):
+        """
+        Set numerical values for the parameters of this model
+
+        Parameters
+        ==========
+        parameter_values : dict
+            A dictionary mapping compartment symbols to
+            numerical values.
+        """
+        self.parameter_values = parameter_values
+        
+class SymbolicEpiModel(DeterministicEpiModel, SymbolicMixin):
     """
     A general class to define standard 
     mean-field compartmental
@@ -230,178 +415,6 @@ class SymbolicEpiModel(DeterministicEpiModel):
 
         return ynew
             
-    def ODEs(self):
-        """
-        Obtain the equations of motion for this model in form of equations.
-        """
-        t = sympy.symbols("t")
-        Eqs = []
-        ynew = self.dydt()
-        for compartment, expr in zip(self.compartments,ynew):
-            dXdt = sympy.Derivative(compartment, t)
-            Eqs.append(sympy.Eq(dXdt, sympy.simplify(expr)))
-        return Eqs
-
-    def ODEs_jupyter(self):
-        """
-        Pretty-print the equations of motion for this model in a Jupyter notebook.
-        """
-
-        from IPython.display import Math, display
-        for ode in self.ODEs():
-            display(Math(sympy.latex(ode)))
-
-    def find_fixed_points(self):
-        """
-        Find states in which this model is stationary (fixed points).
-        """
-        ynew = [expr for expr in self.dydt()]
-        return sympy.nonlinsolve(ynew, self.compartments)
-
-
-    def jacobian(self,simplify=True):
-        """
-        Obtain the Jacobian for this model.
-        """
-
-        if not self.has_functional_rates:
-            y = sympy.Matrix(self.compartments)
-            J = sympy.Matrix(self.linear_rates) 
-            
-            for i in range(self.N_comp):
-                J[i,:] += (self.quadratic_rates[i] * y + self.quadratic_rates[i].T * y).T
-
-        else:
-            y = sympy.Matrix(self.compartments)
-            J = sympy.zeros(self.N_comp, self.N_comp)
-            dydt = self.dydt()
-            for i in range(self.N_comp):
-                for j in range(self.N_comp):
-                    J[i,j] = sympy.diff(dydt[i], self.compartments[j])
-
-        if simplify:
-            J = sympy.simplify(J)
-
-        return J
-
-    def get_jacobian_at_fixed_point(self,fixed_point_dict):
-        """
-        Obtain the Jacobian at a given fixed point.
-
-        Parameters
-        ----------
-        fixed_point_dict : dict
-            A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
-            If compartments are missing, it is implicitly assumed
-            that this compartment has a value of zero.
-
-        Returns
-        -------
-        J : sympy.Matrix
-            The Jacobian matrix at the given fixed point.
-
-        """
-        
-        fixed_point = self._convert_fixed_point_dict(fixed_point_dict)
-
-        J = self.jacobian()
-        
-        for compartment, value in fixed_point:
-            J = J.subs(compartment, value)
-
-        return J
-
-    def get_eigenvalues_at_fixed_point(self,fixed_point_dict):
-        """
-        Obtain the Jacobian's eigenvalues at a given fixed point.
-
-        Parameters
-        ----------
-        fixed_point_dict : dict
-            A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
-            If compartments are missing, it is implicitly assumed
-            that this compartment has a value of zero.
-
-        Returns
-        -------
-        eigenvalues : dict
-            Each entry maps an eigenvalue expression to its multiplicity.
-
-        """
-        J = self.get_jacobian_at_fixed_point(fixed_point_dict)
-        return J.eigenvals()
-        
-
-    def get_eigenvalues_at_disease_free_state(self,disease_free_state=None):
-        """
-        Obtain the Jacobian's eigenvalues at the disease free state.
-
-        Parameters
-        ----------
-        disease_free_state : dict, default = None
-            A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
-            If compartments are missing, it is implicitly assumed
-            that this compartment has a value of zero.
-
-            If ``None``, the disease_free_state is assumed to be at
-            ``disease_free_state = { S: 1 }``.
-
-        Returns
-        -------
-        eigenvalues : dict
-            Each entry maps an eigenvalue expression to its multiplicity.
-
-        """
-
-        if disease_free_state is None:
-            S = sympy.symbols("S")
-            if S not in self.compartments:
-                raise ValueError("Disease free state was not provided to the method. I tried to assume the disease free state is at S = 1, but no `S`-compartment was found.")
-            disease_free_state = {S:1}
-
-        return self.get_eigenvalues_at_fixed_point(disease_free_state)
-
-    def _convert_fixed_point_dict(self,fixed_point_dict):
-        """
-        Get a fixed point list.
-
-        Parameters
-        ----------
-        fixed_point_dict : dict
-            A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
-            If compartments are missing, it is implicitly assumed
-            that this compartment has a value of zero.
-
-        Returns
-        -------
-        fixed_point : iterator of list of tuple
-            A list that is ``N_comp`` entries long.
-            Each entry contains a compartment symbol and 
-            an expression that corresponds to the value
-            this compartment assumes in the fixed point.
-        """
-        fixed_point = {}
-        for compartment in self.compartments:
-            fixed_point[compartment] = 0
-        fixed_point.update(fixed_point_dict)
-        return fixed_point.items()
-
-    def set_parameter_values(self,parameter_values):
-        """
-        Set numerical values for the parameters of this model
-
-        Parameters
-        ==========
-        parameter_values : dict
-            A dictionary mapping compartment symbols to
-            numerical values.
-        """
-        self.parameter_values = parameter_values
-        
     def get_numerical_dydt(self):
         r"""
         Returns values of the given compartments at the demanded

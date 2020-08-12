@@ -10,6 +10,7 @@ import warnings
 from epipack.integrators import (
             integrate_dopri5,
             integrate_euler,
+            IntegrationMixin,
         )
 
 from epipack.process_conversions import (
@@ -19,92 +20,6 @@ from epipack.process_conversions import (
             fusion_processes_to_rates,
             transmission_processes_to_rates,
         )
-
-class IntegrationMixin():
-
-    def integrate_and_return_by_index(self,
-                                      time_points,
-                                      return_compartments=None,
-                                      integrator='dopri5',
-                                      adopt_final_state=False,
-                                      ):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
-        ``(return_compartments), len(time_points)``.
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-        """
-
-        dydt = self.get_numerical_dydt()
-
-        if integrator == 'dopri5':
-            result = integrate_dopri5(dydt, time_points, self.y0)
-        else:
-            result = integrate_euler(dydt, time_points, self.y0)
-
-        if adopt_final_state:
-            self.y0 = result[:,-1]
-
-        if return_compartments is not None:
-            ndx = [self.get_compartment_id(C) for C in return_compartments]
-            result = result[ndx,:]
-
-        return result
-
-    def integrate(self,
-                  time_points,
-                  return_compartments=None,
-                  *args,
-                  **kwargs,
-                  ):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a dictionary).
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-            as new initial conditions.
-        """
-        if return_compartments is None:
-            return_compartments = self.compartments
-
-        result = self.integrate_and_return_by_index(time_points, return_compartments,*args,**kwargs)
-
-        result_dict = {}
-        for icomp, compartment in enumerate(return_compartments):
-            result_dict[compartment] = result[icomp,:]
-
-        return result_dict
 
 
 class DeterministicEpiModel(IntegrationMixin):
@@ -590,39 +505,6 @@ class DeterministicEpiModel(IntegrationMixin):
         Return a function that obtains t and y as an input and returns dydt of this system
         """
         return self.dydt
-
-    def set_initial_conditions(self, initial_conditions,allow_nonzero_column_sums=False):
-        """
-        Set the initial conditions for integration
-
-        Parameters
-        ----------
-        initial_conditions : dict
-            A dictionary that maps compartments to a fraction
-            of the population. Compartments that are not
-            set in this dictionary are assumed to have an initial condition
-            of zero.
-        allow_nonzero_column_sums : bool, default = False
-            If True, an error is raised when the initial conditions do not
-            sum to the population size.
-        """
-
-        if type(initial_conditions) == dict:
-            initial_conditions = list(initial_conditions.items())
-
-        self.y0 = np.zeros(self.N_comp)
-        total = 0
-        for compartment, amount in initial_conditions:
-            total += amount
-            if self.y0[self.get_compartment_id(compartment)] != 0:
-                warnings.warn('Double entry in initial conditions for compartment '+str(compartment))
-            else:
-                self.y0[self.get_compartment_id(compartment)] = amount
-
-        if np.abs(total-self.initial_population_size)/self.initial_population_size > 1e-14 and not allow_nonzero_column_sums:
-            warnings.warn('Sum of initial conditions does not equal unity.')
-
-        return self
 
 
 class DeterministicSIModel(DeterministicEpiModel):

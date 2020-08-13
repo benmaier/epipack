@@ -71,6 +71,7 @@ class DeterministicEpiModel(IntegrationMixin):
         """
         """
 
+        self.t0 = None
         self.y0 = None
         self.affected_by_quadratic_process = []
 

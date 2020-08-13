@@ -2,6 +2,8 @@
 Provides an API to define deterministic epidemiological models in terms of sympy symbolic expressions.
 """
 
+import warnings
+
 import numpy as np 
 import scipy.sparse as sprs
 
@@ -17,6 +19,8 @@ from epipack.process_conversions import (
         )
 
 from epipack.deterministic_epi_models import DeterministicEpiModel
+
+from epipack.numeric_epi_models import NumericEpiModel
 
 class SymbolicMixin():
 
@@ -203,7 +207,96 @@ class SymbolicMixin():
         """
         self.parameter_values = parameter_values
         
-class SymbolicEpiModel(DeterministicEpiModel, SymbolicMixin):
+    def get_numerical_dydt(self):
+        r"""
+        Returns values of the given compartments at the demanded
+        time points (as a numpy.ndarray of shape 
+        ``(return_compartments), len(time_points)``.
+
+        Parameters
+        ==========
+        time_points : np.ndarray
+            An array of time points at which the compartment values
+            should be evaluated and returned.
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        integrator : str, default = 'dopri5'
+            Which method to use for integration. Currently supported are
+            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
+            :math:`\delta t` will be determined by the difference
+            of consecutive entries in ``time_points``.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
+        """
+
+        these_symbols = [sympy.symbols("t")] + self.compartments
+
+        params = list(self.parameter_values.items())
+        param_symbols = set([_p[0] for _p in params])
+
+        odes = [ ode.subs(params) for ode in self.dydt() ]
+
+        not_set = []
+        for ode in odes:
+            not_set.extend(ode.free_symbols)
+
+        not_set = set(not_set) - set(these_symbols)
+
+        if len(not_set) > 0:
+            raise ValueError("Parameters", set(not_set), "have not been set. Please set them using",
+                             "SymbolicEpiModel.parameter_values()")
+
+        F_sympy = sympy.lambdify(these_symbols, odes)
+
+        def dydt(t, y, *args, **kwargs):
+            these_args = [t] + y.tolist()
+            return np.array(F_sympy(*these_args))
+
+        return dydt
+
+    def get_numerical_event_and_rate_functions(self):
+        rates = self.birth_rate_functions + self.linear_rate_functions
+        if self.correct_for_dynamical_population_size:
+            population_size = sum(self.compartments)
+        else:
+            population_size = self.initial_population_size
+        rates += [ r/population_size for r in self.quadratic_rate_functions ]
+        events = self.birth_event_updates + self.linear_event_updates + self.quadratic_event_updates
+        
+        these_symbols = [sympy.symbols("t")] + self.compartments
+
+        params = list(self.parameter_values.items())
+        param_symbols = set([_p[0] for _p in params])
+
+        rates = [ sympy.sympify(rate).subs(params) for rate in rates ]
+        events = [ np.array(event).astype(np.float64).flatten() for event in events ]
+
+        not_set = []
+        for rate in rates:
+            not_set.extend(rate.free_symbols)
+
+        not_set = set(not_set) - set(these_symbols)
+
+        if len(not_set) > 0:
+            raise ValueError("Parameters", set(not_set), "have not been set. Please set them using",
+                             "SymbolicEpiModel.parameter_values()")
+
+        sympy_rates = sympy.lambdify(these_symbols, rates)
+
+        def get_event_rates(t, y):
+            these_args = [t] + y.tolist()
+            return np.array(sympy_rates(*these_args))
+
+        def get_compartment_changes(rates):
+            idy = np.random.choice(len(rates), p=rates/rates.sum())
+            return events[idy]
+
+        return get_event_rates, get_compartment_changes
+
+
+class SymbolicEpiModel(SymbolicMixin, DeterministicEpiModel):
     """
     A general class to define standard 
     mean-field compartmental
@@ -415,54 +508,6 @@ class SymbolicEpiModel(DeterministicEpiModel, SymbolicMixin):
 
         return ynew
             
-    def get_numerical_dydt(self):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
-        ``(return_compartments), len(time_points)``.
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-        """
-
-        these_symbols = [sympy.symbols("t")] + self.compartments
-
-        params = list(self.parameter_values.items())
-        param_symbols = set([_p[0] for _p in params])
-
-        odes = [ ode.subs(params) for ode in self.dydt() ]
-
-        not_set = []
-        for ode in odes:
-            not_set.extend(ode.free_symbols)
-
-        not_set = set(not_set) - set(these_symbols)
-
-        if len(not_set) > 0:
-            raise ValueError("Parameters", set(not_set), "have not been set. Please set them using",
-                             "SymbolicEpiModel.parameter_values()")
-
-        F_sympy = sympy.lambdify(these_symbols, odes)
-
-        def dydt(t, y, *args, **kwargs):
-            these_args = [t] + y.tolist()
-            return np.array(F_sympy(*these_args))
-
-        return dydt
 
 class SymbolicSIModel(SymbolicEpiModel):
     """
@@ -479,6 +524,216 @@ class SymbolicSIModel(SymbolicEpiModel):
                 (S, I, S, -infection_rate),
                 (S, I, I, +infection_rate),
             ])
+
+class SymbolicEventEpiModel(SymbolicMixin, NumericEpiModel):
+
+    def __init__(self,compartments,
+                      initial_population_size=1,
+                      correct_for_dynamical_population_size=False,
+                      ):
+        NumericEpiModel.__init__(self,
+                      compartments,
+                      initial_population_size=initial_population_size,
+                      correct_for_dynamical_population_size=correct_for_dynamical_population_size,
+                )
+        self.parameter_values = {}
+
+    def _check_rate_for_functional_dependency(self,rate):
+        try:
+            t = sympy.symbols("t")
+            has_time_dependence = t in rate.free_symbols
+            self.rates_have_explicit_time_dependence |= has_time_dependence
+        except AttributeError as e:
+            return
+
+    def set_linear_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
+        """
+        Define the linear transition events between compartments.
+
+        Parameters
+        ==========
+
+        event_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains transitions events in the following format:
+
+            .. code:: python
+
+                [
+                    ( acting_compartment, affected_compartment, rate ),
+                    ...
+                ]
+
+        allow_nonzero_column_sums : :obj:`bool`, default : False
+            Traditionally, epidemiological models preserve the
+            total population size. If that's not the case,
+            switch off testing for this.
+
+        Example
+
+        reset_events : bool, default : True
+            Whether to reset all linear events to zero before 
+            converting those.
+        """
+
+        if reset_events:
+            birth_rate_functions = []
+            birth_event_updates = []
+            linear_rate_functions = []
+            linear_event_updates = []
+        else:
+            linear_event_updates = self.linear_event_updates
+            birth_event_updates = self.birth_event_updates
+            linear_rate_functions = self.linear_rate_functions
+            birth_rate_functions = self.birth_rate_functions
+
+        for acting_compartments, rate, affected_compartments in event_list:
+
+            dy = sympy.zeros(self.N_comp,1)
+            for trg, change in affected_compartments:
+                _t = self.get_compartment_id(trg)
+                dy[_t] = change
+
+            if acting_compartments[0] is None:
+                self._check_rate_for_functional_dependency(rate)
+                birth_event_updates.append( dy )
+                birth_rate_functions.append( rate )
+            else:
+                _s = self.get_compartment_id(acting_compartments[0])                
+                self._check_rate_for_functional_dependency(rate)
+                this_rate = rate * acting_compartments[0]
+                linear_event_updates.append( dy )
+                linear_rate_functions.append( this_rate )
+
+
+        if not allow_nonzero_column_sums and len(linear_rate_functions)>0:
+            _y = np.ones(self.N_comp)
+            test = sympy.zeros(self.N_comp,1)
+            for dy, r in zip (linear_event_updates, linear_rate_functions):
+                test += dy * r
+            for dy, r in zip (birth_event_updates, birth_rate_functions):
+                test += dy * r
+            test_sum = sum(test)
+            if test_sum != 0:
+                warnings.warn("events do not sum to zero for each column:" + str(test_sum))
+
+        self.linear_event_updates = linear_event_updates
+        self.linear_rate_functions = linear_rate_functions
+        self.birth_event_updates = birth_event_updates
+        self.birth_rate_functions = birth_rate_functions
+
+        return self
+
+    def set_quadratic_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
+        r"""
+        Define the quadratic transition processes between compartments.
+
+        Parameters
+        ----------
+        event_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains transitions events in the following format:
+
+            .. code:: python
+
+                [
+                    ("coupling_compartment_0", 
+                     "coupling_compartment_1",
+                     "affected_compartment", 
+                     event 
+                     ),
+                    ...
+                ]
+
+        allow_nonzero_column_sums : :obj:`bool`, default : False
+            Traditionally, epidemiological models preserve the
+            total population size. If that's not the case,
+            switch off testing for this.
+
+        Example
+        -------
+
+        For an SEIR model.
+
+        .. code:: python
+
+            epi.set_quadratic_events([
+                ("S", "I", "S", -1 ),
+                ("S", "I", "E", +1 )
+            ])
+
+        Read  as
+        
+        "Coupling of *S* and *I* leads to 
+        a reduction in "S" proportional to :math:`S\times I` and event -1/time_unit.
+        Furthermore, coupling of *S* and *I* leads to 
+        an increase in "E" proportional to :math:`S\times I` and event +1/time_unit."
+        """
+
+        if reset_events:
+            quadratic_event_updates = []
+            quadratic_rate_functions = []
+        else:
+            quadratic_event_updates = self.quadratic_event_updates
+            quadratic_rate_functions = self.quadratic_rate_functions
+        
+        for coupling_compartments, rate, affected_compartments in event_list:
+
+            _s0 = coupling_compartments[0]
+            _s1 = coupling_compartments[1]
+
+            dy = sympy.zeros(self.N_comp,1)
+            for trg, change in affected_compartments:
+                _t = self.get_compartment_id(trg)
+                dy[_t] = change
+
+            self._check_rate_for_functional_dependency(rate)
+            this_rate = rate * _s0 * _s1
+
+            quadratic_event_updates.append( dy )
+            quadratic_rate_functions.append( this_rate )
+
+        if not allow_nonzero_column_sums and len(quadratic_rate_functions)>0:
+            dy = sympy.zeros(self.N_comp,1)
+            test = sympy.zeros(self.N_comp,1)
+            for dy, r in zip (quadratic_event_updates, quadratic_rate_functions):
+                test += dy * r 
+            test_sum = sum(test)
+            if np.abs(test_sum) > 1e-15:
+                warnings.warn("events do not sum to zero for each column:" + str(test_sum))
+
+        self.quadratic_event_updates = quadratic_event_updates
+        self.quadratic_rate_functions = quadratic_rate_functions
+
+        return self
+
+    def dydt(self):
+        """
+        Compute the current momenta of the epidemiological model.
+
+        Parameters
+        ----------
+        t : :obj:`float`
+            Current time
+        y : numpy.ndarray
+            The entries correspond to the compartment frequencies
+            (or counts, depending on population size).
+        """
+        ynew = sympy.zeros(self.N_comp,1)
+
+        for dy, r in zip(self.birth_event_updates, self.birth_rate_functions):
+            ynew += r * dy
+
+        for dy, r in zip(self.linear_event_updates, self.linear_rate_functions):
+            ynew += r * dy
+
+        if self.correct_for_dynamical_population_size:
+            population_size = sum(self.compartments)
+        else:
+            population_size = self.initial_population_size
+
+        for dy, r in zip(self.quadratic_event_updates, self.quadratic_rate_functions):
+            ynew += r/population_size * dy 
+
+        return ynew
 
 class SymbolicSIRModel(SymbolicEpiModel):
     """

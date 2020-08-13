@@ -87,32 +87,30 @@ class NumericEpiTest(unittest.TestCase):
         pass
 
     def test_SIS_with_simulation_restart_and_euler(self):
-        #N = 100
-        #epi = NumericSISModel(R0=2,recovery_rate=1,initial_population_size=N)
-        #epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
-        #tt = np.linspace(0,100,2)
-        #result = epi.integrate(tt,['S'])
-        #assert(np.isclose(result['S'][-1],N/2))
+        N = 100
+        epi = NumericSISModel(infection_rate=2,recovery_rate=1,initial_population_size=N)
+        epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
+        tt = np.linspace(0,100,2)
+        result = epi.integrate(tt,['S'])
+        assert(np.isclose(result['S'][-1],N/2))
 
-        #tt = np.linspace(0,100,1000)
-        #result = epi.integrate_and_return_by_index(tt,['S'],integrator='euler')
-        #assert(np.isclose(result[0,-1],N/2))
-        pass
+        tt = np.linspace(0,100,1000)
+        result = epi.integrate_and_return_by_index(tt,['S'],integrator='euler')
+        assert(np.isclose(result[0,-1],N/2))
 
     def test_repeated_simulation(self):
 
-        #N = 100
-        #epi = NumericSISModel(R0=2,recovery_rate=1,initial_population_size=N)
-        #epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
-        #tt = np.linspace(0,100,100)
-        #old_t = tt[0]
+        N = 100
+        epi = NumericSISModel(infection_rate=2,recovery_rate=1,initial_population_size=N)
+        epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
+        tt = np.linspace(0,100,100)
+        old_t = tt[0]
 
-        #for it, t in enumerate(tt[1:]):
-        #    result = epi.integrate_and_return_by_index([old_t,t],integrator='euler',adopt_final_state=True)
-        #    old_t = t
+        for it, t in enumerate(tt[1:]):
+            result = epi.integrate_and_return_by_index([old_t,t],integrator='euler',adopt_final_state=True)
+            old_t = t
 
-        #assert(np.isclose(result[0,-1],N/2))
-        pass
+        assert(np.isclose(result[0,-1],N/2))
 
     def test_birth_death(self):
 

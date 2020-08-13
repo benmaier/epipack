@@ -8,13 +8,7 @@ import scipy.sparse as sprs
 import warnings
 
 from epipack.integrators import (
-            integrate_dopri5,
-            integrate_euler,
             IntegrationMixin,
-        )
-
-from epipack.stochastic_epi_models import (
-            SimulationMixin,
         )
 
 from epipack.process_conversions import (
@@ -24,6 +18,9 @@ from epipack.process_conversions import (
             fusion_processes_to_events,
             transmission_processes_to_events,
         )
+
+from scipy.optimize import newton
+from scipy.integrate import quad
 
 class ConstantBirthRate():
 
@@ -42,6 +39,7 @@ class DynamicBirthRate():
         return self.rate(t,y)
 
 class ConstantLinearRate:
+
     def __init__(self, rate, comp0):
         self.rate = rate
         self.comp0 = comp0
@@ -50,6 +48,7 @@ class ConstantLinearRate:
         return self.rate * y[self.comp0]
 
 class DynamicLinearRate:
+
     def __init__(self, rate, comp0):
         self.rate = rate
         self.comp0 = comp0
@@ -58,6 +57,7 @@ class DynamicLinearRate:
         return self.rate(t,y) * y[self.comp0]
 
 class ConstantQuadraticRate:
+
     def __init__(self, rate, comp0, comp1):
         self.rate = rate
         self.comp0 = comp0
@@ -67,6 +67,7 @@ class ConstantQuadraticRate:
         return self.rate * y[self.comp0] * y[self.comp1]
 
 class DynamicQuadraticRate:
+
     def __init__(self, rate, comp0, comp1):
         self.rate = rate
         self.comp0 = comp0
@@ -75,7 +76,7 @@ class DynamicQuadraticRate:
     def __call__(self, t, y):
         return self.rate(t,y) * y[self.comp0] * y[self.comp1]
 
-class NumericEpiModel(IntegrationMixin,SimulationMixin):    
+class NumericEpiModel(IntegrationMixin):
     """
     A general class to define a standard 
     mean-field compartmental
@@ -118,7 +119,10 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
 
     """
 
-    def __init__(self,compartments,initial_population_size=1,correct_for_dynamical_population_size=False):
+    def __init__(self,compartments,
+                      initial_population_size=1,
+                      correct_for_dynamical_population_size=False,
+                      ):
         """
         """
 
@@ -137,6 +141,11 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         self.linear_event_updates = []
         self.quadratic_rate_functions = []
         self.quadratic_event_updates = []
+
+
+        self.rates_have_explicit_time_dependence = False
+        self.set_simulation_has_not_ended()
+
 
     def get_compartment_id(self,C):
         """Get the integer ID of a compartment ``C``"""
@@ -189,8 +198,6 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
             turn this behavior off for transition, birth, death, and
             transmission processes. (Useful if you want to define
             symbolic transmission processes that are compartment-dependent).
-
-
         """
 
         quadratic_events, linear_events = processes_to_events(process_list, self.compartments,ignore_rate_position_checks)
@@ -200,7 +207,15 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         return self
 
     def _rate_has_functional_dependency(self,rate):
-        return callable(rate)
+        if callable(rate):
+            t = [0,1,2,10000,-10000]
+            y = np.ones(self.N_comp)
+            test = np.array([ rate(_t, y) for _t in t ])
+            has_time_dependence = not np.all(test == test[0])
+            self.rates_have_explicit_time_dependence = self.rates_have_explicit_time_dependence or has_time_dependence
+            return True
+        else:
+            return False
 
     def set_linear_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
         """
@@ -244,12 +259,10 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
 
         for acting_compartments, rate, affected_compartments in event_list:
 
-            data, row, col = [], [], []
+            dy = np.zeros(self.N_comp)
             for trg, change in affected_compartments:
-                col.append(self.get_compartment_id(trg))
-                data.append(change)
-                row.append(0)
-            dy =  sprs.coo_matrix((data,(row,col)),shape=(1,self.N_comp),dtype=float).tocsr()
+                _t = self.get_compartment_id(trg)
+                dy[_t] = change
 
             if acting_compartments[0] is None:
                 if self._rate_has_functional_dependency(rate):
@@ -257,7 +270,7 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
                 else:
                     this_rate = ConstantBirthRate(rate)
                 birth_event_updates.append( dy )
-                birth_rate_functions.append( this_rate )
+                birth_rate_functions.append( this_rate )                
             else:
                 _s = self.get_compartment_id(acting_compartments[0])                
                 if self._rate_has_functional_dependency(rate):
@@ -267,12 +280,17 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
                 linear_event_updates.append( dy )
                 linear_rate_functions.append( this_rate )
 
+            if dy.sum() != 0 and not self.correct_for_dynamical_population_size:
+                warnings.warn("This model has processes with a fluctuating "+\
+                        "number of agents. Consider correcting the rates dynamically with "+\
+                        "the attribute correct_for_dynamical_population_size = True")
+
 
         if not allow_nonzero_column_sums and len(linear_rate_functions)>0:
             _y = np.ones(self.N_comp)
             test = sum([r(0,_y) * dy for dy, r in zip (linear_event_updates, linear_rate_functions)])
             test += sum([r(0,_y) * dy for dy, r in zip (birth_event_updates, birth_rate_functions)])
-            test_sum = test.toarray().flatten().sum()
+            test_sum = test.sum()
             if np.abs(test_sum) > 1e-15:
                 warnings.warn("events do not sum to zero for each column:" + str(test_sum))
 
@@ -513,12 +531,10 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
             _s0 = self.get_compartment_id(coupling_compartments[0])
             _s1 = self.get_compartment_id(coupling_compartments[1])
 
-            data, row, col = [], [], []
+            dy = np.zeros(self.N_comp)
             for trg, change in affected_compartments:
-                col.append(self.get_compartment_id(trg))
-                data.append(change)
-                row.append(0)
-            dy = sprs.coo_matrix((data,(row,col)),shape=(1,self.N_comp),dtype=float).tocsr()
+                _t = self.get_compartment_id(trg)
+                dy[_t] = change
 
             if self._rate_has_functional_dependency(rate):
                 this_rate = DynamicQuadraticRate(rate, _s0, _s1)
@@ -531,7 +547,7 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         if not allow_nonzero_column_sums and len(quadratic_rate_functions)>0:
             _y = np.ones(self.N_comp)
             test = sum([r(0,_y) * dy for dy, r in zip (quadratic_event_updates, quadratic_rate_functions)])
-            test_sum = test.toarray().flatten().sum()
+            test_sum = test.sum()
             if np.abs(test_sum) > 1e-15:
                 warnings.warn("events do not sum to zero for each column:" + str(test_sum))
 
@@ -560,8 +576,8 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         else:
             population_size = self.initial_population_size
         ynew += sum([r(t,y)/population_size * dy for dy, r in zip(self.quadratic_event_updates, self.quadratic_rate_functions)])
-            
-        return ynew.toarray().flatten()
+
+        return ynew
 
     def get_numerical_dydt(self):
         """
@@ -569,9 +585,191 @@ class NumericEpiModel(IntegrationMixin,SimulationMixin):
         """
         return self.dydt
 
+    def get_time_leap_and_proposed_compartment_changes(self, t,
+                                                       current_event_rates=None, 
+                                                       get_event_rates = None,
+                                                       get_compartment_changes = None,
+                                                       ):
+
+        if get_event_rates is None:
+            get_event_rates = self.get_event_rates
+        if get_compartment_changes is None:
+            get_compartment_changes = self.get_compartment_changes
+
+        if self.rates_have_explicit_time_dependence:
+            # solve the integral numerically
+            integrand = lambda _t : get_event_rates(_t, self.y0).sum()
+            integral = lambda _t : quad(integrand, t, _t)[0]
+            _1_minus_r = 1 - np.random.rand()
+            rootfunction = lambda _t: - np.log(_1_minus_r) - integral(_t)
+            new_t = newton(rootfunction, t)
+            tau = new_t - t
+            proposed_event_rates = get_event_rates(new_t, self.y0)
+            dy = get_compartment_changes(proposed_event_rates)
+        else:
+            if current_event_rates is None:
+                current_event_rates = get_event_rates(t, self.y0)
+
+            total_event_rate = current_event_rates.sum()
+        
+            tau = np.random.exponential(1/total_event_rate)
+            dy = get_compartment_changes(current_event_rates)
+
+        return tau, dy
+
+    def get_compartment_changes(self, rates):
+
+        idy = np.random.choice(len(rates), p=rates/rates.sum())
+
+        if idy < len(self.birth_event_updates):
+            return self.birth_event_updates[idy]
+        elif idy < len(self.birth_event_updates) + len(self.linear_event_updates):
+            idy -= len(self.birth_event_updates)
+            return self.linear_event_updates[idy]
+        else:
+            idy -= (len(self.birth_event_updates) + len(self.linear_event_updates))
+            return self.quadratic_event_updates[idy]
+
+
+    def get_event_rates(self, t, y):
+        rates = [r(t,y) for r in self.birth_rate_functions]
+        rates += [r(t,y) for r in self.linear_rate_functions]
+        if self.correct_for_dynamical_population_size:
+            population_size = self.y0.sum()
+        else:
+            population_size = self.initial_population_size
+        rates += [ r(t,self.y0)/population_size for r in self.quadratic_rate_functions ]
+        rates = np.array(rates)
+
+        return rates
+
+    def get_numerical_event_and_rate_functions(self):
+        return self.get_event_rates, self.get_compartment_changes
+
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None,sampling_callback=None):
+        """
+        Returns values of the given compartments at the demanded
+        time points (as a numpy.ndarray of shape 
+        ``(return_compartments), len(time_points)``.
+
+        If ``return_compartments`` is None, all compartments will
+        be returned.
+
+        Parameters
+        ----------
+        tmax : float
+            maximum length of the simulation
+        return_compartments : list of compartments, default = None:
+            The compartments for which to return time series.
+            If ``None``, all compartments will be returned.
+        sampling_dt : float, default = None
+            Temporal distance between samples of the compartment counts.
+            If ``None``, every change will be returned.
+        sampling_callback : funtion, default = None
+            A function that's called when a sample is taken
+
+        Returns
+        -------
+        t : numpy.ndarray
+            times at which compartment counts have been sampled
+        result : dict
+            Dictionary mapping a compartment to a time series of its count.
+        """
+
+        if return_compartments is None:
+            return_compartments = self.compartments
+
+        if sampling_callback is not None and sampling_dt is None:
+            raise ValueError('A sampling callback function can only be set if sampling_dt is set, as well.')
+
+        ndx = [self.get_compartment_id(C) for C in return_compartments]
+        current_state = self.y0.copy()
+        compartments = [ current_state.copy() ]
+
+        t = self.t0
+        time = [self.t0]
+
+        get_event_rates, get_compartment_changes = self.get_numerical_event_and_rate_functions()
+        current_event_rates = get_event_rates(t, self.y0)
+        total_event_rate = current_event_rates.sum()
+
+        if sampling_callback is not None:
+            sampling_callback()
+
+        # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
+        # This is important because it might happen that nodes
+        # have a non-zero reaction rate but no targets left
+        # at which point the simulation will never halt.
+        while t < tmax and \
+              total_event_rate > 0:
+
+            # sample and advance time according to current total rate
+            tau, dy = self.get_time_leap_and_proposed_compartment_changes(t,
+                                                                          current_event_rates=current_event_rates,
+                                                                          get_event_rates=get_event_rates,
+                                                                          get_compartment_changes=get_compartment_changes,
+                                                                          )
+            new_t = t + tau
+
+            # break if simulation time is reached
+            if new_t >= tmax:
+                break
+
+            # sampling
+            if sampling_dt is not None:
+                # sample all the time steps that were demanded in between the two events
+                last_sample_dt = time[-1]
+                for idt in range(1,int(np.ceil((new_t-last_sample_dt)/sampling_dt))):
+                    time.append(last_sample_dt+idt*sampling_dt)
+                    compartments.append(current_state.copy())
+                    if sampling_callback is not None:
+                        sampling_callback()
+
+            # write losses and gains into the current state vector
+            current_state += dy
+
+            # save the current state if sampling_dt wasn't specified
+            if sampling_dt is None:
+                time.append(t)
+                compartments.append(current_state.copy())
+                if sampling_callback is not None:
+                    sampling_callback()
+
+            # save current state
+            self.t0 = new_t
+            self.y0 = current_state.copy()
+
+            current_event_rates = get_event_rates(new_t, self.y0)
+            total_event_rate = current_event_rates.sum()
+
+            # advance time
+            t = new_t
+
+        # convert to result dictionary
+        time = np.array(time)
+        result = np.array(compartments)
+
+        if sampling_callback is not None:
+            sampling_callback()
+
+        return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
+
+    def set_simulation_has_ended(self):
+        self._simulation_ended = True
+
+    def set_simulation_has_not_ended(self):
+        self._simulation_ended = False
+
+    def simulation_has_ended(self):
+        """
+        Check wether the simulation can be continued in its current state.
+        """
+        return self._simulation_ended
+
+
 class NumericSIModel(NumericEpiModel):
     """
-    An SI model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    An SI model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
     """
 
     def __init__(self, infection_rate, initial_population_size=1.0):
@@ -585,7 +783,7 @@ class NumericSIModel(NumericEpiModel):
 
 class NumericSISModel(NumericEpiModel):
     """
-    An SIS model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    An SIS model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
 
     Parameters
     ----------
@@ -608,7 +806,7 @@ class NumericSISModel(NumericEpiModel):
             ])
 class NumericSIRModel(NumericEpiModel):
     """
-    An SIR model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    An SIR model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
     """
 
     def __init__(self, infection_rate, recovery_rate, initial_population_size=1.0):
@@ -622,7 +820,7 @@ class NumericSIRModel(NumericEpiModel):
 
 class NumericSIRSModel(NumericEpiModel):
     """
-    An SIRS model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    An SIRS model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
     """
 
     def __init__(self, infection_rate, recovery_rate, waning_immunity_rate, initial_population_size=1.0):
@@ -637,7 +835,7 @@ class NumericSIRSModel(NumericEpiModel):
 
 class NumericSEIRModel(NumericEpiModel):
     """
-    An SEIR model derived from :class:`epipack.Numeric_epi_models.NumericEpiModel`.
+    An SEIR model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
     """
 
     def __init__(self, infection_rate, recovery_rate, symptomatic_rate, initial_population_size=1.0):
@@ -662,14 +860,28 @@ if __name__=="__main__":    # pragma: no cover
             ])
 
     print("#printing updates")
-    print([dy.toarray() for dy in epi.linear_event_updates])
-    print([dy.toarray() for dy in epi.quadratic_event_updates])
+    #print([dy.toarray() for dy in epi.linear_event_updates])
+    #print([dy.toarray() for dy in epi.quadratic_event_updates])
 
     import matplotlib.pyplot as pl
+    from time import time
 
-    epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
+    N_meas = 5
+
     tt = np.linspace(0,20,100)
-    result = epi.integrate(tt)
+    start = time()
+    epi = NumericEpiModel(list("SEIR"),100)
+    epi.set_processes([
+                ("S", "I", 2.0, "E", "I"),
+                ("E", 1.0, "I"),
+                ("I", 1.0, "R"),
+            ])
+    for meas in range(N_meas):
+        epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
+        result = epi.integrate(tt)
+    end = time()
+
+    print("arrays needed", end-start,"s")
 
     pl.plot(tt, result['S'],label='S')
     pl.plot(tt, result['E'],label='E')
@@ -677,4 +889,68 @@ if __name__=="__main__":    # pragma: no cover
     pl.plot(tt, result['R'],label='R')
     pl.legend()
 
+    from epipack import DeterministicSEIRModel
+
+    tt = np.linspace(0,20,50)
+    SEIR = DeterministicSEIRModel(2.0,1.0,1.0,initial_population_size=N)
+    SEIR.set_initial_conditions({'S':0.99*N,'I':0.01*N})
+    result = SEIR.integrate(tt)
+    pl.plot(tt, result['S'],'s',label='S',mfc='None')
+    pl.plot(tt, result['E'],'s',label='E',mfc='None')
+    pl.plot(tt, result['I'],'s',label='I',mfc='None')
+    pl.plot(tt, result['R'],'s',label='R',mfc='None')
+
+
+
+    ##########
+    epi = NumericEpiModel(list("SEIR"),100)
+    epi.set_processes([
+                ("S", "I", 2.0, "E", "I"),
+                ("E", 1.0, "I"),
+                ("I", 1.0, "R"),
+            ])
+    epi.set_initial_conditions({'S':99,'I':1})
+    t, result = epi.simulate(tt[-1])
+    pl.plot(t, result['S'],label='S')
+    pl.plot(t, result['E'],label='E')
+    pl.plot(t, result['I'],label='I')
+    pl.plot(t, result['R'],label='R')
+
+    pl.figure()
+
+    S, I, R = list("SIR")
+    N = 200
+    model = NumericEpiModel([S,I],N,correct_for_dynamical_population_size=True)
+
+    def temporalR0(t,y):
+        return 4 + np.cos(t/100*2*np.pi)
+
+    model.set_processes([
+            (S, I, temporalR0, I, I),            
+            (None, N, S),
+            (I, 1, S),
+            (S, 1, None),
+            (I, 1, None),
+        ])
+    model.set_initial_conditions({
+            S: 190,
+            I: 10,
+        })
+
+    def print_status():
+        print(model.t0/150*100)
+    t, result = model.simulate(150,sampling_dt=0.5,sampling_callback=print_status)
+    pl.plot(t, result['S'],label='S')
+    pl.plot(t, result['I'],label='I')
+
+    model.set_initial_conditions({
+            S: 190,
+            I: 10,
+        })
+    tt = np.linspace(0,100,1000)
+    result = model.integrate(tt)
+    pl.plot(tt, result['S'],label='S')
+    pl.plot(tt, result['I'],label='I')
+
     pl.show()
+

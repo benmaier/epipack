@@ -131,6 +131,7 @@ class IntegrationMixin():
         """
 
         dydt = self.get_numerical_dydt()
+        self.t0 = time_points[0]
 
         if integrator == 'dopri5':
             result = integrate_dopri5(dydt, time_points, self.y0)
@@ -138,6 +139,7 @@ class IntegrationMixin():
             result = integrate_euler(dydt, time_points, self.y0)
 
         if adopt_final_state:
+            self.t0 = time_points[-1]
             self.y0 = result[:,-1]
 
         if return_compartments is not None:
@@ -185,7 +187,7 @@ class IntegrationMixin():
 
         return result_dict
 
-    def set_initial_conditions(self, initial_conditions,allow_nonzero_column_sums=False):
+    def set_initial_conditions(self, initial_conditions, initial_time=0.0, allow_nonzero_column_sums=False):
         """
         Set the initial conditions for integration
 
@@ -205,6 +207,7 @@ class IntegrationMixin():
             initial_conditions = list(initial_conditions.items())
 
         self.y0 = np.zeros(self.N_comp)
+        self.t0 = initial_time
         total = 0
         for compartment, amount in initial_conditions:
             total += amount

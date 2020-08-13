@@ -1,5 +1,5 @@
 """
-Provides an API to define deterministic epidemiological models in terms of sympy symbolic expressions.
+Provides an API to define NumericMatrixBased epidemiological models in terms of sympy symbolic expressions.
 """
 
 import warnings
@@ -18,7 +18,7 @@ from epipack.process_conversions import (
             transmission_processes_to_rates,
         )
 
-from epipack.deterministic_epi_models import DeterministicEpiModel
+from epipack.numeric_matrix_based_epi_models import NumericMatrixBasedEpiModel
 
 from epipack.numeric_epi_models import NumericEpiModel
 
@@ -296,7 +296,7 @@ class SymbolicMixin():
         return get_event_rates, get_compartment_changes
 
 
-class SymbolicEpiModel(SymbolicMixin, DeterministicEpiModel):
+class SymbolicMatrixBasedEpiModel(SymbolicMixin, NumericMatrixBasedEpiModel):
     """
     A general class to define standard 
     mean-field compartmental
@@ -344,7 +344,7 @@ class SymbolicEpiModel(SymbolicMixin, DeterministicEpiModel):
     def __init__(self,compartments,initial_population_size=1,correct_for_dynamical_population_size=False):
         """
         """
-        DeterministicEpiModel.__init__(self, compartments, initial_population_size, correct_for_dynamical_population_size)
+        NumericMatrixBasedEpiModel.__init__(self, compartments, initial_population_size, correct_for_dynamical_population_size)
 
 
         self.t = sympy.symbols("t")
@@ -509,23 +509,7 @@ class SymbolicEpiModel(SymbolicMixin, DeterministicEpiModel):
         return ynew
             
 
-class SymbolicSIModel(SymbolicEpiModel):
-    """
-    An SI model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
-    """
-
-    def __init__(self, infection_rate, initial_population_size=1):
-
-        S, I = sympy.symbols("S I")
-
-        SymbolicEpiModel.__init__(self,[S, I], initial_population_size)
-
-        self.set_quadratic_rates([
-                (S, I, S, -infection_rate),
-                (S, I, I, +infection_rate),
-            ])
-
-class SymbolicEventEpiModel(SymbolicMixin, NumericEpiModel):
+class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
 
     def __init__(self,compartments,
                       initial_population_size=1,
@@ -735,6 +719,21 @@ class SymbolicEventEpiModel(SymbolicMixin, NumericEpiModel):
 
         return ynew
 
+class SymbolicSIModel(SymbolicEpiModel):
+    """
+    An SI model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
+    """
+
+    def __init__(self, infection_rate, initial_population_size=1):
+
+        S, I = sympy.symbols("S I")
+
+        SymbolicEpiModel.__init__(self,[S, I], initial_population_size)
+
+        self.set_processes([
+                (S, I, infection_rate, I, I),
+            ])
+
 class SymbolicSIRModel(SymbolicEpiModel):
     """
     An SIR model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
@@ -796,10 +795,9 @@ class SymbolicSIRSModel(SymbolicEpiModel):
 if __name__=="__main__":    # pragma: no cover
     eta, rho = sympy.symbols("eta rho")
     epi = SymbolicSIRModel(eta, rho)
-    print(epi.linear_rates)
 
-    for C, M in zip(epi.compartments, epi.quadratic_rates):
-        print(C, M)
+    #for C, M in zip(epi.compartments, epi.quadratic_rates):
+    #    print(C, M)
 
     print(epi.dydt())
     
@@ -854,7 +852,7 @@ if __name__=="__main__":    # pragma: no cover
 
     print("gray scott")
     u, v, f, k = sympy.symbols("u v f k")
-    GS = SymbolicEpiModel([u,v])
+    GS = SymbolicMatrixBasedEpiModel([u,v])
     GS.set_linear_rates([
             (None, u, f),
             (u, u, -f),

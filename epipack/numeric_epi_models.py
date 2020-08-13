@@ -646,7 +646,7 @@ class NumericEpiModel(IntegrationMixin):
     def get_numerical_event_and_rate_functions(self):
         return self.get_event_rates, self.get_compartment_changes
 
-    def simulate(self,tmax,return_compartments=None,sampling_dt=None,sampling_callback=None):
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None,sampling_callback=None,adopt_final_state=False):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -685,6 +685,10 @@ class NumericEpiModel(IntegrationMixin):
         ndx = [self.get_compartment_id(C) for C in return_compartments]
         current_state = self.y0.copy()
         compartments = [ current_state.copy() ]
+
+        if not adopt_final_state:
+            initial_state = current_state.copy()
+            initial_time = self.t0
 
         t = self.t0
         time = [self.t0]
@@ -751,6 +755,11 @@ class NumericEpiModel(IntegrationMixin):
 
         if sampling_callback is not None:
             sampling_callback()
+
+        if not adopt_final_state:
+            self.y0 = initial_state
+            self.t0 = initial_time
+
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
 

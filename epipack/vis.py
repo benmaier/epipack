@@ -1101,7 +1101,7 @@ def visualize(model,
         # `sim_result` is a dictionary that maps a compartment
         # to a numpy array containing the compartment counts at
         # the corresponding time.
-        sim_time, sim_result = model.simulate(sampling_dt)
+        sim_time, sim_result = model.simulate(sampling_dt,adopt_final_state=True)
 
         # compare the new node statuses with the old node statuses
         # and find the nodes that have changed status

@@ -210,8 +210,6 @@ class SymbolicEpiTest(unittest.TestCase):
             assert(np.allclose(res0, result2[str(c0)]))
 
 
-
-
     def test_time_dependent_rates(self):
 
         B, t = sympy.symbols("B t")

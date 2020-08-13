@@ -1,5 +1,5 @@
 import numpy as np
-from StochasticEpiModels import StochasticEpiModel
+from epipack.stochastic_epi_models import StochasticEpiModel
 from SIRXQ import mean_field_SIRX_tracing
 import networkx as nx
 

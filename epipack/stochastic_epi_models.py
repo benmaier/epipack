@@ -35,142 +35,8 @@ _EVENTS = 0
 _RATES = 1
 _LINK_PROCESS_INDICES = 2
 
-class SimulationMixin():
 
-    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None,sampling_callback=None):
-        """
-        Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
-        ``(return_compartments), len(time_points)``.
-
-        If ``return_compartments`` is None, all compartments will
-        be returned.
-
-        Parameters
-        ----------
-        tmax : float
-            maximum length of the simulation
-        return_compartments : list of compartments, default = None:
-            The compartments for which to return time series.
-            If ``None``, all compartments will be returned.
-        sampling_dt : float, default = None
-            Temporal distance between samples of the compartment counts.
-            If ``None``, every change will be returned.
-        max_unsuccessful : int, default = None
-            The number of unsuccessful events after which the
-            true total event rate will be evaluated (it might happen
-            that a network becomes effectively disconnected while
-            nodes are still associated with a maximum event rate).
-            If ``None``, this number will be set equal to the number of nodes.
-        sampling_callback : funtion, default = None
-            A function that's called when a sample is taken
-
-        Returns
-        -------
-        t : numpy.ndarray
-            times at which compartment counts have been sampled
-        result : dict
-            Dictionary mapping a compartment to a time series of its count.
-        """
-
-        if return_compartments is None:
-            return_compartments = self.compartments
-
-        if sampling_callback is not None and sampling_dt is None:
-            raise ValueError('A sampling callback function can only be set if sampling_dt is set, as well.')
-
-        ndx = [self.get_compartment_id(C) for C in return_compartments]
-        current_state = self.y0.copy()
-        compartments = [ current_state.copy() ]
-
-        t = 0.0
-        time = [0.0]
-
-        if max_unsuccessful is None:
-            max_unsuccessful = self.N_nodes
-            unsuccessful = 0
-
-        total_event_rate = self.get_total_event_rate()
-
-        if sampling_callback is not None:
-            sampling_callback()
-
-        # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
-        # This is important because it might happen that nodes
-        # have a non-zero reaction rate but no targets left
-        # at which point the simulation will never halt.
-        while t < tmax and \
-              not self.simulation_has_ended() and\
-              total_event_rate > 0 and \
-              current_state[self.transitioning_compartments].sum() > 0:
-
-            # sample and advance time according to current total rate
-            tau = self.get_time_leap()
-            new_t = t+tau
-
-            # break if simulation time is reached
-            if new_t >= tmax:
-                break
-
-            # sample a reacting node from the reaction set
-            # let the event take place and get all the compartments
-            # that are associated with changes
-            changing_compartments = self.get_compartment_changes(new_t)
-
-            # only save compartment counts if anything changed
-            if len(changing_compartments) > 0:
-
-                if sampling_dt is not None:
-                    # sample all the time steps that were demanded in between the two events
-                    last_sample_dt = time[-1]
-                    for idt in range(1,int(np.ceil((new_t-last_sample_dt)/sampling_dt))):
-                        time.append(last_sample_dt+idt*sampling_dt)
-                        compartments.append(current_state.copy())
-                        if sampling_callback is not None:
-                            sampling_callback()
-
-                # write losses and gains into the current state vector
-                #for losing, gaining in changing_compartments:
-                #    current_state[losing] -= 1 
-                #    current_state[gaining] += 1 
-                current_state += changing_compartments
-
-                # save the current state if sampling_dt wasn't specified
-                if sampling_dt is None:
-                    time.append(t)
-                    compartments.append(current_state.copy())
-                    if sampling_callback is not None:
-                        sampling_callback()
-
-                unsuccessful = 0
-                total_event_rate = self.get_total_event_rate()
-
-                # save current state
-                self.y0 = current_state.copy()
-            else:
-                unsuccessful += 1
-                if unsuccessful > max_unsuccessful:
-                    total_event_rate = self.get_true_total_event_rate()
-                    unsuccessful = 0
-                else:
-                    total_event_rate = self.get_total_event_rate()
-
-
-            # advance time
-            t = new_t
-
-
-
-        # convert to result dictionary
-        time = np.array(time)
-        result = np.array(compartments)
-
-        if sampling_callback is not None:
-            sampling_callback()
-
-        return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
-
-class StochasticEpiModel(SimulationMixin):
+class StochasticEpiModel():
     """
     A general class to define any 
     compartmental epidemiological model
@@ -178,7 +44,6 @@ class StochasticEpiModel(SimulationMixin):
     system or on a weighted, directed network.
     By default, the epidemiological process is considered
     to run in a well-mixed system.
-
     Parameters
     ----------
     compartments : :obj:`list` of :obj:`string`
@@ -188,9 +53,7 @@ class StochasticEpiModel(SimulationMixin):
     edge_weight_tuples : list of tuples of (int, int, float), default = None
         Choose this ption
         The links along which transmissions can take place.
-
             [ (source_id, target_id, weight), ... ]
-
     directed : bool, default = False
         If `directed` is False, each entry in the edge_weight_tuples
         is considered to equally point from `target_id` to `source_id`
@@ -200,11 +63,8 @@ class StochasticEpiModel(SimulationMixin):
         in a well-mixed population where for each link-transmission
         event, a node is assumed to have contact to exactly one
         other node.
-
-
     Attributes
     ----------
-
     compartments : :obj:`list` of :obj:`string`
         A list containing strings that describe each compartment,
         (e.g. "S", "I", etc.).
@@ -213,17 +73,13 @@ class StochasticEpiModel(SimulationMixin):
     node_status : numpy.ndarray of int
         Each entry gives the compartment that the
         corresponding node is part of.
-
-
     Example
     -------
-
     .. code:: python
         
         >>> epi = StochasticEpiModel(["S","I","R"],10)
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
-
     """
 
     def __init__(self,compartments,N,edge_weight_tuples=None,directed=False,well_mixed_mean_contact_number=1):
@@ -255,21 +111,17 @@ class StochasticEpiModel(SimulationMixin):
     def set_network(self,N_nodes,edge_weight_tuples,directed=False):
         """
         Define the model to run on a network.
-
         Parameters
         ---------
         N_nodes : int
             Number of nodes in the system
         edge_weight_tuples : list of tuple of (int, int, float)
             The links along which transmissions can take place.
-
                 [ (source_id, target_id, weight), ... ]
-
         directed : bool, default = False
             If `directed` is False, each entry in the edge_weight_tuples
             is considered to equally point from `target_id` to `source_id`
             with weight `weight`.
-
         """
 
         self.N_nodes = int(N_nodes)
@@ -337,32 +189,23 @@ class StochasticEpiModel(SimulationMixin):
     def set_node_transition_processes(self,process_list):
         """
         Define the linear node transition processes between compartments.
-
         Parameters
         ==========
-
         process_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions rates in the following format:
-
             .. code:: python
-
                 [
                     ("source_compartment", rate, "target_compartment" ),
                     ...
                 ]
-
         Example
         -------
-
         For an SEIR model.
-
         .. code:: python
-
             epi.set_node_transition_processes([
                 ("E", symptomatic_rate, "I" ),
                 ("I", recovery_rate, "R" ),
             ])
-
         """
 
         # each compartment is associated with a list of events that it can be
@@ -395,14 +238,11 @@ class StochasticEpiModel(SimulationMixin):
     def set_link_transmission_processes(self,process_list):
         r"""
         Define link transmission processes between compartments.
-
         Parameters
         ----------
         process_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions rates in the following format:
-
             .. code:: python
-
                 [
                     ("source_compartment", 
                      "target_compartment_initial",
@@ -412,18 +252,13 @@ class StochasticEpiModel(SimulationMixin):
                      ),
                     ...
                 ]
-
         Example
         -------
-
         For an SEIR model.
-
         .. code:: python
-
             epi.set_link_transmission_processes([
                 ("I", "S", +1, "I", "E" ),
             ])
-
         """
 
         # each compartment is associated with a list of events that it can be
@@ -464,14 +299,11 @@ class StochasticEpiModel(SimulationMixin):
     def set_conditional_link_transmission_processes(self,process_dict):
         r"""
         Define link transmission processes between compartments.
-
         Parameters
         ----------
         process_dict : :obj:`list` of :obj:`tuple`
             A dictionary of tuples that contains conditional transmission events in the following format:
-
             .. code:: python
-
                 {  
                     ( "source_base", "->", "target_base" ): [
                         ("target_base", 
@@ -492,25 +324,20 @@ class StochasticEpiModel(SimulationMixin):
                     ...
                    ]
                 }
-
         Example
         -------
-
         When an `I`-node recovers (to `R`), scan all of the newly-recovered node's
         neighbors. If the neighbor is an `S`, transition the neighbor
         to `X`. If the neighbor is an `I`, transition the neighbor to `Q` with
         probability :math:`p` (implying that nothing happens to this neighbor
         with probability :math:`1-p`.
-
         .. code:: python
-
             epi.set_conditional_link_transmission_processes({
                 ( "I", "->", "R" ) : [
                     ("R", "S", "->", "R", "X" ),
                     ("R", "I", p, "R", "Q" ),
                 ]
             })
-
         """
 
         # each compartment is associated with a list of events that it can be
@@ -648,7 +475,6 @@ class StochasticEpiModel(SimulationMixin):
     def set_random_initial_conditions(self, initial_conditions):
         """
         Set random initial conditions for each compartment.
-
         Parameters
         ----------
         initial_conditions : dict
@@ -703,7 +529,6 @@ class StochasticEpiModel(SimulationMixin):
         """
         Set all node statuses at once and evaluate events and rates accordingly.
         Can be used to set initial conditions.
-
         Parameters
         ----------
         node_status : numpy.ndarray of int
@@ -763,7 +588,6 @@ class StochasticEpiModel(SimulationMixin):
     def set_node_status(self,node,status):
         """
         Set the status of node `node` to `status`
-
         Parameters
         ----------
         node : int
@@ -878,7 +702,7 @@ class StochasticEpiModel(SimulationMixin):
         """
         return np.random.exponential(1/self.get_total_event_rate())
 
-    def get_compartment_changes(self, new_time):
+    def get_compartment_changes(self):
         """
         Let an event take place according to the new time and return the change in compartment counts.
         """
@@ -895,12 +719,10 @@ class StochasticEpiModel(SimulationMixin):
         """
         Let a random node event happen according to the event probabilities
         of this node's status.
-
         Parameters
         ----------
         reacting_node : int
             the index of the node that reacts
-
         Returns
         -------
         compartment_changes : list of tuples of int
@@ -924,7 +746,6 @@ class StochasticEpiModel(SimulationMixin):
     def make_node_event(self, reacting_node, event, neighbor=None):
         """
         Let a specific node event happen
-
         Parameters
         ----------
         reacting_node : int
@@ -933,7 +754,6 @@ class StochasticEpiModel(SimulationMixin):
             three-entry long tuple that characterizes this event
         neighbor : int, default = None
             specify the neighbor to which this specific event happens
-
         Returns
         -------
         compartment_changes : list of tuples of int
@@ -947,7 +767,7 @@ class StochasticEpiModel(SimulationMixin):
         losing_compartment = event[_AFFECTED_SOURCE_COMPARTMENT]
         gaining_compartment = event[_AFFECTED_TARGET_COMPARTMENT]
 
-        compartment_changes = np.zeros((self.N_comp,),dtype=int)
+        compartment_changes = []
 
         # if is transmission event
         if is_transmission_event:            
@@ -1016,7 +836,7 @@ class StochasticEpiModel(SimulationMixin):
                     # is longer than one. if not, let this single event take place with the given probability
                     if len(probabilities) == 1 and (probabilities[0] == 1.0 or probabilities[0] > np.random.random()):
                         these_compartment_changes = self.make_node_event(affected_node, conditional_transmission_events[0], neighbor = n)
-                        compartment_changes += these_compartment_changes
+                        compartment_changes.extend(these_compartment_changes)
                     else:
                         # if there's a list of proposed events, each associated with a probability,
                         # choose from the list uniform at random
@@ -1028,14 +848,140 @@ class StochasticEpiModel(SimulationMixin):
                                 conditional_transmission_event[_AFFECTED_TARGET_COMPARTMENT]:
                             # if something happens, let it happen
                             these_compartment_changes = self.make_node_event(affected_node, conditional_transmission_event, neighbor = n)
-                            compartment_changes += these_compartment_changes
+                            compartment_changes.extend(these_compartment_changes)
 
-
-        compartment_changes[losing_compartment] -= 1
-        compartment_changes[gaining_compartment] += 1
+        compartment_changes.append((losing_compartment, gaining_compartment))
 
         return compartment_changes
 
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None,sampling_callback=None,**kwargs):
+        """
+        Returns values of the given compartments at the demanded
+        time points (as a numpy.ndarray of shape 
+        ``(return_compartments), len(time_points)``.
+        If ``return_compartments`` is None, all compartments will
+        be returned.
+        Parameters
+        ----------
+        tmax : float
+            maximum length of the simulation
+        return_compartments : list of compartments, default = None:
+            The compartments for which to return time series.
+            If ``None``, all compartments will be returned.
+        sampling_dt : float, default = None
+            Temporal distance between samples of the compartment counts.
+            If ``None``, every change will be returned.
+        max_unsuccessful : int, default = None
+            The number of unsuccessful events after which the
+            true total event rate will be evaluated (it might happen
+            that a network becomes effectively disconnected while
+            nodes are still associated with a maximum event rate).
+            If ``None``, this number will be set equal to the number of nodes.
+        sampling_callback : funtion, default = None
+            A function that's called when a sample is taken
+        Returns
+        -------
+        t : numpy.ndarray
+            times at which compartment counts have been sampled
+        result : dict
+            Dictionary mapping a compartment to a time series of its count.
+        """
+
+        if return_compartments is None:
+            return_compartments = self.compartments
+
+        if sampling_callback is not None and sampling_dt is None:
+            raise ValueError('A sampling callback function can only be set if sampling_dt is set, as well.')
+
+        ndx = [self.get_compartment_id(C) for C in return_compartments]
+        current_state = self.y0.copy()
+        compartments = [ current_state.copy() ]
+
+        t = 0.0
+        time = [0.0]
+
+        if max_unsuccessful is None:
+            max_unsuccessful = self.N_nodes
+            unsuccessful = 0
+
+        total_event_rate = self.get_total_event_rate()
+
+        if sampling_callback is not None:
+            sampling_callback()
+
+        # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
+        # This is important because it might happen that nodes
+        # have a non-zero reaction rate but no targets left
+        # at which point the simulation will never halt.
+        while t < tmax and \
+              not self.simulation_has_ended() and\
+              total_event_rate > 0 and \
+              current_state[self.transitioning_compartments].sum() > 0:
+
+            # sample and advance time according to current total rate
+            tau = self.get_time_leap()
+            new_t = t+tau
+
+            # break if simulation time is reached
+            if new_t >= tmax:
+                break
+
+            # sample a reacting node from the reaction set
+            # let the event take place and get all the compartments
+            # that are associated with changes
+            changing_compartments = self.get_compartment_changes()
+
+            # only save compartment counts if anything changed
+            if len(changing_compartments) > 0:
+
+                if sampling_dt is not None:
+                    # sample all the time steps that were demanded in between the two events
+                    last_sample_dt = time[-1]
+                    for idt in range(1,int(np.ceil((new_t-last_sample_dt)/sampling_dt))):
+                        time.append(last_sample_dt+idt*sampling_dt)
+                        compartments.append(current_state.copy())
+                        if sampling_callback is not None:
+                            sampling_callback()
+
+                # write losses and gains into the current state vector
+                for losing, gaining in changing_compartments:
+                    current_state[losing] -= 1 
+                    current_state[gaining] += 1 
+
+                # save the current state if sampling_dt wasn't specified
+                if sampling_dt is None:
+                    time.append(t)
+                    compartments.append(current_state.copy())
+                    if sampling_callback is not None:
+                        sampling_callback()
+
+                unsuccessful = 0
+                total_event_rate = self.get_total_event_rate()
+
+                # save current state
+                self.y0 = current_state.copy()
+            else:
+                unsuccessful += 1
+                if unsuccessful > max_unsuccessful:
+                    total_event_rate = self.get_true_total_event_rate()
+                    unsuccessful = 0
+                else:
+                    total_event_rate = self.get_total_event_rate()
+
+
+            # advance time
+            t = new_t
+
+
+
+        # convert to result dictionary
+        time = np.array(time)
+        result = np.array(compartments)
+
+        if sampling_callback is not None:
+            sampling_callback()
+
+        return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
 class StochasticSIRModel(StochasticEpiModel):
     """
     An SIR model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
@@ -1228,3 +1174,4 @@ if __name__ == "__main__":     # pragma: no cover
 
     pl.legend()
     pl.show()
+

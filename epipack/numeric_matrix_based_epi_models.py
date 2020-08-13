@@ -1,5 +1,5 @@
 """
-Provides an API to define deterministic epidemiological models.
+Provides an API to define NumericMatrixBased epidemiological models.
 """
 
 import numpy as np 
@@ -10,6 +10,7 @@ import warnings
 from epipack.integrators import (
             integrate_dopri5,
             integrate_euler,
+            IntegrationMixin,
         )
 
 from epipack.process_conversions import (
@@ -20,94 +21,8 @@ from epipack.process_conversions import (
             transmission_processes_to_rates,
         )
 
-class IntegrationMixin():
 
-    def integrate_and_return_by_index(self,
-                                      time_points,
-                                      return_compartments=None,
-                                      integrator='dopri5',
-                                      adopt_final_state=False,
-                                      ):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
-        ``(return_compartments), len(time_points)``.
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-        """
-
-        dydt = self.get_numerical_dydt()
-
-        if integrator == 'dopri5':
-            result = integrate_dopri5(dydt, time_points, self.y0)
-        else:
-            result = integrate_euler(dydt, time_points, self.y0)
-
-        if adopt_final_state:
-            self.y0 = result[:,-1]
-
-        if return_compartments is not None:
-            ndx = [self.get_compartment_id(C) for C in return_compartments]
-            result = result[ndx,:]
-
-        return result
-
-    def integrate(self,
-                  time_points,
-                  return_compartments=None,
-                  *args,
-                  **kwargs,
-                  ):
-        r"""
-        Returns values of the given compartments at the demanded
-        time points (as a dictionary).
-
-        Parameters
-        ==========
-        time_points : np.ndarray
-            An array of time points at which the compartment values
-            should be evaluated and returned.
-        return_compartments : list, default = None
-            A list of compartments for which the result should be returned.
-            If ``return_compartments`` is None, all compartments will
-            be returned.
-        integrator : str, default = 'dopri5'
-            Which method to use for integration. Currently supported are
-            ``'euler'`` and ``'dopri5'``. If ``'euler'`` is chosen,
-            :math:`\delta t` will be determined by the difference
-            of consecutive entries in ``time_points``.
-        adopt_final_state : bool, default = False
-            Whether or not to adopt the final state of the integration
-            as new initial conditions.
-        """
-        if return_compartments is None:
-            return_compartments = self.compartments
-
-        result = self.integrate_and_return_by_index(time_points, return_compartments,*args,**kwargs)
-
-        result_dict = {}
-        for icomp, compartment in enumerate(return_compartments):
-            result_dict[compartment] = result[icomp,:]
-
-        return result_dict
-
-
-class DeterministicEpiModel(IntegrationMixin):
+class NumericMatrixBasedEpiModel(IntegrationMixin):
     """
     A general class to define standard 
     mean-field compartmental
@@ -145,7 +60,7 @@ class DeterministicEpiModel(IntegrationMixin):
 
     .. code:: python
         
-        >>> epi = DeterministicEpiModel(["S","I","R"])
+        >>> epi = NumericMatrixBasedEpiModel(["S","I","R"])
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
 
@@ -156,6 +71,7 @@ class DeterministicEpiModel(IntegrationMixin):
         """
         """
 
+        self.t0 = None
         self.y0 = None
         self.affected_by_quadratic_process = []
 
@@ -591,48 +507,15 @@ class DeterministicEpiModel(IntegrationMixin):
         """
         return self.dydt
 
-    def set_initial_conditions(self, initial_conditions,allow_nonzero_column_sums=False):
-        """
-        Set the initial conditions for integration
 
-        Parameters
-        ----------
-        initial_conditions : dict
-            A dictionary that maps compartments to a fraction
-            of the population. Compartments that are not
-            set in this dictionary are assumed to have an initial condition
-            of zero.
-        allow_nonzero_column_sums : bool, default = False
-            If True, an error is raised when the initial conditions do not
-            sum to the population size.
-        """
-
-        if type(initial_conditions) == dict:
-            initial_conditions = list(initial_conditions.items())
-
-        self.y0 = np.zeros(self.N_comp)
-        total = 0
-        for compartment, amount in initial_conditions:
-            total += amount
-            if self.y0[self.get_compartment_id(compartment)] != 0:
-                warnings.warn('Double entry in initial conditions for compartment '+str(compartment))
-            else:
-                self.y0[self.get_compartment_id(compartment)] = amount
-
-        if np.abs(total-self.initial_population_size)/self.initial_population_size > 1e-14 and not allow_nonzero_column_sums:
-            warnings.warn('Sum of initial conditions does not equal unity.')
-
-        return self
-
-
-class DeterministicSIModel(DeterministicEpiModel):
+class NumericMatrixBasedSIModel(NumericMatrixBasedEpiModel):
     """
-    An SI model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
+    An SI model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
     """
 
     def __init__(self, infection_rate, initial_population_size=1.0):
 
-        DeterministicEpiModel.__init__(self, list("SI"), initial_population_size)
+        NumericMatrixBasedEpiModel.__init__(self, list("SI"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -640,9 +523,9 @@ class DeterministicSIModel(DeterministicEpiModel):
             ])
 
 
-class DeterministicSISModel(DeterministicEpiModel):
+class NumericMatrixBasedSISModel(NumericMatrixBasedEpiModel):
     """
-    An SIS model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
+    An SIS model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
 
     Parameters
     ----------
@@ -659,7 +542,7 @@ class DeterministicSISModel(DeterministicEpiModel):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SI"), initial_population_size)
+        NumericMatrixBasedEpiModel.__init__(self, list("SI"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -669,16 +552,16 @@ class DeterministicSISModel(DeterministicEpiModel):
                 ("I", recovery_rate, "S" ),
             ])
 
-class DeterministicSIRModel(DeterministicEpiModel):
+class NumericMatrixBasedSIRModel(NumericMatrixBasedEpiModel):
     """
-    An SIR model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
+    An SIR model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIR"), initial_population_size)
+        NumericMatrixBasedEpiModel.__init__(self, list("SIR"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -688,16 +571,16 @@ class DeterministicSIRModel(DeterministicEpiModel):
                 ("I", recovery_rate, "R"),
             ])
 
-class DeterministicSIRSModel(DeterministicEpiModel):
+class NumericMatrixBasedSIRSModel(NumericMatrixBasedEpiModel):
     """
-    An SIRS model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
+    An SIRS model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, waning_immunity_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SIR"), initial_population_size)
+        NumericMatrixBasedEpiModel.__init__(self, list("SIR"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -708,16 +591,16 @@ class DeterministicSIRSModel(DeterministicEpiModel):
                 ("R", waning_immunity_rate, "S"),
             ])
 
-class DeterministicSEIRModel(DeterministicEpiModel):
+class NumericMatrixBasedSEIRModel(NumericMatrixBasedEpiModel):
     """
-    An SEIR model derived from :class:`epipack.deterministic_epi_models.DeterministicEpiModel`.
+    An SEIR model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, initial_population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        DeterministicEpiModel.__init__(self, list("SEIR"), initial_population_size)
+        NumericMatrixBasedEpiModel.__init__(self, list("SEIR"), initial_population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -730,7 +613,7 @@ class DeterministicSEIRModel(DeterministicEpiModel):
 
 
 if __name__=="__main__":    # pragma: no cover
-    epi = DeterministicEpiModel(list("SEIR"))
+    epi = NumericMatrixBasedEpiModel(list("SEIR"))
     print(epi.compartments)
     print()
     epi.add_transition_processes([
@@ -749,7 +632,7 @@ if __name__=="__main__":    # pragma: no cover
     import matplotlib.pyplot as pl
 
     N = 100
-    epi = DeterministicSISModel(R0=2,recovery_rate=1,initial_population_size=N)
+    epi = NumericMatrixBasedSISModel(R0=2,recovery_rate=1,initial_population_size=N)
     print(epi.linear_rates)
     epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
     tt = np.linspace(0,10,100)

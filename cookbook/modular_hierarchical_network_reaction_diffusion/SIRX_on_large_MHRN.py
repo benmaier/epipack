@@ -53,7 +53,7 @@ model.set_conditional_link_transmission_processes({
 model.set_random_initial_conditions({'I':10,'S':N-10})
 
 # in every step of the simulation/visualization, let a time of `sampling_dt` pass
-sampling_dt = 0.12
+sampling_dt = 1
 
 # simulate and visualize, do not plot the "S" count,
 # and remove links from nodes that transition to "X"

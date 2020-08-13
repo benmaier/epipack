@@ -1,4 +1,4 @@
-from epipack import DeterministicEpiModel, get_2D_lattice_links
+from epipack import NumericMatrixBasedEpiModel, get_2D_lattice_links
 from epipack.vis import visualize_reaction_diffusion, get_grid_layout
 import numpy as np
 
@@ -14,7 +14,7 @@ network = get_grid_layout(N)
 base_compartments = "SIR"
 
 compartments = [ (node, C) for node in range(N) for C in base_compartments ]
-model = DeterministicEpiModel(compartments)
+model = NumericMatrixBasedEpiModel(compartments)
 
 infection_rate = 2
 recovery_rate = 1

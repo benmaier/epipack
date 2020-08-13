@@ -1,18 +1,41 @@
 # -*- coding: utf-8 -*-
 """
-Build, simulate, and analyze any polynomial epidemiological model.
+Build, simulate, and analyze epidemiological models.
 """
 
 from .metadata import *
 
-from .deterministic_epi_models import (
-        DeterministicEpiModel,
-        DeterministicSIModel,
-        DeterministicSISModel,
-        DeterministicSIRModel,
-        DeterministicSIRSModel,
-        DeterministicSEIRModel,
+from .numeric_matrix_based_epi_models import (
+        NumericMatrixBasedEpiModel,
+        NumericMatrixBasedSIModel,
+        NumericMatrixBasedSISModel,
+        NumericMatrixBasedSIRModel,
+        NumericMatrixBasedSIRSModel,
+        NumericMatrixBasedSEIRModel,
         )
+
+MatrixEpiModel = NumericMatrixBasedEpiModel
+MatrixBasedSIModel = NumericMatrixBasedSIModel,
+MatrixBasedSISModel = NumericMatrixBasedSISModel,
+MatrixBasedSIRModel = NumericMatrixBasedSIRModel,
+MatrixBasedSIRSModel = NumericMatrixBasedSIRSModel,
+MatrixBasedSEIRModel = NumericMatrixBasedSEIRModel,
+
+from .numeric_epi_models import (
+        NumericEpiModel,
+        NumericSIModel,
+        NumericSISModel,
+        NumericSIRModel,
+        NumericSIRSModel,
+        NumericSEIRModel,
+        )
+
+EpiModel = NumericEpiModel
+SIModel = NumericSIModel
+SISModel = NumericSISModel
+SIRModel = NumericSIRModel
+SIRSModel = NumericSIRSModel
+SEIRModel = NumericSEIRModel
 
 from .stochastic_epi_models import (
         StochasticEpiModel,
@@ -21,6 +44,7 @@ from .stochastic_epi_models import (
         )
 
 from .symbolic_epi_models import (
+        SymbolicMatrixBasedEpiModel,
         SymbolicEpiModel,
         SymbolicSIModel,
         SymbolicSISModel,

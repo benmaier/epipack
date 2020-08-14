@@ -20,14 +20,18 @@ such that all the analysis steps can be performed in an efficient manner,
 simply by defining processes based on reaction equations. `epipack` provides
 three base classes to accomodate different problems.
 
-* `DeterministicEpiModel`: Define a model based on transition, birth, 
-  death, fission, fusion, or transmission reactions and integrate the 
+* `EpiModel`: Define a model based on transition, birth, 
+  death, fission, fusion, or transmission reactions, integrate the 
   ordinary differential equations (ODEs) of the corresponding well-mixed system
-  numerically.
+  numerically or simulate it using Gillespie's algorithm.
+  Process rates can be numerical functions of time and the system state.
 * `SymbolicEpiModel`: Define a model based on transition, birth, 
   death, fission, fusion, or transmission reactions. Obtain the ODEs,
   fixed points, Jacobian, and the Jacobian's eigenvalues at fixed points
-  as symbolic expressions.
+  as symbolic expressions. 
+  Process rates can be symbolic expressions of time and the system state.
+  Set numerical parameter values and integrate the ODEs numerically or
+  simulate the stochastic systems using Gillespie's algorithm.
 * `StochasticEpiModel`: Define a model based on node transition and
   link transmission reactions. Add conditional link transmission reactions.
   Simulate your model on any (un-/)directed, (un-/)weighted static network,
@@ -66,7 +70,7 @@ Please note that **fast network simulations are only available if you install**
 
 ## Documentation
 
-The full documentation is available at XXX.
+The full documentation is available at epipack.benmaier.org.
 
 ## Examples
 
@@ -84,7 +88,7 @@ rho = recovery_rate = 1 # let's say 1/days
 eta = infection_rate = R0 * recovery_rate
 omega = 1/14 # in units of 1/days
 
-SIRS = DeterministicEpiModel([S,I,R])
+SIRS = EpiModel([S,I,R])
 
 SIRS.set_processes([
     #### transmission process ####
@@ -102,7 +106,8 @@ SIRS.set_processes([
 SIRS.set_initial_conditions({S:1-0.01, I:0.01})
 
 t = np.linspace(0,40,1000) 
-result = SIRS.integrate(t)
+result_int = SIRS.integrate(t)
+t_sim, result_sim = SIRS.simulate(t[-1])
 ```
 
 ![integrated-ODEs](https://github.com/benmaier/epipack/raw/master/img/integrated_ODEs.png)

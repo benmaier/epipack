@@ -952,8 +952,6 @@ class StochasticEpiModel():
                 if sampling_dt is None:
                     time.append(t)
                     compartments.append(current_state.copy())
-                    if sampling_callback is not None:
-                        sampling_callback()
 
                 unsuccessful = 0
                 total_event_rate = self.get_total_event_rate()
@@ -973,6 +971,14 @@ class StochasticEpiModel():
             t = new_t
 
 
+        if sampling_dt is not None:
+            next_sample = time[-1] + sampling_dt
+            if next_sample <= tmax:
+                time.append(next_sample)
+                compartments.append(current_state)
+                if sampling_callback is not None:
+                    sampling_callback()
+
 
         # convert to result dictionary
         time = np.array(time)
@@ -982,6 +988,20 @@ class StochasticEpiModel():
             sampling_callback()
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
+
+class StochasticSIModel(StochasticEpiModel):
+    """
+    An SI model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+    """
+
+    def __init__(self, N, infection_rate, *args, **kwargs):
+
+        StochasticEpiModel.__init__(self, list("SI"), N, *args, **kwargs)
+
+        self.set_link_transmission_processes([
+                ("I", "S", infection_rate, "I", "I"),
+            ])
+
 class StochasticSIRModel(StochasticEpiModel):
     """
     An SIR model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.

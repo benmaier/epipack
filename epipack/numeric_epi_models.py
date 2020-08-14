@@ -147,7 +147,6 @@ class EpiModel(IntegrationMixin):
 
 
         self.rates_have_explicit_time_dependence = False
-        self.set_simulation_has_not_ended()
 
 
     def get_compartment_id(self,C):
@@ -265,7 +264,7 @@ class EpiModel(IntegrationMixin):
             dy = np.zeros(self.N_comp)
             for trg, change in affected_compartments:
                 _t = self.get_compartment_id(trg)
-                dy[_t] = change
+                dy[_t] += change
 
             if acting_compartments[0] is None:
                 if self._rate_has_functional_dependency(rate):
@@ -537,7 +536,7 @@ class EpiModel(IntegrationMixin):
             dy = np.zeros(self.N_comp)
             for trg, change in affected_compartments:
                 _t = self.get_compartment_id(trg)
-                dy[_t] = change
+                dy[_t] += change
 
             if self._rate_has_functional_dependency(rate):
                 this_rate = DynamicQuadraticRate(rate, _s0, _s1)
@@ -610,8 +609,6 @@ class EpiModel(IntegrationMixin):
             proposed_event_rates = get_event_rates(new_t, self.y0)
             dy = get_compartment_changes(proposed_event_rates)
         else:
-            if current_event_rates is None:
-                current_event_rates = get_event_rates(t, self.y0)
 
             total_event_rate = current_event_rates.sum()
         
@@ -739,8 +736,6 @@ class EpiModel(IntegrationMixin):
             if sampling_dt is None:
                 time.append(t)
                 compartments.append(current_state.copy())
-                if sampling_callback is not None:
-                    sampling_callback()
 
             # save current state
             self.t0 = new_t
@@ -752,12 +747,18 @@ class EpiModel(IntegrationMixin):
             # advance time
             t = new_t
 
+
+        if sampling_dt is not None:
+            next_sample = time[-1] + sampling_dt
+            if next_sample <= tmax:
+                time.append(next_sample)
+                compartments.append(current_state)
+                if sampling_callback is not None:
+                    sampling_callback()
+
         # convert to result dictionary
         time = np.array(time)
         result = np.array(compartments)
-
-        if sampling_callback is not None:
-            sampling_callback()
 
         if not adopt_final_state:
             self.y0 = initial_state
@@ -765,19 +766,6 @@ class EpiModel(IntegrationMixin):
 
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
-
-    def set_simulation_has_ended(self):
-        self._simulation_ended = True
-
-    def set_simulation_has_not_ended(self):
-        self._simulation_ended = False
-
-    def simulation_has_ended(self):
-        """
-        Check wether the simulation can be continued in its current state.
-        """
-        return self._simulation_ended
-
 
 class SIModel(EpiModel):
     """

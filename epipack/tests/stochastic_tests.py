@@ -5,6 +5,7 @@ from scipy.stats import entropy
 
 from epipack.stochastic_epi_models import (
             StochasticEpiModel,
+            StochasticSIModel,
         )
 
 class StochasticEpiTest(unittest.TestCase):
@@ -317,10 +318,26 @@ class StochasticEpiTest(unittest.TestCase):
         rel_err = np.abs(1-_counts[ndx]/_exp_counts[ndx])
         assert(rel_err.mean() < 0.03)
 
+    def test_sampling_callback(self):
+        epi = StochasticSIModel(100,infection_rate=5.0)
+        epi.set_random_initial_conditions({"S":90,"I":10})
+        self.assertRaises(ValueError,epi.simulate,1,sampling_callback=lambda x: x)
+
+        i = 0
+        samples = []
+        def sampled():
+            samples.append(epi.y0[0])
+
+        t, res = epi.simulate(10,sampling_dt=0.1,sampling_callback=sampled)
+
+        assert(all([a==b for a, b in zip(res['S'], samples)]))
+
+
 
 if __name__ == "__main__":
 
     T = StochasticEpiTest()
+    T.test_sampling_callback()
     T.test_compartments()
     T.test_mean_contact_number()
     T.test_errors()

@@ -310,11 +310,17 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
                       initial_population_size=1,
                       correct_for_dynamical_population_size=False,
                       ):
+
         EpiModel.__init__(self,
                       compartments,
                       initial_population_size=initial_population_size,
                       correct_for_dynamical_population_size=correct_for_dynamical_population_size,
                 )
+
+        self.t = sympy.symbols("t")
+        if self.t in self.compartments:
+            raise ValueError("Don't use `t` as a compartment symbol, as it is reserved for time.")
+
         self.parameter_values = {}
 
     def _check_rate_for_functional_dependency(self,rate):
@@ -363,7 +369,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
             dy = sympy.zeros(self.N_comp,1)
             for trg, change in affected_compartments:
                 _t = self.get_compartment_id(trg)
-                dy[_t] = change
+                dy[_t] += change
 
             if acting_compartments[0] is None:
                 self._check_rate_for_functional_dependency(rate)
@@ -446,7 +452,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
             dy = sympy.zeros(self.N_comp,1)
             for trg, change in affected_compartments:
                 _t = self.get_compartment_id(trg)
-                dy[_t] = change
+                dy[_t] += change
 
             self._check_rate_for_functional_dependency(rate)
             this_rate = rate * _s0 * _s1
@@ -460,7 +466,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
             for dy, r in zip (quadratic_event_updates, quadratic_rate_functions):
                 test += dy * r
             test_sum = sum(test)
-            if np.abs(test_sum) > 1e-15:
+            if test_sum != 0:
                 warnings.warn("events do not sum to zero for each column:" + str(test_sum))
 
         self.quadratic_event_updates = quadratic_event_updates

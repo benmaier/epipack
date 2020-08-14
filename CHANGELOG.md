@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.0.5] - 2020-08-14
+
 ### Changed
+- DeterministicEpiModel is now MatrixEpiModel
+- SymbolicEpiModel is now SymbolicMatrixEpiModel
 - in StochasticEpiModel and during visualization, a more efficient mechanism checks for whether the simulation has ended for good
 
 ### Added
-- StochasticSIRModel, StochasticSISModel
+- Added models that are based entirely on events. In this way, we can easily implement time-dependent rates and have single models that can do everything at once: symbolic evaluations, numerical evaluations, and stochastic mean-field simulations
+- time-dependent rates are integrated using a time-varying Gillespie algorithm
+- EpiModel, StochasticSIModel, StochasticSIRModel, StochasticSISModel, SymbolicEpiModel (based on events rather than rates)
 
 ## [v0.0.4] - 2020-08-03
 ### Changed
@@ -40,11 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Working package
 
-## [v0.0.0] - 2020-06-22
+## v0.0.0 - 2020-06-22
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.0.5...HEAD
+[v0.0.4]: https://github.com/benmaier/epipack/compare/v0.0.4...v0.0.5]
 [v0.0.4]: https://github.com/benmaier/epipack/compare/v0.0.3...v0.0.4]
 [v0.0.3]: https://github.com/benmaier/epipack/compare/v0.0.2...v0.0.3]
 [v0.0.2]: https://github.com/benmaier/epipack/compare/v0.0.1...v0.0.2]

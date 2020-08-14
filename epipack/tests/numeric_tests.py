@@ -4,25 +4,25 @@ import numpy as np
 from scipy.optimize import root
 
 from epipack.numeric_epi_models import (
-            NumericEpiModel,
-            NumericSISModel,
-            NumericSIModel,
-            NumericSIRModel,
-            NumericSEIRModel,
-            NumericSIRSModel,
+            EpiModel,
+            SISModel,
+            SIModel,
+            SIRModel,
+            SEIRModel,
+            SIRSModel,
         )
 
-class NumericEpiTest(unittest.TestCase):
+class EpiTest(unittest.TestCase):
 
     def test_compartments(self):
-        epi = NumericEpiModel(list("SEIR"))
+        epi = EpiModel(list("SEIR"))
         assert(all([ i == epi.get_compartment_id(C) for i, C in enumerate("SEIR") ]))
         assert(epi.get_compartment_id("E") == 1)
         assert(epi.get_compartment(1) == "E")
 
     def test_linear_rates(self):
 
-        #epi = NumericEpiModel(list("SEIR"))
+        #epi = EpiModel(list("SEIR"))
         #epi.add_transition_processes([
         #        ("E", 1.0, "I"),
         #        ("I", 1.0, "R"),
@@ -38,7 +38,7 @@ class NumericEpiTest(unittest.TestCase):
 
     def test_adding_linear_rates(self):
 
-        #epi = NumericEpiModel(list("SEIR"))
+        #epi = EpiModel(list("SEIR"))
         #epi.set_processes([
         #        ("E", 1.0, "I"),
         #   w     ])
@@ -57,7 +57,7 @@ class NumericEpiTest(unittest.TestCase):
 
     def test_quadratic_processes(self):
 
-        #epi = NumericEpiModel(list("SEIR"))
+        #epi = EpiModel(list("SEIR"))
         #Q = [ np.zeros((4,4)) for C in epi.compartments ]
         #Q[0][0,2] = -1
         #Q[1][0,2] = +1
@@ -70,7 +70,7 @@ class NumericEpiTest(unittest.TestCase):
 
     def test_adding_quadratic_processes(self):
 
-        epi = NumericEpiModel(list("SEIAR"))
+        epi = EpiModel(list("SEIAR"))
         #Q = [ np.zeros((5,5)) for C in epi.compartments ]
         #Q[0][0,2] = -1
         #Q[0][0,3] = -1
@@ -88,7 +88,7 @@ class NumericEpiTest(unittest.TestCase):
 
     def test_SIS_with_simulation_restart_and_euler(self):
         N = 100
-        epi = NumericSISModel(infection_rate=2,recovery_rate=1,initial_population_size=N)
+        epi = SISModel(infection_rate=2,recovery_rate=1,initial_population_size=N)
         epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
         tt = np.linspace(0,100,2)
         result = epi.integrate(tt,['S'])
@@ -101,7 +101,7 @@ class NumericEpiTest(unittest.TestCase):
     def test_repeated_simulation(self):
 
         N = 100
-        epi = NumericSISModel(infection_rate=2,recovery_rate=1,initial_population_size=N)
+        epi = SISModel(infection_rate=2,recovery_rate=1,initial_population_size=N)
         epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
         tt = np.linspace(0,100,100)
         old_t = tt[0]
@@ -114,7 +114,7 @@ class NumericEpiTest(unittest.TestCase):
 
     def test_birth_death(self):
 
-        epi = NumericEpiModel(list("SIR"))
+        epi = EpiModel(list("SIR"))
 
         R0 = 2
         rho = 1
@@ -142,7 +142,7 @@ class NumericEpiTest(unittest.TestCase):
 
         A, B, C = list("ABC")
 
-        #epi = NumericEpiModel(list("ABC"))
+        #epi = EpiModel(list("ABC"))
 
         ## this should not raise a warning that rates do not sum to zero
         ## as it will be actively suppressed
@@ -172,7 +172,7 @@ class NumericEpiTest(unittest.TestCase):
 
         A, B, C = list("ABC")
 
-        epi = NumericEpiModel(list("ABC"))
+        epi = EpiModel(list("ABC"))
 
         with self.assertWarns(UserWarning):
             # this should raise a warning that rates do not sum to zero
@@ -188,7 +188,7 @@ class NumericEpiTest(unittest.TestCase):
         S, I, R = list("SIR")
 
         eta = 1
-        epi = NumericSIModel(eta)
+        epi = SIModel(eta)
         epi.set_initial_conditions({"S":0.99, "I":0.01})
         epi.integrate([0,1000],adopt_final_state=True)
         assert(np.isclose(epi.y0[0],0))
@@ -197,7 +197,7 @@ class NumericEpiTest(unittest.TestCase):
         
         eta = 2
         rho = 1
-        epi = NumericSIRModel(eta,rho)
+        epi = SIRModel(eta,rho)
         S0 = 0.99
         epi.set_initial_conditions({S:S0, I:1-S0})
         R0 = eta/rho
@@ -209,14 +209,14 @@ class NumericEpiTest(unittest.TestCase):
 
 
         omega = 1
-        epi = NumericSEIRModel(eta,rho,omega)
+        epi = SEIRModel(eta,rho,omega)
         epi.set_initial_conditions({S:S0, I:1-S0})
         res = epi.integrate([0,100])
         assert(np.isclose(res[R][-1],SIR_theory))
         #======================
 
 
-        epi = NumericSISModel(eta, rho, initial_population_size=100)
+        epi = SISModel(eta, rho, initial_population_size=100)
 
         epi.set_initial_conditions({S: 99, I:1 })
 
@@ -224,7 +224,7 @@ class NumericEpiTest(unittest.TestCase):
         result = epi.integrate(tt)
         assert(np.isclose(result[S][-1],50))
 
-        epi = NumericSIRSModel(eta, rho, omega)
+        epi = SIRSModel(eta, rho, omega)
 
         epi.set_initial_conditions({S: 0.99, I:0.01 })
 
@@ -234,7 +234,7 @@ class NumericEpiTest(unittest.TestCase):
 
 if __name__ == "__main__":
 
-    T = NumericEpiTest()
+    T = EpiTest()
     T.test_compartments()
     T.test_linear_rates()
     T.test_adding_linear_rates()

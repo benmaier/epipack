@@ -1,5 +1,5 @@
 """
-Provides an API to define NumericMatrixBased epidemiological models in terms of sympy symbolic expressions.
+Provides an API to define epidemiological models in terms of sympy symbolic expressions.
 """
 
 import warnings
@@ -9,18 +9,7 @@ import scipy.sparse as sprs
 
 import sympy
 
-from epipack.integrators import integrate_dopri5, integrate_euler
-from epipack.process_conversions import (
-            processes_to_rates,
-            transition_processes_to_rates,
-            fission_processes_to_rates,
-            fusion_processes_to_rates,
-            transmission_processes_to_rates,
-        )
-
-from epipack.numeric_matrix_based_epi_models import NumericMatrixBasedEpiModel
-
-from epipack.numeric_epi_models import NumericEpiModel
+from epipack.numeric_epi_models import EpiModel, custom_choice
 
 class SymbolicMixin():
 
@@ -277,6 +266,24 @@ class SymbolicMixin():
         for rate in rates:
             not_set.extend(rate.free_symbols)
 
+        not_set = set(not_set) - set(these_symbols)
+
+        if len(not_set) > 0:
+            raise ValueError("Parameters", set(not_set), "have not been set. Please set them using",
+                             "SymbolicEpiModel.parameter_values()")
+
+        sympy_rates = sympy.lambdify(these_symbols, rates)
+
+        def get_event_rates(t, y):
+            these_args = [t] + y.tolist()
+            return np.array(sympy_rates(*these_args))
+
+        def get_compartment_changes(rates):
+            idy = custom_choice(rates/rates.sum())
+            return events[idy]
+
+        return get_event_rates, get_compartment_changes
+
 def get_temporal_interpolation(time_data, value_data, interpolation_degree=1):
     """
     Obtain a symbolic piecewise function that interpolates between values
@@ -297,227 +304,13 @@ def get_temporal_interpolation(time_data, value_data, interpolation_degree=1):
     else:
         return sympy.interpolating_spline(interpolation_degree, t, time_data, value_data)
 
-
-class SymbolicMatrixBasedEpiModel(SymbolicMixin, NumericMatrixBasedEpiModel):
-    """
-    A general class to define standard 
-    mean-field compartmental
-    epidemiological model.
-
-    Parameters
-    ----------
-
-    compartments : :obj:`list` of :obj:`string`
-        A list containing compartment strings.
-
-    Attributes
-    ----------
-
-    compartments : :obj:`list` of :obj:`string`
-        A list containing strings that describe each compartment,
-        (e.g. "S", "I", etc.).
-    N_comp : :obj:`int`
-        Number of compartments (including population number)
-    linear_rates : sympy.Matrix
-        Matrix containing 
-        transition rates of the linear processes.
-    quadratic_rates : list of sympy.Matrix
-        List of matrices that contain
-        transition rates of the quadratic processes
-        for each compartment.
-    affected_by_quadratic_process : :obj:`list` of :obj:`int`
-        List of integer compartment IDs, collecting
-        compartments that are affected
-        by the quadratic processes
-
-
-    Example
-    -------
-
-    .. code:: python
-        
-        >>> epi = SymbolicEpiModel(symbols("S I R"))
-        >>> print(epi.compartments)
-        [ S, I, R ]
-
-
-    """
-
-    def __init__(self,compartments,initial_population_size=1,correct_for_dynamical_population_size=False):
-        """
-        """
-        NumericMatrixBasedEpiModel.__init__(self, compartments, initial_population_size, correct_for_dynamical_population_size)
-
-
-        self.t = sympy.symbols("t")
-        if self.t in self.compartments:
-            raise ValueError("Don't use `t` as a compartment symbol, as it is reserved for time.")
-
-        self.has_functional_rates = False
-
-        self.birth_rates = sympy.zeros(self.N_comp,1)
-        self.linear_rates = sympy.zeros(self.N_comp, self.N_comp)
-        self.quadratic_rates = [ sympy.zeros(self.N_comp, self.N_comp)\
-                                 for c in range(self.N_comp) ]
-        self.birth_events = sympy.zeros(self.N_comp,1)
-        self.linear_events = sympy.zeros(self.N_comp, self.N_comp)
-        self.quadratic_events = [ sympy.zeros(self.N_comp, self.N_comp)\
-                                 for c in range(self.N_comp) ]
-        self.parameter_values = {}
-
-    def set_linear_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=True):
-        """
-        Define the linear transition rates between compartments.
-
-        Parameters
-        ==========
-
-        rate_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions rates in the following format:
-
-            .. code:: python
-
-                [
-                    ( acting_compartment, affected_compartment, rate ),
-                    ...
-                ]
-        allow_nonzero_column_sums : :obj:`bool`, default : False
-            This keyword has no function in this class
-        reset_rates : bool, default : True
-            Whether to reset all linear rates to zero before 
-            setting the new ones.
-        """
-
-        if reset_rates:
-            linear_rates = sympy.zeros(self.N_comp, self.N_comp)
-            birth_rates = sympy.zeros(self.N_comp,1)
-            self.has_functional_rates = False
-        else:
-            linear_rates = sympy.Matrix(self.linear_rates)
-            birth_rates = sympy.Matrix(self.birth_rates)
-
-        for acting_compartment, affected_compartment, rate in rate_list:
-
-            _t = self.get_compartment_id(affected_compartment)
-            if acting_compartment is None:
-                birth_rates[_t] += rate
-            else:
-                _s = self.get_compartment_id(acting_compartment)
-                linear_rates[_t, _s] += rate
-
-            self._check_rate_for_functional_dependency(rate)
-
-        self.linear_rates = linear_rates
-        self.birth_rates = birth_rates
-
-        return self
-
-    def _check_rate_for_functional_dependency(self,rate):
-        try:
-            self.has_functional_rates |= any([ compartment in rate.free_symbols for compartment in self.compartments])
-        except AttributeError as e:
-            return
-
-
-    def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
-        r"""
-        Define the quadratic transition processes between compartments.
-
-        Parameters
-        ----------
-        rate_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions rates in the following format:
-
-            .. code:: python
-
-                [
-                    ("coupling_compartment_0", 
-                     "coupling_compartment_1",
-                     "affected_compartment", 
-                     rate 
-                     ),
-                    ...
-                ]
-
-        allow_nonzero_column_sums : :obj:`bool`, default : False
-            This keyword has no function in this class
-        reset_rates : bool, default : True
-            Whether to reset all quadratic rates to zero before 
-            setting the new ones.
-
-        Example
-        -------
-
-        For an SEIR model.
-
-        .. code:: python
-
-            epi.set_quadratic_rates([
-                ("S", "I", "S", -1 ),
-                ("S", "I", "E", +1 )
-            ])
-
-        Read  as
-        
-        "Coupling of *S* and *I* leads to 
-        a reduction in "S" proportional to :math:`S\times I` and rate -1/time_unit.
-        Furthermore, coupling of *S* and *I* leads to 
-        an increase in "E" proportional to :math:`S\times I` and rate +1/time_unit."
-        """
-
-        if reset_rates:
-
-            matrices = [None for c in self.compartments]
-            for c in range(self.N_comp):
-                matrices[c] = sympy.zeros(self.N_comp, self.N_comp)
-
-            all_affected = []
-            self.has_functional_rates = False
-        else:
-            matrices =  [ sympy.Matrix(M) for M in self.quadratic_rates ]
-            all_affected = self.affected_by_quadratic_process if len(self.affected_by_quadratic_process)>0 else []
-        
-        for coupling0, coupling1, affected, rate in rate_list:
-
-            c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
-            a = self.get_compartment_id(affected)
-
-            self._check_rate_for_functional_dependency(rate)
-
-            matrices[a][c0,c1] += rate
-            all_affected.append(a)
-
-        self.affected_by_quadratic_process = sorted(list(set(all_affected)))
-        self.quadratic_rates = matrices
-
-        return self
-
-
-    def dydt(self):
-        """
-        Obtain the equations of motion for this model in form of a sympy.Matrix.
-        """
-
-        y = sympy.Matrix(self.compartments)
-        
-        ynew = self.linear_rates * y + self.birth_rates
-        if self.correct_for_dynamical_population_size:
-            population_size = sum(self.compartments)
-        else:
-            population_size = self.initial_population_size
-        for c in self.affected_by_quadratic_process:
-            ynew[c] += (y.T * self.quadratic_rates[c] * y)[0,0] / population_size
-
-        return ynew
-            
-
-class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
+class SymbolicEpiModel(SymbolicMixin, EpiModel):
 
     def __init__(self,compartments,
                       initial_population_size=1,
                       correct_for_dynamical_population_size=False,
                       ):
-        NumericEpiModel.__init__(self,
+        EpiModel.__init__(self,
                       compartments,
                       initial_population_size=initial_population_size,
                       correct_for_dynamical_population_size=correct_for_dynamical_population_size,
@@ -535,29 +328,22 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
     def set_linear_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
         """
         Define the linear transition events between compartments.
-
         Parameters
         ==========
-
         event_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions events in the following format:
-
             .. code:: python
-
                 [
                     ( acting_compartment, affected_compartment, rate ),
                     ...
                 ]
-
         allow_nonzero_column_sums : :obj:`bool`, default : False
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
-
         Example
-
         reset_events : bool, default : True
-            Whether to reset all linear events to zero before 
+            Whether to reset all linear events to zero before
             converting those.
         """
 
@@ -584,7 +370,7 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
                 birth_event_updates.append( dy )
                 birth_rate_functions.append( rate )
             else:
-                _s = self.get_compartment_id(acting_compartments[0])                
+                _s = self.get_compartment_id(acting_compartments[0])
                 self._check_rate_for_functional_dependency(rate)
                 this_rate = rate * acting_compartments[0]
                 linear_event_updates.append( dy )
@@ -612,45 +398,36 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
     def set_quadratic_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.
-
         Parameters
         ----------
         event_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions events in the following format:
-
             .. code:: python
-
                 [
-                    ("coupling_compartment_0", 
+                    ("coupling_compartment_0",
                      "coupling_compartment_1",
-                     "affected_compartment", 
-                     event 
+                     "affected_compartment",
+                     event
                      ),
                     ...
                 ]
-
         allow_nonzero_column_sums : :obj:`bool`, default : False
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
-
         Example
         -------
-
         For an SEIR model.
-
         .. code:: python
-
             epi.set_quadratic_events([
                 ("S", "I", "S", -1 ),
                 ("S", "I", "E", +1 )
             ])
-
         Read  as
-        
-        "Coupling of *S* and *I* leads to 
+
+        "Coupling of *S* and *I* leads to
         a reduction in "S" proportional to :math:`S\times I` and event -1/time_unit.
-        Furthermore, coupling of *S* and *I* leads to 
+        Furthermore, coupling of *S* and *I* leads to
         an increase in "E" proportional to :math:`S\times I` and event +1/time_unit."
         """
 
@@ -660,7 +437,7 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
         else:
             quadratic_event_updates = self.quadratic_event_updates
             quadratic_rate_functions = self.quadratic_rate_functions
-        
+
         for coupling_compartments, rate, affected_compartments in event_list:
 
             _s0 = coupling_compartments[0]
@@ -681,7 +458,7 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
             dy = sympy.zeros(self.N_comp,1)
             test = sympy.zeros(self.N_comp,1)
             for dy, r in zip (quadratic_event_updates, quadratic_rate_functions):
-                test += dy * r 
+                test += dy * r
             test_sum = sum(test)
             if np.abs(test_sum) > 1e-15:
                 warnings.warn("events do not sum to zero for each column:" + str(test_sum))
@@ -694,7 +471,6 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
     def dydt(self):
         """
         Compute the current momenta of the epidemiological model.
-
         Parameters
         ----------
         t : :obj:`float`
@@ -717,9 +493,10 @@ class SymbolicEpiModel(SymbolicMixin, NumericEpiModel):
             population_size = self.initial_population_size
 
         for dy, r in zip(self.quadratic_event_updates, self.quadratic_rate_functions):
-            ynew += r/population_size * dy 
+            ynew += r/population_size * dy
 
         return ynew
+
 
 class SymbolicSIModel(SymbolicEpiModel):
     """
@@ -851,34 +628,6 @@ if __name__=="__main__":    # pragma: no cover
     print(SIS.jacobian())
     print(SIS.get_eigenvalues_at_disease_free_state())
 
-
-    print("gray scott")
-    u, v, f, k = sympy.symbols("u v f k")
-    GS = SymbolicMatrixBasedEpiModel([u,v])
-    GS.set_linear_rates([
-            (None, u, f),
-            (u, u, -f),
-            (v, v, -f-k),
-        ])
-
-    GS.set_quadratic_rates([
-            (u, v, u, -v),
-            (u, v, v, +v),
-        ])
-
-
-    GS.set_processes([
-            (u, f, None),
-            (None, f, u),
-            (v, f+k, None),
-            (u, v, v*1, v, v),
-        ],ignore_rate_position_checks=True)
-
-    print(GS.ODEs())
-
-    print(GS.find_fixed_points())
-
-    print("===========")
 
 
     N = sympy.symbols("N")

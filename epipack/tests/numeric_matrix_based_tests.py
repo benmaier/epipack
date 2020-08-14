@@ -3,26 +3,26 @@ import unittest
 import numpy as np
 from scipy.optimize import root
 
-from epipack.numeric_matrix_based_epi_models import (
-            NumericMatrixBasedEpiModel,
-            NumericMatrixBasedSISModel,
-            NumericMatrixBasedSIModel,
-            NumericMatrixBasedSIRModel,
-            NumericMatrixBasedSEIRModel,
-            NumericMatrixBasedSIRSModel,
+from epipack.numeric_matrix_epi_models import (
+            MatrixEpiModel,
+            MatrixSISModel,
+            MatrixSIModel,
+            MatrixSIRModel,
+            MatrixSEIRModel,
+            MatrixSIRSModel,
         )
 
-class NumericMatrixBasedEpiTest(unittest.TestCase):
+class MatrixEpiTest(unittest.TestCase):
 
     def test_compartments(self):
-        epi = NumericMatrixBasedEpiModel(list("SEIR"))
+        epi = MatrixEpiModel(list("SEIR"))
         assert(all([ i == epi.get_compartment_id(C) for i, C in enumerate("SEIR") ]))
         assert(epi.get_compartment_id("E") == 1)
         assert(epi.get_compartment(1) == "E")
 
     def test_linear_rates(self):
 
-        epi = NumericMatrixBasedEpiModel(list("SEIR"))
+        epi = MatrixEpiModel(list("SEIR"))
         epi.add_transition_processes([
                 ("E", 1.0, "I"),
                 ("I", 1.0, "R"),
@@ -37,7 +37,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
     def test_adding_linear_rates(self):
 
-        epi = NumericMatrixBasedEpiModel(list("SEIR"))
+        epi = MatrixEpiModel(list("SEIR"))
         epi.set_processes([
                 ("E", 1.0, "I"),
                 ])
@@ -55,7 +55,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
     def test_quadratic_processes(self):
 
-        epi = NumericMatrixBasedEpiModel(list("SEIR"))
+        epi = MatrixEpiModel(list("SEIR"))
         Q = [ np.zeros((4,4)) for C in epi.compartments ]
         Q[0][0,2] = -1
         Q[1][0,2] = +1
@@ -67,7 +67,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
     def test_adding_quadratic_processes(self):
 
-        epi = NumericMatrixBasedEpiModel(list("SEIAR"))
+        epi = MatrixEpiModel(list("SEIAR"))
         Q = [ np.zeros((5,5)) for C in epi.compartments ]
         Q[0][0,2] = -1
         Q[0][0,3] = -1
@@ -84,7 +84,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
     def test_SIS_with_simulation_restart_and_euler(self):
         N = 100
-        epi = NumericMatrixBasedSISModel(R0=2,recovery_rate=1,initial_population_size=N)
+        epi = MatrixSISModel(R0=2,recovery_rate=1,initial_population_size=N)
         epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
         tt = np.linspace(0,100,2)
         result = epi.integrate(tt,['S'])
@@ -97,7 +97,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
     def test_repeated_simulation(self):
 
         N = 100
-        epi = NumericMatrixBasedSISModel(R0=2,recovery_rate=1,initial_population_size=N)
+        epi = MatrixSISModel(R0=2,recovery_rate=1,initial_population_size=N)
         epi.set_initial_conditions({'S':0.99*N,'I':0.01*N})
         tt = np.linspace(0,100,100)
         old_t = tt[0]
@@ -113,7 +113,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
         S, I, R = list("SIR")
 
         eta = 1
-        epi = NumericMatrixBasedSIModel(eta)
+        epi = MatrixSIModel(eta)
         epi.set_initial_conditions({"S":0.99, "I":0.01})
         epi.integrate([0,1000],adopt_final_state=True)
         assert(np.isclose(epi.y0[0],0))
@@ -122,7 +122,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
         
         eta = 2
         rho = 1
-        epi = NumericMatrixBasedSIRModel(eta,rho)
+        epi = MatrixSIRModel(eta,rho)
         S0 = 0.99
         epi.set_initial_conditions({S:S0, I:1-S0})
         R0 = eta/rho
@@ -134,14 +134,14 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
 
         omega = 1
-        epi = NumericMatrixBasedSEIRModel(eta,rho,omega)
+        epi = MatrixSEIRModel(eta,rho,omega)
         epi.set_initial_conditions({S:S0, I:1-S0})
         res = epi.integrate([0,100])
         assert(np.isclose(res[R][-1],SIR_theory))
         #======================
 
 
-        epi = NumericMatrixBasedSISModel(eta, rho, initial_population_size=100)
+        epi = MatrixSISModel(eta, rho, initial_population_size=100)
 
         epi.set_initial_conditions({S: 99, I:1 })
 
@@ -149,7 +149,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
         result = epi.integrate(tt)
         assert(np.isclose(result[S][-1],50))
 
-        epi = NumericMatrixBasedSIRSModel(eta, rho, omega)
+        epi = MatrixSIRSModel(eta, rho, omega)
 
         epi.set_initial_conditions({S: 0.99, I:0.01 })
 
@@ -159,7 +159,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
     def test_birth_death(self):
 
-        epi = NumericMatrixBasedEpiModel(list("SIR"))
+        epi = MatrixEpiModel(list("SIR"))
 
         R0 = 2
         rho = 1
@@ -187,7 +187,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
         A, B, C = list("ABC")
 
-        epi = NumericMatrixBasedEpiModel(list("ABC"))
+        epi = MatrixEpiModel(list("ABC"))
 
         # this should not raise a warning that rates do not sum to zero
         # as it will be actively suppressed
@@ -216,7 +216,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
         A, B, C = list("ABC")
 
-        epi = NumericMatrixBasedEpiModel(list("ABC"))
+        epi = MatrixEpiModel(list("ABC"))
 
         with self.assertWarns(UserWarning):
             # this should raise a warning that rates do not sum to zero
@@ -230,7 +230,7 @@ class NumericMatrixBasedEpiTest(unittest.TestCase):
 
 if __name__ == "__main__":
 
-    T = NumericMatrixBasedEpiTest()
+    T = MatrixEpiTest()
     T.test_compartments()
     T.test_linear_rates()
     T.test_adding_linear_rates()

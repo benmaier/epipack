@@ -6,7 +6,7 @@ github.com/gstonge/SamplableSet but is less efficient.
 import numpy as np
 
 def choice(arr,p):
-    ndx = np.argwhere(np.random.rand()<np.cumsum(p))[0][0]
+    ndx = np.argmax(np.random.rand()<np.cumsum(p))
     try:
         return arr[ndx]
     except TypeError as e:

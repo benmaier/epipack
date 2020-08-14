@@ -1,5 +1,5 @@
 """
-Provides an API to define Numeric epidemiological models.
+Provides an API to define  epidemiological models.
 """
 
 import numpy as np 
@@ -21,6 +21,9 @@ from epipack.process_conversions import (
 
 from scipy.optimize import newton
 from scipy.integrate import quad
+
+def custom_choice(p):
+    return np.argmin(np.cumsum(p)<np.random.rand())
 
 class ConstantBirthRate():
 
@@ -76,7 +79,7 @@ class DynamicQuadraticRate:
     def __call__(self, t, y):
         return self.rate(t,y) * y[self.comp0] * y[self.comp1]
 
-class NumericEpiModel(IntegrationMixin):
+class EpiModel(IntegrationMixin):
     """
     A general class to define a standard 
     mean-field compartmental
@@ -112,7 +115,7 @@ class NumericEpiModel(IntegrationMixin):
 
     .. code:: python
         
-        >>> epi = NumericEpiModel(["S","I","R"])
+        >>> epi = EpiModel(["S","I","R"])
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
 
@@ -597,7 +600,7 @@ class NumericEpiModel(IntegrationMixin):
             get_compartment_changes = self.get_compartment_changes
 
         if self.rates_have_explicit_time_dependence:
-            # solve the integral numerically
+            # solve the integral ally
             integrand = lambda _t : get_event_rates(_t, self.y0).sum()
             integral = lambda _t : quad(integrand, t, _t)[0]
             _1_minus_r = 1 - np.random.rand()
@@ -619,7 +622,7 @@ class NumericEpiModel(IntegrationMixin):
 
     def get_compartment_changes(self, rates):
 
-        idy = np.random.choice(len(rates), p=rates/rates.sum())
+        idy = custom_choice(rates/rates.sum())
 
         if idy < len(self.birth_event_updates):
             return self.birth_event_updates[idy]
@@ -776,23 +779,23 @@ class NumericEpiModel(IntegrationMixin):
         return self._simulation_ended
 
 
-class NumericSIModel(NumericEpiModel):
+class SIModel(EpiModel):
     """
-    An SI model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
+    An SI model derived from :class:`epipack.numeric_epi_models.EpiModel`.
     """
 
     def __init__(self, infection_rate, initial_population_size=1.0):
 
-        NumericEpiModel.__init__(self, list("SI"), initial_population_size)
+        EpiModel.__init__(self, list("SI"), initial_population_size)
 
         self.set_processes([
                 ("S", "I", infection_rate, "I", "I"),
             ])
 
 
-class NumericSISModel(NumericEpiModel):
+class SISModel(EpiModel):
     """
-    An SIS model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
+    An SIS model derived from :class:`epipack.numeric_epi_models.EpiModel`.
 
     Parameters
     ----------
@@ -807,34 +810,34 @@ class NumericSISModel(NumericEpiModel):
 
     def __init__(self, infection_rate, recovery_rate, initial_population_size=1.0):
 
-        NumericEpiModel.__init__(self, list("SI"), initial_population_size)
+        EpiModel.__init__(self, list("SI"), initial_population_size)
 
         self.set_processes([
                 ("S", "I", infection_rate, "I", "I"),
                 ("I", recovery_rate, "S" ),
             ])
-class NumericSIRModel(NumericEpiModel):
+class SIRModel(EpiModel):
     """
-    An SIR model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
+    An SIR model derived from :class:`epipack.numeric_epi_models.EpiModel`.
     """
 
     def __init__(self, infection_rate, recovery_rate, initial_population_size=1.0):
 
-        NumericEpiModel.__init__(self, list("SIR"), initial_population_size)
+        EpiModel.__init__(self, list("SIR"), initial_population_size)
 
         self.set_processes([
                 ("S", "I", infection_rate, "I", "I"),
                 ("I", recovery_rate, "R"),
             ])
 
-class NumericSIRSModel(NumericEpiModel):
+class SIRSModel(EpiModel):
     """
-    An SIRS model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
+    An SIRS model derived from :class:`epipack.numeric_epi_models.EpiModel`.
     """
 
     def __init__(self, infection_rate, recovery_rate, waning_immunity_rate, initial_population_size=1.0):
 
-        NumericEpiModel.__init__(self, list("SIR"), initial_population_size)
+        EpiModel.__init__(self, list("SIR"), initial_population_size)
 
         self.set_processes([
                 ("S", "I", infection_rate, "I", "I"),
@@ -842,14 +845,14 @@ class NumericSIRSModel(NumericEpiModel):
                 ("R", waning_immunity_rate, "S"),
             ])
 
-class NumericSEIRModel(NumericEpiModel):
+class SEIRModel(EpiModel):
     """
-    An SEIR model derived from :class:`epipack.numeric_epi_models.NumericEpiModel`.
+    An SEIR model derived from :class:`epipack.numeric_epi_models.EpiModel`.
     """
 
     def __init__(self, infection_rate, recovery_rate, symptomatic_rate, initial_population_size=1.0):
 
-        NumericEpiModel.__init__(self, list("SEIR"), initial_population_size)
+        EpiModel.__init__(self, list("SEIR"), initial_population_size)
 
         self.set_processes([
                 ("S", "I", infection_rate, "E", "I"),
@@ -859,7 +862,7 @@ class NumericSEIRModel(NumericEpiModel):
 
 if __name__=="__main__":    # pragma: no cover
     N = 100
-    epi = NumericEpiModel(list("SEIR"),100)
+    epi = EpiModel(list("SEIR"),100)
     #print(epi.compartments)
     #print()
     epi.set_processes([
@@ -879,7 +882,7 @@ if __name__=="__main__":    # pragma: no cover
 
     tt = np.linspace(0,20,100)
     start = time()
-    epi = NumericEpiModel(list("SEIR"),100)
+    epi = EpiModel(list("SEIR"),100)
     epi.set_processes([
                 ("S", "I", 2.0, "E", "I"),
                 ("E", 1.0, "I"),
@@ -898,10 +901,10 @@ if __name__=="__main__":    # pragma: no cover
     pl.plot(tt, result['R'],label='R')
     pl.legend()
 
-    from epipack import DeterministicSEIRModel
+    from epipack import MatrixSEIRModel
 
     tt = np.linspace(0,20,50)
-    SEIR = DeterministicSEIRModel(2.0,1.0,1.0,initial_population_size=N)
+    SEIR = MatrixSEIRModel(2.0,1.0,1.0,initial_population_size=N)
     SEIR.set_initial_conditions({'S':0.99*N,'I':0.01*N})
     result = SEIR.integrate(tt)
     pl.plot(tt, result['S'],'s',label='S',mfc='None')
@@ -912,7 +915,7 @@ if __name__=="__main__":    # pragma: no cover
 
 
     ##########
-    epi = NumericEpiModel(list("SEIR"),100)
+    epi = EpiModel(list("SEIR"),100)
     epi.set_processes([
                 ("S", "I", 2.0, "E", "I"),
                 ("E", 1.0, "I"),
@@ -929,7 +932,7 @@ if __name__=="__main__":    # pragma: no cover
 
     S, I, R = list("SIR")
     N = 200
-    model = NumericEpiModel([S,I],N,correct_for_dynamical_population_size=True)
+    model = EpiModel([S,I],N,correct_for_dynamical_population_size=True)
 
     def temporalR0(t,y):
         return 4 + np.cos(t/100*2*np.pi)

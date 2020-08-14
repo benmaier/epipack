@@ -12,21 +12,22 @@ from epipack import (
             SymbolicSIRSModel,
             SymbolicSIModel,
             get_temporal_interpolation,
-            NumericMatrixBasedSISModel,
-            SymbolicMatrixBasedEpiModel
+            MatrixSISModel,
+            MatrixEpiModel,
+            SymbolicMatrixEpiModel,
         )
 
 class SymbolicEpiTest(unittest.TestCase):
 
     def test_compartments(self):
         comps = sympy.symbols("S E I R")
-        epi = SymbolicMatrixBasedEpiModel(comps)
+        epi = SymbolicMatrixEpiModel(comps)
         assert(all([ i == epi.get_compartment_id(C) for i, C in enumerate(comps) ]))
 
     def test_linear_rates(self):
 
         S, E, I, R = sympy.symbols("S E I R")
-        epi = SymbolicMatrixBasedEpiModel([S,E,I,R])
+        epi = SymbolicMatrixEpiModel([S,E,I,R])
         epi.add_transition_processes([
                 (E, 1, I),
                 (I, 1, R),
@@ -44,7 +45,7 @@ class SymbolicEpiTest(unittest.TestCase):
     def test_adding_linear_rates(self):
 
         S, E, I, R = sympy.symbols("S E I R")
-        epi = SymbolicMatrixBasedEpiModel([S,E,I,R])
+        epi = SymbolicMatrixEpiModel([S,E,I,R])
 
         epi.set_processes([
                 (E, 1, I),
@@ -66,7 +67,7 @@ class SymbolicEpiTest(unittest.TestCase):
     def test_quadratic_processes(self):
 
         S, E, I, R = sympy.symbols("S E I R")
-        epi = SymbolicMatrixBasedEpiModel([S,E,I,R])
+        epi = SymbolicMatrixEpiModel([S,E,I,R])
         Q = [ sympy.zeros(4,4) for C in epi.compartments ]
         Q[0][0,2] = -1
         Q[1][0,2] = +1
@@ -80,7 +81,7 @@ class SymbolicEpiTest(unittest.TestCase):
     def test_adding_quadratic_processes(self):
 
         S, E, I, A, R, rho = sympy.symbols("S E I A R rho")
-        epi = SymbolicMatrixBasedEpiModel([S,E,I,A,R])
+        epi = SymbolicMatrixEpiModel([S,E,I,A,R])
 
         Q = [ sympy.zeros(5,5) for C in epi.compartments ]
         Q[0][0,2] = -rho
@@ -101,7 +102,7 @@ class SymbolicEpiTest(unittest.TestCase):
     def test_basic_analytics(self):
         S, I, R, eta, rho, omega, t = symbols("S I R eta rho omega, t")
 
-        SIRS = SymbolicMatrixBasedEpiModel([S,I,R])
+        SIRS = SymbolicMatrixEpiModel([S,I,R])
 
         SIRS.set_processes([
             #### transmission process ####
@@ -141,7 +142,7 @@ class SymbolicEpiTest(unittest.TestCase):
 
         u, v, k, f, t = symbols("u v k f t")
 
-        GS = SymbolicMatrixBasedEpiModel([u,v])
+        GS = SymbolicMatrixEpiModel([u,v])
 
         GS.set_processes([
             # third-order coupling
@@ -200,7 +201,7 @@ class SymbolicEpiTest(unittest.TestCase):
         tt = np.linspace(0,10,1000)
         result = epi.integrate(tt)
 
-        epi2 = NumericMatrixBasedSISModel(2, 1)
+        epi2 = MatrixSISModel(2, 1)
 
         epi2.set_initial_conditions({"S": 1-0.01, "I":0.01 })
 
@@ -214,7 +215,7 @@ class SymbolicEpiTest(unittest.TestCase):
     def test_time_dependent_rates(self):
 
         B, t = sympy.symbols("B t")
-        epi = SymbolicMatrixBasedEpiModel([B])
+        epi = SymbolicMatrixEpiModel([B])
         epi.add_fission_processes([
                 (B, t, B, B),
             ])
@@ -230,7 +231,7 @@ class SymbolicEpiTest(unittest.TestCase):
     def test_exceptions(self):
 
         B, mu, t = sympy.symbols("B mu t")
-        epi = SymbolicMatrixBasedEpiModel([B])
+        epi = SymbolicMatrixEpiModel([B])
         epi.add_fission_processes([
                 (B, mu, B, B),
             ])
@@ -238,7 +239,7 @@ class SymbolicEpiTest(unittest.TestCase):
 
         self.assertRaises(ValueError,epi.integrate,[0,1])
 
-        self.assertRaises(ValueError,SymbolicMatrixBasedEpiModel,[t])
+        self.assertRaises(ValueError,SymbolicMatrixEpiModel,[t])
 
         self.assertRaises(ValueError,epi.get_eigenvalues_at_disease_free_state)
 

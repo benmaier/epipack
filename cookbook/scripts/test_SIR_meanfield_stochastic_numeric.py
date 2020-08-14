@@ -1,6 +1,6 @@
 from bfmplot import pl
 import numpy as np
-from epipack.numeric_epi_models import NumericEpiModel
+from epipack.numeric_epi_models import EpiModel
 from epipack import StochasticEpiModel
 
 from time import time
@@ -9,7 +9,7 @@ S, E, I, R = list("SEIR")
 
 N = 200000
 tmax = 50
-model = NumericEpiModel([S,E,I,R],N)
+model = EpiModel([S,E,I,R],N)
 model.set_processes([
         ( S, I, 2, E, I ),
         ( I, 1, R),

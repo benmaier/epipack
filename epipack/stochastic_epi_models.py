@@ -676,7 +676,7 @@ class StochasticEpiModel():
                 else:
                     for C in coupling_compartments:
                         nodes_of_this_compartment = self.y0[C]
-                        total_rate += nodes_of_this_compartment / (self.N_nodes - 1)
+                        total_rate += these_rates[C] * nodes_of_this_compartment * self.k0 / (self.N_nodes-1)
 
         if total_rate == 0.0:
             self.set_simulation_has_ended()
@@ -950,7 +950,7 @@ class StochasticEpiModel():
 
                 # save the current state if sampling_dt wasn't specified
                 if sampling_dt is None:
-                    time.append(t)
+                    time.append(new_t)
                     compartments.append(current_state.copy())
 
                 unsuccessful = 0

@@ -6,6 +6,8 @@ from scipy.stats import entropy
 from epipack.stochastic_epi_models import (
             StochasticEpiModel,
             StochasticSIModel,
+            StochasticSIRModel,
+            StochasticSISModel,
         )
 
 class StochasticEpiTest(unittest.TestCase):
@@ -333,10 +335,70 @@ class StochasticEpiTest(unittest.TestCase):
         assert(all([a==b for a, b in zip(res['S'], samples)]))
 
 
+    def test_total_event_rate_well_mixed(self):
+        N = 4
+        I0 = 2
+        S0 = N-I0
+        k0 = 1
+        R0 = 10.0
+        rho = 1.0
+        eta = R0*rho
+        epi = StochasticSIRModel(N,R0=R0,recovery_rate=rho,well_mixed_mean_contact_number=k0)
+        epi.set_random_initial_conditions({"S":S0,"I":I0})
+        SI_rate = I0*eta*S0/(N-1)
+        I_rate = rho*I0
+        print(epi.get_true_total_event_rate(), I_rate + SI_rate)
+        print(epi.get_total_event_rate(), I_rate + SI_rate)
+
+        #assert(epi.get_true_total_event_rate() == I_rate + SI_rate)
+        #assert(epi.get_true_total_event_rate() < epi.get_total_event_rate())
+
+    
+        # This is for testing whether the true event rate should be corrected with N-1 and not with N
+        N_sample =  3000
+
+        count_SI = 0
+        taus = []
+        SI_taus = []
+        for sample in range(N_sample):
+            epi.set_random_initial_conditions({"S":S0,"I":I0})
+            t, res = epi.simulate(1)
+            if res['I'][1] > I0:
+                count_SI += 1
+                SI_taus.append(t[1]-t[0])
+            taus.append(t[1]-t[0])
+
+        SI_rate_2 = I0*eta*S0/N
+        I_rate = rho*I0
+        #print(count_SI/N_sample, SI_rate/(I_rate+SI_rate), )
+        #print(count_SI/N_sample, SI_rate_2/(I_rate+SI_rate_2), )
+
+        from matplotlib import pyplot as pl
+        pl.figure()
+        counts, bins = np.histogram(taus,bins=100,density=True)
+        x = 0.5*(bins[1:]+bins[:-1])
+        #pl.hist(taus,bins=50,density=True)
+        L = I_rate + SI_rate
+        L2 = I_rate + SI_rate_2
+        #pl.plot(x,L*np.exp(-L*x))
+        #pl.plot(x,L2*np.exp(-L2*x))
+
+        #pl.figure()
+        counts, bins = np.histogram(SI_taus,bins=100,density=True)
+        x = 0.5*(bins[1:]+bins[:-1])
+        #pl.hist(SI_taus,bins=50,density=True)
+        L = SI_rate
+        L2 = SI_rate_2
+        #pl.plot(x,L*np.exp(-L*x))
+        #pl.plot(x,L2*np.exp(-L2*x))
+
+        #pl.show()
+
 
 if __name__ == "__main__":
 
     T = StochasticEpiTest()
+    T.test_total_event_rate_well_mixed()
     T.test_sampling_callback()
     T.test_compartments()
     T.test_mean_contact_number()

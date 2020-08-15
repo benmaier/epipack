@@ -734,7 +734,7 @@ class EpiModel(IntegrationMixin):
 
             # save the current state if sampling_dt wasn't specified
             if sampling_dt is None:
-                time.append(t)
+                time.append(new_t)
                 compartments.append(current_state.copy())
 
             # save current state

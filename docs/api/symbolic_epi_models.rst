@@ -1,5 +1,5 @@
-Symbolic Deterministic Models
------------------------------
+Symbolic Models
+---------------
 
 .. automodule:: epipack.symbolic_epi_models
     :members:

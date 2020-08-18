@@ -51,14 +51,17 @@ epipack
    :maxdepth: 2
    :caption: API
 
-   api/deterministic_epi_models
+   api/numeric_epi_models
    api/symbolic_epi_models
    api/stochastic_epi_models   
    api/process_conversions
    api/vis 
    api/mock_samplable_set
    api/integrators
-   api/network_models 
+   api/networks
+   api/colors
+   api/numeric_matrix_epi_models
+   api/symbolic_matrix_epi_models
 
 .. .. toctree::
 ..    :maxdepth: 2

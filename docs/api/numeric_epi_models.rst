@@ -1,7 +1,7 @@
-Network Models
+Numeric Models
 --------------
 
-.. automodule:: epipack.network_models
+.. automodule:: epipack.numeric_epi_models
     :members:
     :undoc-members:
     :show-inheritance:

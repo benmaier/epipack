@@ -87,7 +87,7 @@ One may introduce several events for ``source``-neighbors, each with certain pro
         ]
     }
 
-In this case, ``epipack`` adds a "nothing happens"-process ``(target_base, source, 1-p-p**2, target_base, target)`` automatically such 
+In this case, ``epipack`` adds a "nothing happens"-process ``(target_base, source, 1-p-q, target_base, target)`` automatically such 
 that any of the possible processes happens to the ``source``-neighbor (with corresponding probability :math:`p`, :math:`q`, or
 :math:`1-p-q`).
 

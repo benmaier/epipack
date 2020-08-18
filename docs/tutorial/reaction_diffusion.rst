@@ -6,7 +6,7 @@ per location for a finite set of `N` locations that are connected
 via links in a network. Through these links, reactions between
 locations can take place. This means that if we assume a reactive
 system of `C` compartments per location, the system can be described
-using an instance of :class:`epipack.deterministic_epi_models.DeterministicEpiModel`
+using an instance of :class:`epipack.numeric_matrix_epi_models.MatrixEpiModel`
 with :math:`N\times C` compartments: Each compartment is identified
 by a location and its epidemiological description.
 
@@ -53,7 +53,7 @@ We want to define a chain here:
 
 .. code:: python
 
-    from epipack import DeterministicEpiModel
+    from epipack import MatrixEpiModel
 
     N = 4
     nodes = list(range(N))
@@ -63,7 +63,7 @@ We want to define a chain here:
     compartments = [
             (node, comp) for node in nodes for comp in base_compartments
         ]
-    model = DeterministicEpiModel(compartments)
+    model = MatrixEpiModel(compartments)
 
 See that instead of using strings for compartments, we're using a tuple
 that contains the node and the compartment type. This works because 
@@ -202,7 +202,7 @@ it
 Subsequently, we set up the model exactly as above.
 
 One thing that you should know is that internally, an instance of
-``DeterministicEpiModel`` creates a one-dimensional :\math:`N\times C`-long
+``MatrixEpiModel`` creates a one-dimensional :\math:`N\times C`-long
 vector that contains the state of each compartment. In order
 for the visualization function to know which entry it should plot for each node,
 we have to provide it with the appropriate compartments. To this end, we construct

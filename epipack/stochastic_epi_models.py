@@ -44,6 +44,7 @@ class StochasticEpiModel():
     system or on a weighted, directed network.
     By default, the epidemiological process is considered
     to run in a well-mixed system.
+
     Parameters
     ----------
     compartments : :obj:`list` of :obj:`string`
@@ -53,7 +54,11 @@ class StochasticEpiModel():
     edge_weight_tuples : list of tuples of (int, int, float), default = None
         Choose this ption
         The links along which transmissions can take place.
+
+        .. code:: python
+
             [ (source_id, target_id, weight), ... ]
+
     directed : bool, default = False
         If `directed` is False, each entry in the edge_weight_tuples
         is considered to equally point from `target_id` to `source_id`
@@ -63,6 +68,7 @@ class StochasticEpiModel():
         in a well-mixed population where for each link-transmission
         event, a node is assumed to have contact to exactly one
         other node.
+
     Attributes
     ----------
     compartments : :obj:`list` of :obj:`string`
@@ -73,13 +79,16 @@ class StochasticEpiModel():
     node_status : numpy.ndarray of int
         Each entry gives the compartment that the
         corresponding node is part of.
+
     Example
     -------
+
     .. code:: python
         
         >>> epi = StochasticEpiModel(["S","I","R"],10)
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
+
     """
 
     def __init__(self,compartments,N,edge_weight_tuples=None,directed=False,well_mixed_mean_contact_number=1):
@@ -111,6 +120,7 @@ class StochasticEpiModel():
     def set_network(self,N_nodes,edge_weight_tuples,directed=False):
         """
         Define the model to run on a network.
+
         Parameters
         ---------
         N_nodes : int
@@ -189,19 +199,25 @@ class StochasticEpiModel():
     def set_node_transition_processes(self,process_list):
         """
         Define the linear node transition processes between compartments.
+
         Parameters
         ==========
         process_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions rates in the following format:
+
             .. code:: python
+
                 [
                     ("source_compartment", rate, "target_compartment" ),
                     ...
                 ]
+
         Example
         -------
         For an SEIR model.
+
         .. code:: python
+
             epi.set_node_transition_processes([
                 ("E", symptomatic_rate, "I" ),
                 ("I", recovery_rate, "R" ),
@@ -238,11 +254,14 @@ class StochasticEpiModel():
     def set_link_transmission_processes(self,process_list):
         r"""
         Define link transmission processes between compartments.
+
         Parameters
         ----------
         process_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions rates in the following format:
+
             .. code:: python
+
                 [
                     ("source_compartment", 
                      "target_compartment_initial",
@@ -252,10 +271,13 @@ class StochasticEpiModel():
                      ),
                     ...
                 ]
+
         Example
         -------
         For an SEIR model.
+
         .. code:: python
+
             epi.set_link_transmission_processes([
                 ("I", "S", +1, "I", "E" ),
             ])
@@ -299,11 +321,14 @@ class StochasticEpiModel():
     def set_conditional_link_transmission_processes(self,process_dict):
         r"""
         Define link transmission processes between compartments.
+
         Parameters
         ----------
         process_dict : :obj:`list` of :obj:`tuple`
             A dictionary of tuples that contains conditional transmission events in the following format:
+
             .. code:: python
+
                 {  
                     ( "source_base", "->", "target_base" ): [
                         ("target_base", 
@@ -324,6 +349,7 @@ class StochasticEpiModel():
                     ...
                    ]
                 }
+
         Example
         -------
         When an `I`-node recovers (to `R`), scan all of the newly-recovered node's
@@ -331,7 +357,9 @@ class StochasticEpiModel():
         to `X`. If the neighbor is an `I`, transition the neighbor to `Q` with
         probability :math:`p` (implying that nothing happens to this neighbor
         with probability :math:`1-p`.
+
         .. code:: python
+
             epi.set_conditional_link_transmission_processes({
                 ( "I", "->", "R" ) : [
                     ("R", "S", "->", "R", "X" ),
@@ -475,6 +503,7 @@ class StochasticEpiModel():
     def set_random_initial_conditions(self, initial_conditions):
         """
         Set random initial conditions for each compartment.
+
         Parameters
         ----------
         initial_conditions : dict
@@ -529,6 +558,7 @@ class StochasticEpiModel():
         """
         Set all node statuses at once and evaluate events and rates accordingly.
         Can be used to set initial conditions.
+        
         Parameters
         ----------
         node_status : numpy.ndarray of int
@@ -588,6 +618,7 @@ class StochasticEpiModel():
     def set_node_status(self,node,status):
         """
         Set the status of node `node` to `status`
+
         Parameters
         ----------
         node : int
@@ -719,10 +750,12 @@ class StochasticEpiModel():
         """
         Let a random node event happen according to the event probabilities
         of this node's status.
+
         Parameters
         ----------
         reacting_node : int
             the index of the node that reacts
+
         Returns
         -------
         compartment_changes : list of tuples of int
@@ -746,6 +779,7 @@ class StochasticEpiModel():
     def make_node_event(self, reacting_node, event, neighbor=None):
         """
         Let a specific node event happen
+
         Parameters
         ----------
         reacting_node : int
@@ -754,6 +788,7 @@ class StochasticEpiModel():
             three-entry long tuple that characterizes this event
         neighbor : int, default = None
             specify the neighbor to which this specific event happens
+
         Returns
         -------
         compartment_changes : list of tuples of int
@@ -861,6 +896,7 @@ class StochasticEpiModel():
         ``(return_compartments), len(time_points)``.
         If ``return_compartments`` is None, all compartments will
         be returned.
+
         Parameters
         ----------
         tmax : float
@@ -879,6 +915,7 @@ class StochasticEpiModel():
             If ``None``, this number will be set equal to the number of nodes.
         sampling_callback : funtion, default = None
             A function that's called when a sample is taken
+
         Returns
         -------
         t : numpy.ndarray

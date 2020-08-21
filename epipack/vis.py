@@ -1,5 +1,5 @@
 """
-Visualizations of stochastic simulations with pyglet.
+Visualizations of simulations with pyglet.
 """
 
 from copy import deepcopy
@@ -12,30 +12,12 @@ from pyglet import shapes
 from pyglet.window import key, mouse, Window
 from pyglet.gl import *
 
-dark_colors = [ [38,70,83], [231,111,81], [42,157,143],[131,227,119], [233,196,106], [100,100,100] ] * 2
-light_colors = [ [255,250,220], [243,114,44], [67,170,139],[144,190,109], [249,199,79], [140,140,140] ] * 2
-light_colors = [
-                "f29e4c",
-                "0db39e",
-                "54478c",
-                #"efea5a",
-                #"f1c453",
-                "048ba8",
-                #"16db93",
-                "aaaaaa",
-                "048ba8",
-                "2c699a",
-                "16db93",
-                "83e377",
-                "b9e769",
-                "f1c453",
-                ]
-light_colors = [[255,250,220]] + [ list(bytes.fromhex(l)) for l in light_colors ]
-#light_colors = [ [255,250,220], [255,173,173], [255,198,255], [202,255,191], [155,246,255], [140,140,140] ] * 2
-_colors = light_colors
-_colors = dark_colors
+from epipack.networks import get_random_layout, get_grid_layout
+from epipack import colors as col
+from epipack.colors import colors
 
-#[174,217,224],
+_colors = list(colors.values())
+
 
 class SimulationStatus():
     """
@@ -665,7 +647,7 @@ _default_config = {
             'n_circle_segments':16,
             'plot_height':120,
             'bgcolor':'#253237',
-            'curve_stroke_width':4.0,
+            'curve_stroke_width':1.0,
             'node_stroke_width':1.0,
             'link_color': '#4b5a62',
             'node_stroke_color':'#000000',
@@ -675,136 +657,21 @@ _default_config = {
             'show_curves':True,
             'draw_nodes_as_rectangles':False,
             'show_legend': True,
-            'legend_font_color':'#fafaef',
+            'legend_font_color':None,
             'legend_font_size':10,
             'padding':10,
             'compartment_colors':_colors,
+            'palette': "dark",
         }
 
 # light colors
 #_default_config.update({
-#            'bgcolor':'#fafaef',
+#            'bgcolor':'#fbfbef',
 #            'link_color': '#8e9aaf',
 #            'node_stroke_color':'#000000',
+#            'legend_font_color':'#040414',
 #        })
 
-def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
-    """
-    Returns a stylized network dictionary that puts 
-    nodes in a grid layout.
-
-    Parameters
-    ==========
-    N_nodes : int
-        The number of nodes in the network
-    edge_weight_tuples : list, default = []
-        A list of tuples. Each tuple describes an edge
-        with the first entry being the source node index,
-        the second entry being the target node indes
-        and the third entry being the weight, e.g.
-
-        .. code:: python
-
-            [ (0, 1, 1.0) ]
-
-    windowwidth : float, default = 400
-        The width of the network visualization
-    linkwidth : float, default = 1.0 
-        All links get the same width.
-
-    Returns
-    =======
-    network : dict
-        A stylized network dictionary in netwulf-format.
-    """
-
-    w = h = windowwidth
-    N = N_nodes
-    N_side = int(np.ceil(np.sqrt(N)))
-    dx = w / N_side
-    radius = dx/2
-
-    network = {}
-    stylized_network = {
-        'xlim': [0, w],
-        'ylim': [0, h],
-        'linkAlpha': 0.5,
-        'nodeStrokeWidth': 0.0001,
-    }
-
-    nodes = [ {
-                'id': i*N_side + j,
-                'x_canvas': (i+0.5)*dx,
-                'y_canvas': (j+0.5)*dx,
-                'radius': radius
-              } for i in range(N_side) for j in range(N_side) ]
-    nodes = nodes[:N_nodes]
-    links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
-
-    stylized_network['nodes'] = nodes
-    stylized_network['links'] = links
-
-    return stylized_network
-
-def get_random_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
-    """
-    Returns a stylized network dictionary that puts 
-    nodes in a random layout.
-
-    Parameters
-    ==========
-    N_nodes : int
-        The number of nodes in the network
-    edge_weight_tuples : list, default = []
-        A list of tuples. Each tuple describes an edge
-        with the first entry being the source node index,
-        the second entry being the target node indes
-        and the third entry being the weight, e.g.
-
-        .. code:: python
-
-            [ (0, "1", 1.0) ]
-
-    windowwidth : float, default = 400
-        The width of the network visualization
-    linkwidth : float, default = 1.0 
-        All links get the same width.
-
-    Returns
-    =======
-    network : dict
-        A stylized network dictionary in netwulf-format.
-    """
-
-    w = h = windowwidth
-    N = N_nodes
-    N_side = int(np.ceil(np.sqrt(N)))
-    dx = w / N_side
-    radius = dx/4
-
-    network = {}
-    stylized_network = {
-        'xlim': [0, w],
-        'ylim': [0, h],
-        'linkAlpha': 0.5,
-        'nodeStrokeWidth': 0.0001,
-    }
-
-    pos = (np.random.rand(N, 2) * w).tolist()
-
-    nodes = [ {
-                'id': i,
-                'x_canvas': pos[0],
-                'y_canvas': pos[1],
-                'radius': radius
-              } for i, pos in enumerate(pos)]
-    nodes = nodes[:N_nodes]
-    links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
-
-    stylized_network['nodes'] = nodes
-    stylized_network['links'] = links
-
-    return stylized_network
 
 def visualize(model,
               network, 
@@ -896,7 +763,21 @@ def visualize(model,
     cfg = deepcopy(_default_config)
     if config is not None:
         cfg.update(config)
+
+    palette = cfg['palette']
+    if type(palette) == str:
+        cfg['link_color'] = col.hex_link_colors[palette]
+        cfg['bgcolor'] = col.hex_bg_colors[palette]
+        cfg['compartment_colors'] = [ col.colors[this_color] for this_color in col.palettes[palette] ]
+        
     bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
+
+    bgY = 0.2126*bgcolor[0] + 0.7152*bgcolor[1] + 0.0722*bgcolor[2]
+    if cfg['legend_font_color'] is None:
+        if bgY < 0.5:
+            cfg['legend_font_color'] = '#fafaef'
+        else:
+            cfg['legend_font_color'] = '#232323'
         
     width = network['xlim'][1] - network['xlim'][0]
     height = network['ylim'][1] - network['ylim'][0]
@@ -955,7 +836,7 @@ def visualize(model,
                                       this_y - (dy-1.25*legend_circle_radius)/2,
                                       legend_circle_radius,
                                       segments=64,
-                                      color = _colors[iC],
+                                      color = cfg['compartment_colors'][iC],
                                       batch=legend_batch,
                                       )
                         
@@ -1057,11 +938,9 @@ def visualize(model,
     # decide whether to plot all measured changes or only discrete-time samples
     discrete_plot = cfg['plot_sampled_curve']
 
-    # find quarantined compartment ids and the maximal value of the
-    # compartments that are meant to be plotted. 
-    # These sets are needed for filtering later on.
+    # find quarantined compartment ids
+    # This set is needed for filtering later on.
     quarantined = set(model.get_compartment_id(C) for C in quarantine_compartments)
-    maxy = max([ model.y0[model.get_compartment_id(C) ] for C in (set(model.compartments) - set(ignore_plot_compartments))])
 
     # initialize time arrays
     t = 0
@@ -1069,6 +948,10 @@ def visualize(model,
 
     # initialize curves
     if with_plot:
+        # find the maximal value of the
+        # compartments that are meant to be plotted. 
+        # These sets are needed for filtering later on.
+        maxy = max([ model.y0[model.get_compartment_id(C) ] for C in (set(model.compartments) - set(ignore_plot_compartments))])
         scl = Scale(bound_increase_factor=cfg['bound_increase_factor'])\
                 .extent(0,plot_width,plot_height-cfg['padding'],cfg['padding'])\
                 .domain(0,20*sampling_dt,0,maxy)
@@ -1079,7 +962,7 @@ def visualize(model,
             _batch = pyglet.graphics.Batch()
             window.add_batch(_batch,prefunc=_set_linewidth_curves)
             y = [np.count_nonzero(model.node_status==model.get_compartment_id(C))]
-            curve = Curve(discrete_time,y,_colors[iC],scl,_batch)
+            curve = Curve(discrete_time,y,cfg['compartment_colors'][iC],scl,_batch)
             curves[C] = curve
 
     # define the pyglet-App update function that's called on every clock cycle
@@ -1144,7 +1027,7 @@ def visualize(model,
         for node in ndx:
             status = model.node_status[node]    
             if cfg['draw_nodes']:
-                disks[node].color = _colors[status]
+                disks[node].color = cfg['compartment_colors'][status]
 
             # if a node becomes quarantined,
             # iterate through its attached links (lines)
@@ -1269,6 +1152,7 @@ def visualize_reaction_diffusion(
     cfg = deepcopy(_default_config)
     if config is not None:
         cfg.update(config)
+
     bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
         
     width = network['xlim'][1] - network['xlim'][0]
@@ -1277,11 +1161,12 @@ def visualize_reaction_diffusion(
     size = (width, height)
 
 
+
     # overwrite network style with the epipack default style
     network['linkColor'] = cfg['link_color']
     network['nodeStrokeColor'] = cfg['node_stroke_color']
     for node in network['nodes']:
-        node['color'] = cfg['legend_font_color']
+        node['color'] = col.hex_bg_colors['light']
     N = len(network['nodes'])
 
     # get the OpenGL shape objects that comprise the network

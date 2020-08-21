@@ -2,6 +2,7 @@ import netwulf as nw
 
 from epipack.vis import visualize
 from epipack import StochasticEpiModel
+from epipack.colors import palettes, colors, bg_colors, hex_bg_colors
 
 # load network
 network, config, _ = nw.load('/Users/bfmaier/pythonlib/facebook/FB.json')
@@ -45,5 +46,10 @@ visualize(model,
           sampling_dt,
           ignore_plot_compartments=['S'],
           quarantine_compartments=['X'],
+          config={
+                #'link_color': '#A1A1A1',
+                'compartment_colors': [ colors[name] for name in palettes['french79 pastel']],
+                'bgcolor': hex_bg_colors['french79 pastel'],
+              }
           )
 

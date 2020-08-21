@@ -334,20 +334,23 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
     def set_linear_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
         """
         Define the linear transition events between compartments.
+
         Parameters
         ==========
         event_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions events in the following format:
+
             .. code:: python
+
                 [
                     ( acting_compartment, affected_compartment, rate ),
                     ...
                 ]
+
         allow_nonzero_column_sums : :obj:`bool`, default : False
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
-        Example
         reset_events : bool, default : True
             Whether to reset all linear events to zero before
             converting those.
@@ -404,11 +407,14 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
     def set_quadratic_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.
+
         Parameters
         ----------
         event_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions events in the following format:
+
             .. code:: python
+
                 [
                     ("coupling_compartment_0",
                      "coupling_compartment_1",
@@ -417,18 +423,23 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
                      ),
                     ...
                 ]
+
         allow_nonzero_column_sums : :obj:`bool`, default : False
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
+
         Example
         -------
         For an SEIR model.
+
         .. code:: python
+
             epi.set_quadratic_events([
                 ("S", "I", "S", -1 ),
                 ("S", "I", "E", +1 )
             ])
+
         Read  as
 
         "Coupling of *S* and *I* leads to
@@ -477,6 +488,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
     def dydt(self):
         """
         Compute the current momenta of the epidemiological model.
+
         Parameters
         ----------
         t : :obj:`float`

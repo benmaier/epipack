@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import sympy
 
-from epipack.network_models import (
+from epipack.networks import (
             get_2D_lattice_links
         )
 

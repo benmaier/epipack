@@ -10,7 +10,6 @@ from epipack.vis import (
         )
 
 from epipack import StochasticSIRModel, StochasticEpiModel, get_2D_lattice_links
-
 import pyglet
 import gc
 

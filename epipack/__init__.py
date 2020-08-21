@@ -47,6 +47,8 @@ from .symbolic_matrix_epi_models import (
         SymbolicMatrixSIModel,
     )
 
-from .network_models import (
+from .networks import (
         get_2D_lattice_links,
+        get_random_layout,
+        get_grid_layout,
     )

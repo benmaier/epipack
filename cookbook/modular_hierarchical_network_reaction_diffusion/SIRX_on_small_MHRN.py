@@ -1,11 +1,10 @@
 import netwulf as nw
 
 from epipack.vis import visualize
-from epipack.colors import palettes, colors, bg_colors, hex_bg_colors
 from epipack import StochasticEpiModel
 
 # load network
-network, config, _ = nw.load('/Users/bfmaier/pythonlib/facebook/MHRN.json')
+network, config, _ = nw.load('./MHRN.json')
 
 # get the network properties
 N = len(network['nodes'])
@@ -54,19 +53,14 @@ model.set_conditional_link_transmission_processes({
 model.set_random_initial_conditions({'I':10,'S':N-10})
 
 # in every step of the simulation/visualization, let a time of `sampling_dt` pass
-sampling_dt = 1
+sampling_dt = 0.1
 
 # simulate and visualize, do not plot the "S" count,
 # and remove links from nodes that transition to "X"
 visualize(model,
           network,
           sampling_dt,
-          ignore_plot_compartments=['S'],
+          ignore_plot_compartments=[],
           quarantine_compartments=['X'],
-          config={
-                'compartment_colors': [ colors[name] for name in palettes['brewer dark']],
-                'bgcolor': hex_bg_colors['brewer dark'],
-              }
-
           )
 

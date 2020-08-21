@@ -1,5 +1,6 @@
-from epipack import NumericMatrixBasedEpiModel, get_2D_lattice_links
-from epipack.vis import visualize_reaction_diffusion, get_grid_layout
+from epipack import MatrixEpiModel, get_2D_lattice_links
+from epipack.vis import visualize_reaction_diffusion
+from epipack.networks import get_grid_layout
 import numpy as np
 
 from time import time
@@ -21,7 +22,7 @@ for u, v, w in links:
 base_compartments = "SIR"
 
 compartments = [ (node, C) for node in range(N) for C in base_compartments ]
-model = NumericMatrixBasedEpiModel(compartments)
+model = MatrixEpiModel(compartments)
 
 infection_rate = 2
 recovery_rate = 1

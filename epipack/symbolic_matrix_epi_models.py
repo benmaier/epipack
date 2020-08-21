@@ -25,10 +25,12 @@ class SymbolicMatrixEpiModel(SymbolicMixin,MatrixEpiModel):
     A general class to define standard
     mean-field compartmental
     epidemiological model.
+
     Parameters
     ----------
     compartments : :obj:`list` of :obj:`string`
         A list containing compartment strings.
+
     Attributes
     ----------
     compartments : :obj:`list` of :obj:`string`
@@ -47,13 +49,16 @@ class SymbolicMatrixEpiModel(SymbolicMixin,MatrixEpiModel):
         List of integer compartment IDs, collecting
         compartments that are affected
         by the quadratic processes
+
     Example
     -------
+
     .. code:: python
 
         >>> epi = SymbolicMatrixEpiModel(symbols("S I R"))
         >>> print(epi.compartments)
         [ S, I, R ]
+
     """
 
     def __init__(self,compartments,initial_population_size=1,correct_for_dynamical_population_size=False):
@@ -81,15 +86,19 @@ class SymbolicMatrixEpiModel(SymbolicMixin,MatrixEpiModel):
     def set_linear_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=True):
         """
         Define the linear transition rates between compartments.
+
         Parameters
         ==========
         rate_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions rates in the following format:
+
             .. code:: python
+
                 [
                     ( acting_compartment, affected_compartment, rate ),
                     ...
                 ]
+
         allow_nonzero_column_sums : :obj:`bool`, default : False
             This keyword has no function in this class
         reset_rates : bool, default : True
@@ -131,11 +140,14 @@ class SymbolicMatrixEpiModel(SymbolicMixin,MatrixEpiModel):
     def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.
+
         Parameters
         ----------
         rate_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions rates in the following format:
+
             .. code:: python
+
                 [
                     ("coupling_compartment_0",
                      "coupling_compartment_1",
@@ -144,19 +156,24 @@ class SymbolicMatrixEpiModel(SymbolicMixin,MatrixEpiModel):
                      ),
                     ...
                 ]
+
         allow_nonzero_column_sums : :obj:`bool`, default : False
             This keyword has no function in this class
         reset_rates : bool, default : True
             Whether to reset all quadratic rates to zero before
             setting the new ones.
+
         Example
         -------
         For an SEIR model.
+
         .. code:: python
+
             epi.set_quadratic_rates([
                 ("S", "I", "S", -1 ),
                 ("S", "I", "E", +1 )
             ])
+
         Read  as
 
         "Coupling of *S* and *I* leads to

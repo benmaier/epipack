@@ -81,6 +81,7 @@ class GrayScott():
             v += dv*dt
             old_t = t
 
+
         if self.animate == 'u':
             return u
         else:

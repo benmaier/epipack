@@ -350,8 +350,8 @@ class StochasticEpiTest(unittest.TestCase):
         print(epi.get_true_total_event_rate(), I_rate + SI_rate)
         print(epi.get_total_event_rate(), I_rate + SI_rate)
 
-        #assert(epi.get_true_total_event_rate() == I_rate + SI_rate)
-        #assert(epi.get_true_total_event_rate() < epi.get_total_event_rate())
+        assert(np.isclose(epi.get_true_total_event_rate(), I_rate + SI_rate))
+        assert(epi.get_true_total_event_rate() < epi.get_total_event_rate())
 
     
         # This is for testing whether the true event rate should be corrected with N-1 and not with N

@@ -19,6 +19,7 @@ a.out
 /data/
 /selenium/
 
+*/.ipynb_checkpoints/
 /notebooks/.ipynb_checkpoints/
 /notebooks/results_data/
 

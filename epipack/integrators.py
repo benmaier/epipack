@@ -80,13 +80,13 @@ def integrate_euler(dydt, t, y0, *args):
 
 
     # initiate integrator
-    result = np.zeros((len(y0),len(t)+1))
+    result = np.zeros((len(y0),len(t)))
     result[:,0] = y0
     old_t = t0
 
 
     # loop through all demanded time points
-    for it, t_ in enumerate(t):
+    for it, t_ in enumerate(t[1:]):        
 
             # get result of ODE integration
             dt = t_ - old_t

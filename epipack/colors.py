@@ -64,14 +64,14 @@ def torgb(color):
 
 def brighter(rgb):
     """
-    Make the color a tad brighter.
+    Make the color (rgb-tuple) a tad brighter.
     """
     _rgb = tuple([ int(np.sqrt(a/255) * 255) for a in rgb ])
     return _rgb
 
 def darker(rgb):
     """
-    Make the color a tad darker.
+    Make the color (rgb-tuple) a tad darker.
     """
     _rgb = tuple([ int((a/255)**2 * 255) for a in rgb ])
     return _rgb

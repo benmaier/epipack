@@ -6,6 +6,10 @@ github.com/gstonge/SamplableSet but is less efficient.
 import numpy as np
 
 def choice(arr,p):
+    """
+    Returns a random element from ``arr`` with probability given in array ``p``.
+    If ``arr`` is not an iterable, the function returns the index of the chosen element.
+    """
     ndx = np.argmax(np.random.rand()<np.cumsum(p))
     try:
         return arr[ndx]

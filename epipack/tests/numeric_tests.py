@@ -287,7 +287,7 @@ class EpiTest(unittest.TestCase):
         result = epi.integrate(tt)
         assert(np.isclose(result[R][-1],(1-rho/eta)/(1+omega/rho)))
 
-    def test_temporal_gillespie(self):
+    def test_temporal_gillespie(self,plot=False):
 
         scl = 40
         def R0(t,y=None):
@@ -314,20 +314,88 @@ class EpiTest(unittest.TestCase):
             tau, _ = model.get_time_leap_and_proposed_compartment_changes(0)
             taus.append(tau)
 
-        #import matplotlib.pyplot as pl
-        #pl.hist(taus,bins=100,density=True)
         I = lambda t: (4*t + 1/scl*np.sin(t*scl))
         I2 = lambda t: I(t)*S0*I0/N+I0*rec*t
         pdf = lambda t: (R0(t)*S0*I0/N + I0*rec) * np.exp(-I2(t))
-        #tt = np.linspace(0,1,100)
         measured, bins = np.histogram(taus,bins=100,density=True)
         theory = [ np.exp(-I2(bins[i-1]))-np.exp(-I2(bins[i])) for i in range(1,len(bins)) if measured[i-1] > 0]
         experi = [ measured[i-1] for i in range(1,len(bins)) if measured[i-1] > 0]
         # make sure the kullback-leibler divergence is below some threshold
+        if plot:
+            import matplotlib.pyplot as pl
+            pl.figure()
+            pl.hist(taus,bins=100,density=True)
+            tt = np.linspace(0,1,100)
+            pl.plot(tt, pdf(tt))
+            pl.yscale('log')
+            pl.figure()
+            pl.hist(taus,bins=100,density=True)
+            tt = np.linspace(0,1,100)
+            pl.plot(tt, pdf(tt))
+            pl.show()
         assert(entropy(theory, experi) < 0.01)
-        #pl.plot(tt, pdf(tt))
-        #pl.yscale('log')
-        #pl.show()
+
+    def test_temporal_gillespie_repeated_simulation(self,plot=False):
+
+        scl = 40
+        def R0(t,y=None):
+            return 4+np.cos(t*scl)
+
+        S, I = list("SI")
+        N = 100
+        rec = 1
+        model = EpiModel([S,I], N)
+        model.set_processes([
+                (S, I, R0, I, I),
+                (I, rec, S),
+            ])
+        I0 = 1
+        S0 = N - I0
+        model.set_initial_conditions({
+                S: S0,
+                I: I0,
+            })
+
+        taus = []
+        N_sample = 10000
+        from tqdm import tqdm
+        tt = np.linspace(0,1,100)
+        for sample in tqdm(range(N_sample)):
+            tau = None
+            model.set_initial_conditions({
+                    S: S0,
+                    I: I0,
+                })
+            for _t in tt[1:]: 
+                time, result = model.simulate(_t,adopt_final_state=True)
+                #print(time, result['I'])
+                if result['I'][-1] != I0:
+                    tau = time[1]
+                    break
+            #print()
+            if tau is not None:
+                taus.append(tau)
+
+        I = lambda t: (4*t + 1/scl*np.sin(t*scl))
+        I2 = lambda t: I(t)*S0*I0/N+I0*rec*t
+        pdf = lambda t: (R0(t)*S0*I0/N + I0*rec) * np.exp(-I2(t))
+        measured, bins = np.histogram(taus,bins=100,density=True)
+        theory = [ np.exp(-I2(bins[i-1]))-np.exp(-I2(bins[i])) for i in range(1,len(bins)) if measured[i-1] > 0]
+        experi = [ measured[i-1] for i in range(1,len(bins)) if measured[i-1] > 0]
+        # make sure the kullback-leibler divergence is below some threshold
+        if plot:
+            import matplotlib.pyplot as pl
+            pl.figure()
+            pl.hist(taus,bins=100,density=True)
+            tt = np.linspace(0,1,100)
+            pl.plot(tt, pdf(tt))
+            pl.yscale('log')
+            pl.figure()
+            pl.hist(taus,bins=100,density=True)
+            tt = np.linspace(0,1,100)
+            pl.plot(tt, pdf(tt))
+            pl.show()
+        assert(entropy(theory, experi) < 0.01)
 
     def test_stochastic_well_mixed(self):
 
@@ -428,7 +496,10 @@ class EpiTest(unittest.TestCase):
 
 if __name__ == "__main__":
 
+    import sys
+
     T = EpiTest()
+    T.test_temporal_gillespie_repeated_simulation()
     T.test_sampling_callback()
     T.test_birth_stochastics()
     T.test_stochastic_fission()

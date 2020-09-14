@@ -67,12 +67,14 @@ class StochasticEpiModel():
         By default, the epidemiological process is considered to run
         in a well-mixed population where for each link-transmission
         event, a node is assumed to have contact to exactly one
-        other node.
+        other node. Increase this contact number by adjusting this
+        parameter.
 
     Attributes
     ----------
     compartments : :obj:`list` of :obj:`string`
-        A list containing strings that describe each compartment,
+        A list containing strings or other hash-able types
+        that describe each compartment,
         (e.g. "S", "I", etc.).
     N_comp : :obj:`int`
         Number of compartments (including population number)
@@ -127,7 +129,11 @@ class StochasticEpiModel():
             Number of nodes in the system
         edge_weight_tuples : list of tuple of (int, int, float)
             The links along which transmissions can take place.
-                [ (source_id, target_id, weight), ... ]
+
+                .. code:: python
+
+                    [ (source_id, target_id, weight), ... ]
+
         directed : bool, default = False
             If `directed` is False, each entry in the edge_weight_tuples
             is considered to equally point from `target_id` to `source_id`
@@ -213,7 +219,7 @@ class StochasticEpiModel():
                 ]
 
         Example
-        -------
+        =======
         For an SEIR model.
 
         .. code:: python
@@ -1027,8 +1033,29 @@ class StochasticEpiModel():
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
 
 class StochasticSIModel(StochasticEpiModel):
-    """
+    r"""
     An SI model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+    Parameters
+    ----------
+    N : int
+        Number of nodes.
+    infection_rate : float
+        Inverse mean duration of a single SI-contact until infection :math:`\eta=1/\tau_`.
+    *args : list
+        List of arguments that will be passed to 
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+    **kwargs : dict
+        Additional keyword arguments that will be passed to 
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+    Attributes
+    ----------
+    compartments : list of str
+        
+        .. code:: python
+
+            [ "S", "I" ]
     """
 
     def __init__(self, N, infection_rate, *args, **kwargs):
@@ -1040,8 +1067,31 @@ class StochasticSIModel(StochasticEpiModel):
             ])
 
 class StochasticSIRModel(StochasticEpiModel):
-    """
+    r"""
     An SIR model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+    Parameters
+    ----------
+    N : int
+        Number of nodes.
+    R0 : float
+        Basic reproduction number :math:`R_0 = \eta\left< k\right>/\rho`.
+    recovery_rate : float
+        Inverse duration of infection :math:`\rho=1/\tau_I`.
+    *args : list
+        List of arguments that will be passed to 
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+    **kwargs : dict
+        Additional keyword arguments that will be passed to 
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+    Attributes
+    ----------
+    compartments : list of str
+        
+        .. code:: python
+
+            [ "S", "I", "R" ]
     """
 
     def __init__(self, N, R0, recovery_rate, *args, **kwargs):
@@ -1060,8 +1110,32 @@ class StochasticSIRModel(StochasticEpiModel):
             ])
 
 class StochasticSISModel(StochasticEpiModel):
-    """
+    r"""
     An SIS model derived from :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+    Parameters
+    ----------
+    N : int
+        Number of nodes.
+    R0 : float
+        Basic reproduction number :math:`R_0 = \eta\left< k\right>/\rho`.
+    recovery_rate : float
+        Inverse duration of infection :math:`\rho=1/\tau_I`.
+    *args : list
+        List of arguments that will be passed to 
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+    **kwargs : dict
+        Additional keyword arguments that will be passed to 
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+    Attributes
+    ----------
+    compartments : list of str
+        
+        .. code:: python
+
+            [ "S", "I" ]
+
     """
 
     def __init__(self, N, R0, recovery_rate, *args, **kwargs):

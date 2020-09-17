@@ -900,7 +900,7 @@ class StochasticEpiModel():
 
         return compartment_changes
 
-    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None,sampling_callback=None,**kwargs):
+    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None,sampling_callback=None,t0=0.0,**kwargs):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -945,8 +945,8 @@ class StochasticEpiModel():
         current_state = self.y0.copy()
         compartments = [ current_state.copy() ]
 
-        t = 0.0
-        time = [0.0]
+        t = t0
+        time = [t0]
 
         if max_unsuccessful is None:
             max_unsuccessful = self.N_nodes

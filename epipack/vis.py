@@ -647,7 +647,7 @@ _default_config = {
             'n_circle_segments':16,
             'plot_height':120,
             'bgcolor':'#253237',
-            'curve_stroke_width':1.0,
+            'curve_stroke_width':4.0,
             'node_stroke_width':1.0,
             'link_color': '#4b5a62',
             'node_stroke_color':'#000000',

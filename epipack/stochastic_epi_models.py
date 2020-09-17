@@ -144,8 +144,13 @@ class StochasticEpiModel():
 
         # min weights and max weights have to be set for the efficient
         # sampling within sets
-        min_weight = min([ e[_EDGE_WEIGHT] for e in edge_weight_tuples ])
-        max_weight = max([ e[_EDGE_WEIGHT] for e in edge_weight_tuples ])
+        edge_weights = [ e[_EDGE_WEIGHT] for e in edge_weight_tuples ]
+        if len(edge_weights) == 0:
+            min_weight = 1
+            max_weight = 1
+        else:
+            min_weight = min(edge_weights)
+            max_weight = max(edge_weights)
 
         # construct network as list of neighbor dictionaries
         graph = [ {} for n in range(N_nodes) ]

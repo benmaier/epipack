@@ -55,7 +55,7 @@ class DynamicBirthRate():
 
     Parameters
     ----------
-    rate : func
+    rate : function
         Function of time ``t`` and state ``y``
     """
 
@@ -73,7 +73,7 @@ class ConstantLinearRate:
 
     Parameters
     ----------
-    rate : func
+    rate : float
         Constant rate value
     comp0 : int
         Index of the corresponding reacting
@@ -97,7 +97,7 @@ class DynamicLinearRate:
 
     Parameters
     ----------
-    rate : func
+    rate : function
         Function of time ``t`` and state ``y``
     comp0 : int
         Index of the corresponding reacting
@@ -121,7 +121,7 @@ class ConstantQuadraticRate:
 
     Parameters
     ----------
-    rate : func
+    rate : float
         Constant rate value
     comp0 : int
         Index of one of the reacting
@@ -151,7 +151,7 @@ class DynamicQuadraticRate:
 
     Parameters
     ----------
-    rate : func
+    rate : function
         Function of time ``t`` and state ``y``
     comp0 : int
         Index of one of the reacting

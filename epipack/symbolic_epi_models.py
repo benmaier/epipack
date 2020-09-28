@@ -1,5 +1,6 @@
 """
-Provides an API to define epidemiological models in terms of sympy symbolic expressions.
+Provides an API to define epidemiological
+models in terms of sympy symbolic expressions.
 """
 
 import warnings
@@ -45,6 +46,15 @@ class SymbolicMixin():
     def jacobian(self,simplify=True):
         """
         Obtain the Jacobian for this model.
+
+        Parameters
+        ----------
+        simplify : bool, default = True
+            If ``True``, `epipack` will try to simplify 
+            the evaluated Jacobian. This might not be
+            desirable in some cases due to its
+            long evaluation time, which is why 
+            it can be turned off.
         """
 
         try:
@@ -122,7 +132,6 @@ class SymbolicMixin():
         -------
         eigenvalues : dict
             Each entry maps an eigenvalue expression to its multiplicity.
-
         """
         J = self.get_jacobian_at_fixed_point(fixed_point_dict)
         return J.eigenvals()
@@ -153,14 +162,16 @@ class SymbolicMixin():
         if disease_free_state is None:
             S = sympy.symbols("S")
             if S not in self.compartments:
-                raise ValueError("Disease free state was not provided to the method. I tried to assume the disease free state is at S = 1, but no `S`-compartment was found.")
+                raise ValueError("The disease free state was not provided to the method. "+\
+                                 "I tried to assume the disease free state is at S = 1, "+\
+                                 "but no `S`-compartment was found.")
             disease_free_state = {S:1}
 
         return self.get_eigenvalues_at_fixed_point(disease_free_state)
 
     def _convert_fixed_point_dict(self,fixed_point_dict):
         """
-        Get a fixed point list.
+        Get a fixed point item iterator.
 
         Parameters
         ----------
@@ -186,12 +197,14 @@ class SymbolicMixin():
 
     def set_parameter_values(self,parameter_values):
         """
-        Set numerical values for the parameters of this model
+        Set numerical values for the parameters of this model.
+        This might include free symbols that are part of symbolized
+        rate functions.
 
         Parameters
         ==========
         parameter_values : dict
-            A dictionary mapping compartment symbols to
+            A dictionary mapping symbols to
             numerical values.
         """
         self.parameter_values = parameter_values
@@ -218,6 +231,13 @@ class SymbolicMixin():
             of consecutive entries in ``time_points``.
         adopt_final_state : bool, default = False
             Whether or not to adopt the final state of the integration
+
+        Returns
+        =======
+        dydt : func
+            A function ``dydt(t, y, *args, **kwargs)`` that returns
+            the numerical momenta of this system at time ``t`` and
+            state vector ``y``.
         """
 
         these_symbols = [sympy.symbols("t")] + self.compartments
@@ -246,6 +266,27 @@ class SymbolicMixin():
         return dydt
 
     def get_numerical_event_and_rate_functions(self):
+        """
+        Converts the symbolic event lists and corresponding
+        symbolic rates to functions that return numeric
+        event lists and numeric rates based on the current
+        time and state vector.
+
+        This function is needed in the 
+        :class:`epipack.numeric_epi_models.EpiModel`
+        base class for stochastic simulations.
+
+        Returns
+        -------
+        get_event_rates : func
+            A function that takes the current time ``t`` and
+            state vector ``y`` 
+            and returns numerical event rate lists.
+        get_compartment_changes : funx
+            A function that takes a numerical list of event ``rates``
+            and returns a random event state change vector
+            with probability proportional to its entry in ``rates``.
+        """
         rates = self.birth_rate_functions + self.linear_rate_functions
         if self.correct_for_dynamical_population_size:
             population_size = sum(self.compartments)
@@ -269,16 +310,24 @@ class SymbolicMixin():
         not_set = set(not_set) - set(these_symbols)
 
         if len(not_set) > 0:
-            raise ValueError("Parameters", set(not_set), "have not been set. Please set them using",
+            raise ValueError("Parameters " + str(set(not_set)) +\
+                             "have not been set. Please set them using " +\
                              "SymbolicEpiModel.parameter_values()")
 
         sympy_rates = sympy.lambdify(these_symbols, rates)
 
         def get_event_rates(t, y):
+            """
+            Returns numerical event rate lists based on current
+            state vector ``y`` and time ``t``.
+            """
             these_args = [t] + y.tolist()
             return np.array(sympy_rates(*these_args))
 
         def get_compartment_changes(rates):
+            """
+            Choose an event change vector based on the current ``rates``.
+            """
             idy = custom_choice(rates/rates.sum())
             return events[idy]
 
@@ -292,11 +341,24 @@ def get_temporal_interpolation(time_data, value_data, interpolation_degree=1):
     If ``interpolation_degree == 0``, the function changes according to step
     functions. In this case ``time_data`` needs to have one value more than
     ``value_data``.
+
+    The values in ``time_data`` and ``value_data`` can be symbols or numeric
+    values.
+
+    Parameters
+    ----------
+    time_data : list
+        Sorted list of time values.
+    value_data : list
+        List of values corresponding to the times given in ``time_data``.
+    interpolation_degree : int
+        The degree of the polynomial that interpolates between values.
     """
     t = sympy.symbols("t")
     if interpolation_degree == 0:
         if len(time_data) != len(value_data)+1:
-            raise ValueError("For ``interpolation_degree == 0``, `time_data`` needs to have one value more than ``value_data``.")
+            raise ValueError("For ``interpolation_degree == 0``, `time_data`` " +\
+                             "needs to have one value more than ``value_data``.")
         return sympy.Piecewise(*[
                     (v, (time_data[i] <= t) & ( t < time_data[i+1])) \
                     for i, v in enumerate(value_data)
@@ -305,6 +367,40 @@ def get_temporal_interpolation(time_data, value_data, interpolation_degree=1):
         return sympy.interpolating_spline(interpolation_degree, t, time_data, value_data)
 
 class SymbolicEpiModel(SymbolicMixin, EpiModel):
+    """
+    Define a model based on the analytical framework
+    offered by `Sympy <https://sympy.org/>`_.
+
+    This class uses the event-based framework
+    where state-change vectors are associated with
+    event rates.
+
+    Parameters
+    ==========
+    compartments : list
+        A list of :class:`sympy.Symbol` instances that
+        symbolize compartments.
+    initial_population_size : float, default = 1.0
+        The population size at :math:`t = 0`.
+    correct_for_dynamical_population_size : bool, default = True
+        If ``True``, the quadratic coupling terms will be
+        divided by the population size.
+
+    Attributes
+    ==========
+    compartments : list
+        A list of :class:`sympy.Symbol` instances that
+        symbolize compartments.
+    N_comp : :obj:`int`
+        Number of compartments (including population number)
+    parameter_values : dict
+        Maps parameter symbols to numerical values, 
+
+    Other attributes will be inherited 
+    from :class:`epipack.symbolic_epi_models.SymbolicMixin` and
+    :class:`epipack.symbolic_epi_models.EpiModel`.
+
+    """
 
     def __init__(self,compartments,
                       initial_population_size=1,
@@ -324,6 +420,11 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         self.parameter_values = {}
 
     def _check_rate_for_functional_dependency(self,rate):
+        """
+        Sets the attribute ``rates_have_explicit_time_dependence``
+        to ``True`` if ``rate`` has an explicit functional dependency
+        on a :class:`sympy.Symbol` called ``"t"``.
+        """
         try:
             t = sympy.symbols("t")
             has_time_dependence = t in rate.free_symbols
@@ -338,7 +439,8 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         Parameters
         ==========
         event_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions events in the following format:
+            A list of tuples that contains transitions events in the
+            following format:
 
             .. code:: python
 

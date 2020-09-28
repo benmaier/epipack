@@ -23,10 +23,24 @@ from scipy.optimize import newton
 from scipy.integrate import quad
 
 def custom_choice(p):
+    """
+    Return an index of normalized probability
+    vector ``p`` with probability equal to
+    the corresponding entry in ``p``.
+    """
     return np.argmin(np.cumsum(p)<np.random.rand())
 
 class ConstantBirthRate():
+    """
+    Will be used as a function of
+    time ``t`` and state ``y``,
+    returning a rate value.
 
+    Parameters
+    ----------
+    rate : float
+        Constant rate value
+    """
     def __init__(self, rate):
         self.rate = rate
 
@@ -34,6 +48,16 @@ class ConstantBirthRate():
         return self.rate
 
 class DynamicBirthRate():
+    """
+    Will be used as a function of
+    time ``t`` and state ``y``,
+    returning a rate value.
+
+    Parameters
+    ----------
+    rate : func
+        Function of time ``t`` and state ``y``
+    """
 
     def __init__(self, rate):
         self.rate = rate
@@ -42,6 +66,21 @@ class DynamicBirthRate():
         return self.rate(t,y)
 
 class ConstantLinearRate:
+    """
+    Will be used as a function of
+    time ``t`` and state ``y``,
+    returning a rate value.
+
+    Parameters
+    ----------
+    rate : func
+        Constant rate value
+    comp0 : int
+        Index of the corresponding reacting
+        component. The incidence of this component
+        will be multiplied with the
+        value of ``rate``.
+    """
 
     def __init__(self, rate, comp0):
         self.rate = rate
@@ -51,6 +90,21 @@ class ConstantLinearRate:
         return self.rate * y[self.comp0]
 
 class DynamicLinearRate:
+    """
+    Will be used as a function of
+    time ``t`` and state ``y``,
+    returning a rate value.
+
+    Parameters
+    ----------
+    rate : func
+        Function of time ``t`` and state ``y``
+    comp0 : int
+        Index of the corresponding reacting
+        component. The incidence of this component
+        will be multiplied with the
+        value of ``rate``.
+    """
 
     def __init__(self, rate, comp0):
         self.rate = rate
@@ -60,6 +114,26 @@ class DynamicLinearRate:
         return self.rate(t,y) * y[self.comp0]
 
 class ConstantQuadraticRate:
+    """
+    Will be used as a function of
+    time ``t`` and state ``y``,
+    returning a rate value.
+
+    Parameters
+    ----------
+    rate : func
+        Constant rate value
+    comp0 : int
+        Index of one of the reacting
+        components. The incidence of this component
+        will be multiplied with the
+        value of ``rate``.
+    comp1 : int
+        Index of the other reacting
+        component. The incidence of this component
+        will be multiplied with the
+        value of ``rate``.
+    """
 
     def __init__(self, rate, comp0, comp1):
         self.rate = rate
@@ -70,6 +144,26 @@ class ConstantQuadraticRate:
         return self.rate * y[self.comp0] * y[self.comp1]
 
 class DynamicQuadraticRate:
+    """
+    Will be used as a function of
+    time ``t`` and state ``y``,
+    returning a rate value.
+
+    Parameters
+    ----------
+    rate : func
+        Function of time ``t`` and state ``y``
+    comp0 : int
+        Index of one of the reacting
+        components. The incidence of this component
+        will be multiplied with the
+        value of ``rate``.
+    comp1 : int
+        Index of the other reacting
+        component. The incidence of this component
+        will be multiplied with the
+        value of ``rate``.
+    """
 
     def __init__(self, rate, comp0, comp1):
         self.rate = rate
@@ -104,11 +198,6 @@ class EpiModel(IntegrationMixin):
         List of sparse matrices that contain
         transition events of the quadratic processes
         for each compartment.
-    affected_by_quadratic_process : :obj:`list` of :obj:`int`
-        List of integer compartment IDs, collecting
-        compartments that are affected
-        by the quadratic processes
-
 
     Example
     -------
@@ -126,8 +215,6 @@ class EpiModel(IntegrationMixin):
                       initial_population_size=1,
                       correct_for_dynamical_population_size=False,
                       ):
-        """
-        """
 
         self.y0 = None
 
@@ -240,9 +327,6 @@ class EpiModel(IntegrationMixin):
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
-
-        Example
-
         reset_events : bool, default : True
             Whether to reset all linear events to zero before 
             converting those.
@@ -310,7 +394,6 @@ class EpiModel(IntegrationMixin):
 
         Parameters
         ==========
-
         process_list : :obj:`list` of :obj:`tuple`
             A list of tuples that contains transitions events in the following format:
 
@@ -322,7 +405,7 @@ class EpiModel(IntegrationMixin):
                 ]
 
         Example
-        -------
+        =======
 
         For an SEIR model.
 
@@ -407,15 +490,18 @@ class EpiModel(IntegrationMixin):
 
     def add_transmission_processes(self,process_list):
         r"""
-        A wrapper to define quadratic process rates through transmission reaction equations.
+        A wrapper to define quadratic process rates
+        through transmission reaction equations.
         Note that in stochastic network/agent simulations, the transmission
         rate is equal to a rate per link. For the mean-field ODEs,
         the rates provided to this function will just be equal 
         to the prefactor of the respective quadratic terms.
 
-        For instance, if you analyze an SIR system and simulate on a network of mean degree :math:`k_0`,
-        a basic reproduction number :math:`R_0`, and a recovery rate :math:`\mu`,
-        you would define the single link transmission process as 
+        For instance, if you analyze an SIR system and simulate
+        on a network of mean degree :math:`k_0`,
+        a basic reproduction number :math:`R_0`, and a 
+        recovery rate :math:`\mu`, you would define the single 
+        link transmission process as 
 
             .. code:: python
 
@@ -583,7 +669,7 @@ class EpiModel(IntegrationMixin):
 
     def get_numerical_dydt(self):
         """
-        Return a function that obtains t and y as an input and returns dydt of this system
+        Return a function that obtains ``t`` and ``y`` as an input and returns ``dydt`` of this system
         """
         return self.dydt
 
@@ -592,6 +678,8 @@ class EpiModel(IntegrationMixin):
                                                        get_event_rates = None,
                                                        get_compartment_changes = None,
                                                        ):
+        """
+        """
 
         if get_event_rates is None:
             get_event_rates = self.get_event_rates
@@ -618,6 +706,8 @@ class EpiModel(IntegrationMixin):
         return tau, dy
 
     def get_compartment_changes(self, rates):
+        """
+        """
 
         idy = custom_choice(rates/rates.sum())
 
@@ -632,6 +722,24 @@ class EpiModel(IntegrationMixin):
 
 
     def get_event_rates(self, t, y):
+        """
+        Get a list of rate values corresponding to the previously
+        set events. 
+        
+        Parameters
+        ----------
+        t : float
+            Current time
+        y : numpy.ndarray
+            Current state vector
+
+        Returns
+        -------
+        rates : list
+            A list of rate values corresponding to rates.
+            Ordered as ``birth_rate_functions + 
+            linear_rate_functions + quadratic_rate_functions``.
+        """
         rates = [r(t,y) for r in self.birth_rate_functions]
         rates += [r(t,y) for r in self.linear_rate_functions]
         if self.correct_for_dynamical_population_size:
@@ -644,6 +752,21 @@ class EpiModel(IntegrationMixin):
         return rates
 
     def get_numerical_event_and_rate_functions(self):
+        """
+        This function is needed to generalize
+        stochastic simulations for child classes.
+
+        Returns
+        -------
+        get_event_rates : func
+            A function that takes the current time ``t`` and
+            state vector ``y`` 
+            and returns numerical event rate lists.
+        get_compartment_changes : funx
+            A function that takes a numerical list of event ``rates``
+            and returns a random event state change vector
+            with probability proportional to its entry in ``rates``.
+        """
         return self.get_event_rates, self.get_compartment_changes
 
     def simulate(self,

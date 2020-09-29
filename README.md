@@ -10,6 +10,7 @@ Fast prototyping of epidemiological models based on reaction equations. Analyze 
 
 ```python
 import epipack as epk
+from epipack.vis import visualize
 import netwulf as nw
 
 network, _, __ = nw.load('cookbook/readme_vis/MHRN.json')
@@ -21,7 +22,7 @@ model = epk.StochasticEpiModel(["S","I","R"],N,links)\
             .set_node_transition_processes([ ("I", 1.0, "R") ])\
             .set_random_initial_conditions({ "S": N-5, "I": 5 })
 
-epk.vis.visualize(model, network, sampling_dt=0.1)
+visualize(model, network, sampling_dt=0.1)
 ```
 
 ![sir-example](https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif)

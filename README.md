@@ -8,6 +8,24 @@ Fast prototyping of epidemiological models based on reaction equations. Analyze 
 * repository: https://github.com/benmaier/epipack/
 * documentation: https://epipack.readthedocs.io/
 
+```python
+import epipack as epk
+import netwulf as nw
+
+network, cfg, g = nw.load('MHRN.json')
+N = len(network['nodes'])
+links = [ (l['source'], l['target'], 1.0) for l in network['links'] ]
+
+model = epk.StochasticEpiModel(["S","I","R"],N,links)\
+            .set_link_transmission_processes([ ("I", "S", 1.0, "I", "I") ])\
+            .set_node_transition_processes([ ("I", 1.0, "R") ])\
+            .set_random_initial_conditions({ "S": N-5, "I": 5 })
+
+epk.vis.visualize(model, network, sampling_dt=0.1)
+```
+
+![sir-example](https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif)
+
 ## Idea
 
 Simple compartmental models of infectious diseases are useful

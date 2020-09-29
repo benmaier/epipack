@@ -766,11 +766,11 @@ def visualize(model,
 
     palette = cfg['palette']
     if type(palette) == str:
-        if 'link_color' not in config:
+        if 'link_color' not in cfg:
             cfg['link_color'] = col.hex_link_colors[palette]
-        if 'bgcolor' not in config:
+        if 'bgcolor' not in cfg:
             cfg['bgcolor'] = col.hex_bg_colors[palette]
-        if 'compartment_colors' not in config:
+        if 'compartment_colors' not in cfg:
             cfg['compartment_colors'] = [ col.colors[this_color] for this_color in col.palettes[palette] ]
         
     bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]

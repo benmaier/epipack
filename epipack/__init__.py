@@ -52,3 +52,7 @@ from .networks import (
         get_random_layout,
         get_grid_layout,
     )
+
+# we have to do this to be able to call 
+# epipack.vis.visualize without a hassle
+import epipack.vis as vis

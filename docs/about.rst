@@ -275,7 +275,7 @@ until the warnings disappear. Then do
 
    make upload
 
-.. |logo| image:: img/logo_medium.png
+.. |logo| image:: img/logo_flatter_medium.png
 .. |integrated-ODEs| image:: img/integrated_ODEs.png
 .. |stochastic-simulation| image:: img/stochastic_simulation.png
 .. |ODEs| image:: img/ODEs.png

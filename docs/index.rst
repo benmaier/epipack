@@ -2,8 +2,8 @@
 epipack
 =======
 
-.. image:: img/logo_large.png
-    :scale: 50 %
+.. image:: img/logo_flatter_large.png
+    :scale: 30 %
 
 .. raw:: latex
 

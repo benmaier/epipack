@@ -1,5 +1,5 @@
 
-![logo](https://github.com/benmaier/epipack/raw/master/img/logo_medium.png)
+![logo](https://github.com/benmaier/epipack/raw/master/img/logo_flatter_medium.png)
 
 # epipack
 

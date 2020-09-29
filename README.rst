@@ -280,7 +280,7 @@ until the warnings disappear. Then do
 
    make upload
 
-.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_medium.png
+.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_flatter_medium.png
 .. |integrated-ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/integrated_ODEs.png
 .. |stochastic-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png
 .. |ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/ODEs.png

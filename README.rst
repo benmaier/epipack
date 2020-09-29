@@ -15,7 +15,7 @@ simulations on networks/well-mixed systems.
    import epipack as epk
    import netwulf as nw
 
-   network, _, __ = nw.load('MHRN.json')
+   network, _, __ = nw.load('cookbook/readme_vis/MHRN.json')
    N = len(network['nodes'])
    links = [ (l['source'], l['target'], 1.0) for l in network['links'] ]
 

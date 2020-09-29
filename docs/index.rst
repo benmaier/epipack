@@ -56,6 +56,7 @@ epipack
    api/stochastic_epi_models   
    api/process_conversions
    api/vis 
+   api/interactive 
    api/mock_samplable_set
    api/integrators
    api/networks

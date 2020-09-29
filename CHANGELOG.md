@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `epipack.interactive`: contains a class that adds an interactive widget to Jupyter notebooks
+  with which one may control the parameter values of a SymbolicEpiModel instance
+
 ## [v0.0.5] - 2020-08-14
 
 ### Changed

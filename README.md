@@ -12,7 +12,7 @@ Fast prototyping of epidemiological models based on reaction equations. Analyze 
 import epipack as epk
 import netwulf as nw
 
-network, cfg, g = nw.load('MHRN.json')
+network, _, __ = nw.load('MHRN.json')
 N = len(network['nodes'])
 links = [ (l['source'], l['target'], 1.0) for l in network['links'] ]
 

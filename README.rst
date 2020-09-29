@@ -10,6 +10,24 @@ simulations on networks/well-mixed systems.
 -  repository: https://github.com/benmaier/epipack/
 -  documentation: https://epipack.readthedocs.io/
 
+.. code:: python
+
+   import epipack as epk
+   import netwulf as nw
+
+   network, _, __ = nw.load('MHRN.json')
+   N = len(network['nodes'])
+   links = [ (l['source'], l['target'], 1.0) for l in network['links'] ]
+
+   model = epk.StochasticEpiModel(["S","I","R"],N,links)\
+               .set_link_transmission_processes([ ("I", "S", 1.0, "I", "I") ])\
+               .set_node_transition_processes([ ("I", 1.0, "R") ])\
+               .set_random_initial_conditions({ "S": N-5, "I": 5 })
+
+   epk.vis.visualize(model, network, sampling_dt=0.1)
+
+|sir-example|
+
 Idea
 ----
 
@@ -281,6 +299,7 @@ until the warnings disappear. Then do
    make upload
 
 .. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_flatter_medium.png
+.. |sir-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
 .. |integrated-ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/integrated_ODEs.png
 .. |stochastic-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png
 .. |ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/ODEs.png

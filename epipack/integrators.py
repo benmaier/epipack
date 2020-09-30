@@ -100,6 +100,19 @@ def integrate_euler(dydt, t, y0, *args):
     return result
 
 class IntegrationMixin():
+    """
+    A helper MixIn that enables the base
+    class to set initial conditions
+    and integrate numerical ODEs.
+
+    Expects the base class to have the following methods
+    and attributes:
+
+    - get_numerical_dydt()
+    - get_compartment_id()
+    - compartments
+    - N_comp
+    """
 
     def integrate_and_return_by_index(self,
                                       time_points,

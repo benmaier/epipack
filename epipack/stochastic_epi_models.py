@@ -1046,7 +1046,7 @@ class StochasticSIModel(StochasticEpiModel):
     N : int
         Number of nodes.
     infection_rate : float
-        Inverse mean duration of a single SI-contact until infection :math:`\eta=1/\tau_`.
+        Inverse mean duration of a single SI-contact until infection :math:`\eta=1/\tau`.
     *args : list
         List of arguments that will be passed to 
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.

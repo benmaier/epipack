@@ -11,8 +11,15 @@ import scipy.sparse as sprs
 import sympy
 
 from epipack.numeric_epi_models import EpiModel, custom_choice
+from IPython.display import Math, display
 
 class SymbolicMixin():
+    """
+    Provides methods that are useful to both
+    :class:`epipack.symbolic_epi_models.SymbolicEpiModel`
+    and
+    :class:`epipack.symbolic_matrix_epi_models.SymbolicMatrixEpiModel`
+    """
 
     def ODEs(self):
         """
@@ -31,7 +38,6 @@ class SymbolicMixin():
         Pretty-print the equations of motion for this model in a Jupyter notebook.
         """
 
-        from IPython.display import Math, display
         for ode in self.ODEs():
             display(Math(sympy.latex(ode)))
 
@@ -382,9 +388,10 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         symbolize compartments.
     initial_population_size : float, default = 1.0
         The population size at :math:`t = 0`.
-    correct_for_dynamical_population_size : bool, default = True
+    correct_for_dynamical_population_size : bool, default = False
         If ``True``, the quadratic coupling terms will be
-        divided by the population size.
+        divided by the sum of all compartments, otherwise they
+        will be divided by the initial population size.
 
     Attributes
     ==========
@@ -395,10 +402,42 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         Number of compartments (including population number)
     parameter_values : dict
         Maps parameter symbols to numerical values, 
-
-    Other attributes will be inherited 
-    from :class:`epipack.symbolic_epi_models.SymbolicMixin` and
-    :class:`epipack.symbolic_epi_models.EpiModel`.
+    initial_population_size : float
+        The population size at :math:`t = 0`.
+    correct_for_dynamical_population_size : bool
+        If ``True``, the quadratic coupling terms will be
+        divided by the sum of all compartments, otherwise they
+        will be divided by the initial population size.
+    birth_rate_functions : list of symbolic expressions
+        A list of functions that return rate values based on time ``t``
+        and state vector ``y``. Each entry corresponds to an event update
+        in ``self.birth_event_updates``.
+    birth_event_updates : list of sympy.Matrix
+        A list of vectors. Each entry corresponds to a rate in 
+        ``birth_rate_functions`` and quantifies the change in
+        individual counts in the compartments.
+    linear_rate_functions : list of symbolic expressions
+        A list of functions that return rate values based on time ``t``
+        and state vector ``y``. Each entry corresponds to an event update
+        in ``self.linear_event_updates``.
+    linear_event_updates : list of sympy.Matrix
+        A list of vectors. Each entry corresponds to a rate in 
+        ``linear_rate_functions`` and quantifies the change in
+        individual counts in the compartments.
+    quadratic_rate_functions : list of symbolic expressions
+        A list of functions that return rate values based on time ``t``
+        and state vector ``y``. Each entry corresponds to an event update
+        in ``self.quadratic_event_updates``.
+    quadratic_event_updates : list of sympy.Matrix
+        A list of vectors. Each entry corresponds to a rate in 
+        ``quadratic_rate_functions`` and quantifies the change in
+        individual counts in the compartments.
+    y0 : numpy.ndarray
+        The initial conditions.
+    rates_have_explicit_time_dependence : bool
+        Internal switch that's flipped when a non-constant
+        rate is passed to the model.
+        
 
     """
 
@@ -433,19 +472,27 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
             return
 
     def set_linear_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
-        """
+        r"""
         Define the linear transition events between compartments.
 
         Parameters
         ==========
         event_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions events in the
+            A list of tuples that contains transition events in the
             following format:
 
             .. code:: python
 
                 [
-                    ( acting_compartment, affected_compartment, rate ),
+                    (
+                        ("affected_compartment_0",),
+                        rate,
+                        [
+                            ("affected_compartment_0", dN0),
+                            ("affected_compartment_1", dN1),
+                            ...
+                        ],
+                     ),
                     ...
                 ]
 
@@ -456,6 +503,28 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         reset_events : bool, default : True
             Whether to reset all linear events to zero before
             converting those.
+
+        Example
+        -------
+        For an SEIR model with infectious period ``tau``
+        and incubation period ``theta``.
+
+        .. code:: python
+
+            epi.set_linear_events([
+                ( ("E",),
+                  1/theta, 
+                  [ ("E", -1), ("I", +1) ] 
+                ),
+                ( ("I",),
+                  1/tau, 
+                  [ ("I", -1), ("R", +1) ] 
+                ),
+            ])
+
+        Read as "compartment E reacts with rate :math:`1/\theta`
+        which leads to the decay of one E particle to one I particle."
+
         """
 
         if reset_events:
@@ -506,22 +575,26 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
 
         return self
 
-    def set_quadratic_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
+    def set_quadratic_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
         r"""
-        Define the quadratic transition processes between compartments.
+        Define the quadratic transition events between compartments.
 
         Parameters
         ----------
         event_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions events in the following format:
+            A list of tuples that contains transmission events in the following format:
 
             .. code:: python
 
                 [
-                    ("coupling_compartment_0",
-                     "coupling_compartment_1",
-                     "affected_compartment",
-                     event
+                    (
+                        ("coupling_compartment_0", "coupling_compartment_1"), 
+                        rate,
+                        [
+                            ("affected_compartment_0", dN0),
+                            ("affected_compartment_1", dN1),
+                            ...
+                        ],
                      ),
                     ...
                 ]
@@ -530,24 +603,28 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
+        reset_events : bool, default : True
+            Whether to reset all linear events to zero before
+            converting those.
 
         Example
         -------
-        For an SEIR model.
+        For an SEIR model with infection rate ``eta``.
 
         .. code:: python
 
             epi.set_quadratic_events([
-                ("S", "I", "S", -1 ),
-                ("S", "I", "E", +1 )
+                ( ("S", "I"),
+                  eta, 
+                  [ ("S", -1), ("E", +1) ] 
+                ),
             ])
 
         Read  as
 
         "Coupling of *S* and *I* leads to
-        a reduction in "S" proportional to :math:`S\times I` and event -1/time_unit.
-        Furthermore, coupling of *S* and *I* leads to
-        an increase in "E" proportional to :math:`S\times I` and event +1/time_unit."
+        the decay of one *S* particle to one *E* particle with 
+        rate :math:`\eta`.".
         """
 
         if reset_events:
@@ -589,7 +666,8 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
 
     def dydt(self):
         """
-        Compute the current momenta of the epidemiological model.
+        Compute the momenta of the epidemiological model as
+        symbolic expressions.
 
         Parameters
         ----------

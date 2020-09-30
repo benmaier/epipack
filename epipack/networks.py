@@ -104,7 +104,13 @@ def get_grid_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
 
     return stylized_network
 
-def get_random_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1):
+def get_random_layout(N_nodes,
+                      edge_weight_tuples=[],
+                      windowwidth=400,
+                      linkwidth=1,
+                      node_scale_by_degree=0.5,
+                      circular=True,
+                      ):
     """
     Returns a stylized network dictionary that puts 
     nodes in a random layout.
@@ -116,17 +122,25 @@ def get_random_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1)
     edge_weight_tuples : list, default = []
         A list of tuples. Each tuple describes an edge
         with the first entry being the source node index,
-        the second entry being the target node indes
+        the second entry being the target node index
         and the third entry being the weight, e.g.
 
         .. code:: python
 
-            [ (0, "1", 1.0) ]
+            [ (0, 1, 1.0) ]
 
     windowwidth : float, default = 400
         The width of the network visualization
     linkwidth : float, default = 1.0 
         All links get the same width.
+    node_scale_by_degree : float, default = 0.5
+        Scale the node radius by ``degree**node_scale_by_degree``.
+        Per default, the node disk area will be
+        proportional to the degree. If you want 
+        all nodes to be equally sized, set
+        ``node_scale_by_degree = 0``.
+    circular : bool, default = True
+        Use a circular or square layout
 
     Returns
     =======
@@ -148,19 +162,41 @@ def get_random_layout(N_nodes,edge_weight_tuples=[],windowwidth=400,linkwidth=1)
         'nodeStrokeWidth': 0.0001,
     }
 
-    pos = (np.random.rand(N, 2) * w).tolist()
+    degree = np.zeros(N,)
+    for u, v, _w in edge_weight_tuples:
+        degree[u] += 1
+        degree[v] += 1
+
+    median_degree = np.median(degree)
+    if median_degree == 0:
+        median_degree = 1
+    radius_scale = (degree/median_degree)**node_scale_by_degree
+    radius_scale[radius_scale==0] = 1.0
+    radius = radius_scale * radius
+
+    if not circular:
+        pos = (np.random.rand(N, 2) * w).tolist()
+    else:
+        R = w/2
+        r = R*np.sqrt(np.random.random(N,))
+        t = 2*np.pi*np.random.random(N,)
+        pos = np.zeros((N, 2))
+        pos[:,0] = r*np.cos(t) + w/2
+        pos[:,1] = r*np.sin(t) + w/2
+
 
     nodes = [ {
                 'id': i,
                 'x_canvas': pos[0],
                 'y_canvas': pos[1],
-                'radius': radius
+                'radius': radius[i],
               } for i, pos in enumerate(pos)]
     nodes = nodes[:N_nodes]
     links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
 
     stylized_network['nodes'] = nodes
     stylized_network['links'] = links
+
 
     return stylized_network
 

@@ -18,6 +18,39 @@ def choice(arr,p):
 
 
 class MockSamplableSet:
+    """
+    A set of items that can be sampled with probability
+    proportional to a corresponding item weight.
+
+    Mimicks the behavior of github.com/gstonge/SamplableSet
+    without being as efficient.
+
+    Works similar to Python's set, with ``__getitem__``, 
+    ``__setitem__``, ``__delitem__``, ``__iter__``,
+    ``__len__``, ``__contains__``.
+
+    Parameters
+    ==========
+    min_weight : float
+        minimum possible weight
+    max_weight : float
+        maximum possible weight
+    weighted_elements : list, default = []
+        list of 2-tuples, first entry an item, second entry a weight
+    cpp_type : str, default = 'int'
+        The type of the items.
+
+    Attributes
+    ==========
+    min_weight : float
+        minimum possible weight
+    max_weight : float
+        maximum possible weight
+    items : numpy.ndarray
+        list of items in this set
+    weights : numpy.ndarray
+        list of corresponding weights
+    """
 
     def __init__(self,min_weight,max_weight,weighted_elements=[],cpp_type='int'):
 
@@ -41,6 +74,18 @@ class MockSamplableSet:
             raise ValueError("There are weights above the limit.")
 
     def sample(self):
+        """
+        Random sample from the set, sampled
+        with probability proportional to items' weight.
+
+        Returns
+        =======
+        item : cpp_type
+            An item from the set
+        weight : float
+            The weight of the item
+        """
+
         #ndx = np.random.choice(len(self.items),p=self.weights/self._total_weight)
         #ndx = np.argwhere(np.random.rand()<np.cumsum(self.weights/self._total_weight))[0][0]
         ndx = choice(len(self.items),p=self.weights/self._total_weight)
@@ -97,9 +142,11 @@ class MockSamplableSet:
         return self._find_key(key)[0]
 
     def total_weight(self):
+        """Obtain the total weight of the set"""
         return self._total_weight
 
     def clear(self):
+        """Reset the set. Not implemented yet."""
         pass
 
 

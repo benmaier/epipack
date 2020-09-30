@@ -1,5 +1,5 @@
-Convert Processes to Rates
---------------------------
+Process Conversions
+-------------------
 
 .. automodule:: epipack.process_conversions
     :members:

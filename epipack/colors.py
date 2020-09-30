@@ -377,7 +377,7 @@ palettes = {
        'brewer dark pastel':    brewer_dark_pastel,
    }
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma : no cover
 
     from matplotlib.collections import LineCollection, EllipseCollection
     import matplotlib as mpl

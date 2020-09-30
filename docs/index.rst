@@ -2,8 +2,7 @@
 epipack
 =======
 
-.. image:: img/logo_flatter_large.png
-    :scale: 30 %
+.. image:: img/logo_flatter_medium.png
 
 .. raw:: latex
 
@@ -26,6 +25,7 @@ epipack
    tutorial/deterministics.rst
    tutorial/stochastics.rst
    tutorial/symbolics.rst
+   tutorial/interactive.rst 
    tutorial/visualizations.rst 
    tutorial/reaction_diffusion.rst
 

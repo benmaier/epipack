@@ -36,8 +36,6 @@ class Range(dict):
     step_count : int, default = 100
         Divide the parameter space into that
         many intervals
-    base : float, default = 10
-        Base of the logarithm
     value : float, default = None
         Initial value. If ``None``, defaults to the
         mean of ``min`` and ``max``. 

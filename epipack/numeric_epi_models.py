@@ -177,28 +177,64 @@ class EpiModel(IntegrationMixin):
     """
     A general class to define a standard 
     mean-field compartmental
-    epidemiological model.
+    epidemiological model, based on reaction
+    events.
 
     Parameters
     ----------
     compartments : :obj:`list` of :obj:`string`
         A list containing compartment strings.
+    initial_population_size : float, default = 1.0
+        The population size at :math:`t = 0`.
+    correct_for_dynamical_population_size : bool, default = False
+        If ``True``, the quadratic coupling terms will be
+        divided by the population size.
 
     Attributes
     ----------
-    compartments : :obj:`list` of :obj:`string`
-        A list containing strings that describe each compartment,
+    compartments : list
+        A list containing strings or hashable types that describe each compartment,
         (e.g. "S", "I", etc.).
+    compartment_ids: dict
+        Maps compartments to their indices in ``self.compartments``.
     N_comp : :obj:`int`
         Number of compartments (including population number)
-    linear_events : scipy.sparse.csr_matrix
-        Sparse matrix containing 
-        transition events of the linear processes.
-    quadratic_events : scipy.sparse.csr_matrix
-        List of sparse matrices that contain
-        transition events of the quadratic processes
-        for each compartment.
-
+    initial_population_size : float
+        The population size at :math:`t = 0`.
+    correct_for_dynamical_population_size : bool
+        If ``True``, the quadratic coupling terms will be
+        divided by the sum of all compartments, otherwise they
+        will be divided by the initial population size.
+    birth_rate_functions : list of ConstantBirthRate or DynamicBirthRate
+        A list of functions that return rate values based on time ``t``
+        and state vector ``y``. Each entry corresponds to an event update
+        in ``self.birth_event_updates``.
+    birth_event_updates : list of numpy.ndarray
+        A list of vectors. Each entry corresponds to a rate in 
+        ``birth_rate_functions`` and quantifies the change in
+        individual counts in the compartments.
+    linear_rate_functions : list of ConstantLinearRate or DynamicLinearRate
+        A list of functions that return rate values based on time ``t``
+        and state vector ``y``. Each entry corresponds to an event update
+        in ``self.linear_event_updates``.
+    linear_event_updates : list of numpy.ndarray
+        A list of vectors. Each entry corresponds to a rate in 
+        ``linear_rate_functions`` and quantifies the change in
+        individual counts in the compartments.
+    quadratic_rate_functions : list of ConstantQuadraticRate or DynamicQuadraticRate
+        A list of functions that return rate values based on time ``t``
+        and state vector ``y``. Each entry corresponds to an event update
+        in ``self.quadratic_event_updates``.
+    quadratic_event_updates : list of numpy.ndarray
+        A list of vectors. Each entry corresponds to a rate in 
+        ``quadratic_rate_functions`` and quantifies the change in
+        individual counts in the compartments.
+    y0 : numpy.ndarray
+        The initial conditions.
+    rates_have_explicit_time_dependence : bool
+        Internal switch that's flipped when a non-constant
+        rate is passed to the model.
+        
     Example
     -------
 
@@ -232,9 +268,7 @@ class EpiModel(IntegrationMixin):
         self.quadratic_rate_functions = []
         self.quadratic_event_updates = []
 
-
         self.rates_have_explicit_time_dependence = False
-
 
     def get_compartment_id(self,C):
         """Get the integer ID of a compartment ``C``"""
@@ -244,7 +278,10 @@ class EpiModel(IntegrationMixin):
         """Get the compartment, given an integer ID ``iC``"""
         return self.compartments[iC]
 
-    def set_processes(self,process_list,allow_nonzero_column_sums=False,reset_events=True,
+    def set_processes(self,
+                      process_list,
+                      allow_nonzero_column_sums=False,
+                      reset_events=True,
                       ignore_rate_position_checks=False):
         """
         Converts a list of reaction process tuples to event tuples and sets the rates for this model.
@@ -289,9 +326,13 @@ class EpiModel(IntegrationMixin):
             symbolic transmission processes that are compartment-dependent).
         """
 
-        quadratic_events, linear_events = processes_to_events(process_list, self.compartments,ignore_rate_position_checks)
-        self.set_linear_events(linear_events,allow_nonzero_column_sums=allow_nonzero_column_sums)
-        self.set_quadratic_events(quadratic_events,allow_nonzero_column_sums=allow_nonzero_column_sums)
+        quadratic_events, linear_events = processes_to_events(process_list,
+                                                              self.compartments,
+                                                              ignore_rate_position_checks)
+        self.set_linear_events(linear_events,
+                               allow_nonzero_column_sums=allow_nonzero_column_sums)
+        self.set_quadratic_events(quadratic_events,
+                                  allow_nonzero_column_sums=allow_nonzero_column_sums)
 
         return self
 
@@ -301,25 +342,37 @@ class EpiModel(IntegrationMixin):
             y = np.ones(self.N_comp)
             test = np.array([ rate(_t, y) for _t in t ])
             has_time_dependence = not np.all(test == test[0])
-            self.rates_have_explicit_time_dependence = self.rates_have_explicit_time_dependence or has_time_dependence
+            self.rates_have_explicit_time_dependence = \
+                    self.rates_have_explicit_time_dependence or has_time_dependence
             return True
         else:
             return False
 
-    def set_linear_events(self,event_list,allow_nonzero_column_sums=False,reset_events=True):
-        """
+    def set_linear_events(self,
+                          event_list,
+                          allow_nonzero_column_sums=False,
+                          reset_events=True):
+        r"""
         Define the linear transition events between compartments.
 
         Parameters
         ==========
-
         event_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions events in the following format:
+            A list of tuples that contains transition events in the
+            following format:
 
             .. code:: python
 
                 [
-                    ( acting_compartment, affected_compartment, rate ),
+                    (
+                        ("affected_compartment_0",),
+                        rate,
+                        [
+                            ("affected_compartment_0", dN0),
+                            ("affected_compartment_1", dN1),
+                            ...
+                        ],
+                     ),
                     ...
                 ]
 
@@ -328,8 +381,29 @@ class EpiModel(IntegrationMixin):
             total population size. If that's not the case,
             switch off testing for this.
         reset_events : bool, default : True
-            Whether to reset all linear events to zero before 
+            Whether to reset all linear events to zero before
             converting those.
+
+        Example
+        -------
+        For an SEIR model with infectious period ``tau``
+        and incubation period ``theta``.
+
+        .. code:: python
+
+            epi.set_linear_events([
+                ( ("E",),
+                  1/theta, 
+                  [ ("E", -1), ("I", +1) ] 
+                ),
+                ( ("I",),
+                  1/tau, 
+                  [ ("I", -1), ("R", +1) ] 
+                ),
+            ])
+
+        Read as "compartment E reacts with rate :math:`1/\theta`
+        which leads to the decay of one E particle to one I particle."
         """
 
         if reset_events:
@@ -420,7 +494,9 @@ class EpiModel(IntegrationMixin):
 
         linear_events = transition_processes_to_events(process_list)
 
-        return self.set_linear_events(linear_events, reset_events=False, allow_nonzero_column_sums=True)
+        return self.set_linear_events(linear_events,
+                                      reset_events=False,
+                                      allow_nonzero_column_sums=True)
 
     def add_fission_processes(self,process_list):
         """
@@ -453,7 +529,9 @@ class EpiModel(IntegrationMixin):
         """
         linear_events = fission_processes_to_events(process_list)
 
-        return self.set_linear_events(linear_events, reset_events=False, allow_nonzero_column_sums=True)
+        return self.set_linear_events(linear_events,
+                                      reset_events=False,
+                                      allow_nonzero_column_sums=True)
     
     def add_fusion_processes(self,process_list):
         """
@@ -486,7 +564,9 @@ class EpiModel(IntegrationMixin):
         """
         quadratic_events = fusion_processes_to_events(process_list)
 
-        return self.set_quadratic_events(quadratic_events, reset_events=False, allow_nonzero_column_sums=True)
+        return self.set_quadratic_events(quadratic_events,
+                                         reset_events=False, 
+                                         allow_nonzero_column_sums=True)
 
     def add_transmission_processes(self,process_list):
         r"""
@@ -544,67 +624,89 @@ class EpiModel(IntegrationMixin):
         """
         quadratic_events = transmission_processes_to_events(process_list)
 
-        return self.set_quadratic_events(quadratic_events, reset_events=False, allow_nonzero_column_sums=True)
+        return self.set_quadratic_events(quadratic_events,
+                                         reset_events=False, 
+                                         allow_nonzero_column_sums=True)
 
-    def add_quadratic_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
+    def add_quadratic_events(self,
+                             event_list,
+                             allow_nonzero_column_sums=False):
         """
         Add quadratic events without resetting the existing event terms.
-        See :func:`_tacoma.set_quadratic_events` for docstring.
+        See :func:`epipack.numeric_epi_models.EpiModel.set_quadratic_events` for docstring.
         """
 
-        return self.set_quadratic_events(event_list,reset_events=False,allow_nonzero_column_sums=allow_nonzero_column_sums)
+        return self.set_quadratic_events(event_list,
+                                         reset_events=False,
+                                         allow_nonzero_column_sums=allow_nonzero_column_sums,
+                                         )
 
-    def add_linear_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
+    def add_linear_events(self,
+                          event_list,
+                          allow_nonzero_column_sums=False):
         """
         Add linear events without resetting the existing event terms.
-        See :func:`_tacoma.set_linear_events` for docstring.
+        See :func:`epipack.numeric_epi_models.EpiModel.set_linear_events` for docstring.
         """
 
-        return self.set_linear_events(event_list,reset_events=False,allow_nonzero_column_sums=allow_nonzero_column_sums)
+        return self.set_linear_events(event_list,
+                                      reset_events=False,
+                                      allow_nonzero_column_sums=allow_nonzero_column_sums
+                                      )
     
-    def set_quadratic_events(self,event_list,reset_events=True,allow_nonzero_column_sums=False):
+    def set_quadratic_events(self,
+                             event_list,
+                             allow_nonzero_column_sums=False,
+                             reset_events=True,
+                             ):
         r"""
-        Define the quadratic transition processes between compartments.
+        Define quadratic transition events between compartments.
 
         Parameters
         ----------
         event_list : :obj:`list` of :obj:`tuple`
-            A list of tuples that contains transitions events in the following format:
+            A list of tuples that contains transmission events in the following format:
 
             .. code:: python
 
                 [
-                    ("coupling_compartment_0", 
-                     "coupling_compartment_1",
-                     "affected_compartment", 
-                     event 
+                    (
+                        ("coupling_compartment_0", "coupling_compartment_1"), 
+                        rate,
+                        [
+                            ("affected_compartment_0", dN0),
+                            ("affected_compartment_1", dN1),
+                            ...
+                        ],
                      ),
                     ...
                 ]
-
         allow_nonzero_column_sums : :obj:`bool`, default : False
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
+        reset_events : bool, default : True
+            Whether to reset all linear events to zero before
+            converting those.
 
         Example
         -------
-
-        For an SEIR model.
+        For an SEIR model with infection rate ``eta``.
 
         .. code:: python
 
             epi.set_quadratic_events([
-                ("S", "I", "S", -1 ),
-                ("S", "I", "E", +1 )
+                ( ("S", "I"),
+                  eta, 
+                  [ ("S", -1), ("E", +1) ] 
+                ),
             ])
 
         Read  as
-        
-        "Coupling of *S* and *I* leads to 
-        a reduction in "S" proportional to :math:`S\times I` and event -1/time_unit.
-        Furthermore, coupling of *S* and *I* leads to 
-        an increase in "E" proportional to :math:`S\times I` and event +1/time_unit."
+
+        "Coupling of *S* and *I* leads to
+        the decay of one *S* particle to one *E* particle with 
+        rate :math:`\eta`.".
         """
 
         if reset_events:
@@ -673,12 +775,46 @@ class EpiModel(IntegrationMixin):
         """
         return self.dydt
 
-    def get_time_leap_and_proposed_compartment_changes(self, t,
-                                                       current_event_rates=None, 
+    def get_time_leap_and_proposed_compartment_changes(self,
+                                                       t,
+                                                       current_event_rates = None, 
                                                        get_event_rates = None,
                                                        get_compartment_changes = None,
                                                        ):
         """
+        For the current event rates, obtain a proposed
+        time leap and concurrent state change vector.
+
+        This method is needed for stochastic simulations.
+
+        Parameters
+        ----------
+        t : float
+            current time
+        current_event_rates : list, default = None
+            A list of constant rate values.
+            Will be ignored if
+            ``self.rates_have_explicit_time_dependence`` is ``True``,
+            which is why ``None`` is a valid value.
+        get_event_rates : function, default = None
+            A function that takes time ``t`` and current
+            state ``y`` as input and computes the rates of 
+            all possible events.
+            If ``None``, will attempt
+            to set this to self.get_event_rates().
+        get_compartment_changes : function, default = None
+            A function that takes computed event rates
+            and returns a random state change with
+            probability proportional to its rate.
+            If ``None``, will attempt
+            to set this to self.get_compartment_changes().
+
+        Returns
+        -------
+        tau : float
+            A time leap.
+        dy : numpy.ndarray
+            A state change vector.
         """
 
         if get_event_rates is None:
@@ -707,6 +843,23 @@ class EpiModel(IntegrationMixin):
 
     def get_compartment_changes(self, rates):
         """
+        Sample a state change vector with probability
+        proportional to its rate in ``rates``.
+        
+        Needed for stochastic simulations.
+
+        Parameters
+        ==========
+        rates : numpy.ndarray
+            A non-zero list of rates.
+            Expects ``rates`` to be sorted according
+            to 
+            ``self.birth_event_updates + self.linear_event_updates + self.quadratic_event_updates``.
+
+        Returns
+        =======
+        dy : numpy.ndarray
+            A state change vector.
         """
 
         idy = custom_choice(rates/rates.sum())

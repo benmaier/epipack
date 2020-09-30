@@ -72,6 +72,10 @@ class InteractiveTest(unittest.TestCase):
         assert(integrator.ax.get_xscale() == 'log')
         assert(integrator.ax.get_yscale() == 'log')
 
+        integrator = InteractiveIntegrator(model, parameters, t, figsize=(3,4))
+        keys = sorted([ str(k) for k in integrator.lines.keys() ])
+        assert(all([ a==b for a, b in zip(sorted([str(C) for C in model.compartments]), keys) ]))
+
 
 
 

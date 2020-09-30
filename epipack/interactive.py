@@ -15,18 +15,12 @@ import matplotlib.pyplot as pl
 
 from epipack.colors import palettes, hex_colors 
 
-#def interactive(model,**kwargs):
-#    symbols = {}
-#    for k, v in kwargs.items:
-#        symbols[k] = sympy.symbols(k)
-#    model.set_parameters({})
-
-def make_box_layout():
-     return widgets.Layout(
-        #border='solid 1px black',
+def get_box_layout():
+    """Return default box layout"""
+    return widgets.Layout(
         margin='0px 10px 10px 0px',
         padding='5px 5px 5px 5px'
-     )
+    )
 
 class Range(dict):
     """
@@ -121,6 +115,7 @@ class LogRange(dict):
 
 class InteractiveIntegrator(widgets.HBox):
     """
+    An interactive widget that lets you control 
 
     Based on this tutorial: https://kapernikov.com/ipywidgets-with-matplotlib/
 
@@ -151,6 +146,8 @@ class InteractiveIntegrator(widgets.HBox):
     continuous_update : bool, default = False
         If ``False``, curves will be updated only if the mouse button
         is released. If ``True``, curves will be continuously updated.
+    show_grid : bool, default = False
+        Whether or not to display a grid
 
     Attributes
     ==========
@@ -187,6 +184,7 @@ class InteractiveIntegrator(widgets.HBox):
                  palette='dark',
                  integrator='dopri5',
                  continuous_update=False,
+                 show_grid=False,
                 ):
 
         super().__init__()
@@ -208,10 +206,10 @@ class InteractiveIntegrator(widgets.HBox):
             self.fig, self.ax = pl.subplots(constrained_layout=True, figsize=figsize)
             self.ax.set_xlabel('time')
             self.ax.set_ylabel('incidence')
+            self.ax.grid(show_grid)
 
          
         self.fig.canvas.toolbar_position = 'bottom'
-        #self.ax.grid(True)
  
         # define widgets
         self.fixed_parameters = {}
@@ -244,23 +242,22 @@ class InteractiveIntegrator(widgets.HBox):
                 checkb_xscale,
                 checkb_yscale,      
         ])
-        controls.layout = make_box_layout()
+        controls.layout = get_box_layout()
          
         out_box = widgets.Box([output])
-        output.layout = make_box_layout()
+        output.layout = get_box_layout()
  
-        # observe stuff
         for parameter, slider in self.sliders.items():
             slider.observe(self.update_parameters, 'value')
         checkb_xscale.observe(self.update_xscale, 'value')
         checkb_yscale.observe(self.update_yscale, 'value')
          
-        # add to children
         self.children = [controls, output]
 
         self.update_parameters()
      
     def update_parameters(self, *args, **kwargs):
+        """Update the current values of parameters as given by slider positions."""
         parameters = copy.deepcopy(self.fixed_parameters)
         for parameter, slider in self.sliders.items():
             parameters[parameter] = slider.value
@@ -268,6 +265,7 @@ class InteractiveIntegrator(widgets.HBox):
         self.update_plot(parameters)
 
     def update_plot(self, parameters):
+        """Recompute and -draw the epidemic curves with updated parameter values"""
 
         self.model.set_parameter_values(parameters)
 
@@ -293,12 +291,14 @@ class InteractiveIntegrator(widgets.HBox):
         self.fig.canvas.draw()
 
     def update_xscale(self, change):
+        """Update the scale of the x-axis. For "log", pass an object ``change`` that has ``change.new=True``"""
         scale = 'linear'
         if change.new:
             scale = 'log'
         self.ax.set_xscale(scale)
  
     def update_yscale(self, change):
+        """Update the scale of the y-axis. For "log", pass an object ``change`` that has ``change.new=True``"""
         scale = 'linear'
         if change.new:
             scale = 'log'

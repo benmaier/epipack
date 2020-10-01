@@ -297,5 +297,92 @@ Let's set up an ``EpiModel``.
             (None, gamma, S),
         ])
 
-Note that we're hit the following warning:
+Note that we're hit the following warnings:
 
+    UserWarning: This model has processes with a fluctuating number of agents.
+        Consider correcting the rates dynamically with the attribute
+        correct_for_dynamical_population_size = True
+    UserWarning: events do not sum to zero for each column: 1.0
+
+`epipack` noticed that the population size will not stay constant.
+If this is intended, reaction rates of quadratic couplings will
+have to be rescaled by the dynamically changed population size.
+
+Tell the model to do this by setting
+
+.. code:: python
+
+    model.correct_for_dynamical_population_size = True
+
+Ideally, you already knew that beforehand, which is why you want to initiate
+the model with this behavior:
+
+.. code:: python
+
+    model = epk.EpiModel([S,I,R],
+                         initial_population_size=N,
+                         correct_for_dynamical_population_size=True,
+                         )
+
+Now, we can integrate the ODEs and simulate the system
+
+.. code:: python
+
+    t, result_sim = model.simulate(4000)
+    result_int = model.integrate(t)
+
+This is the initial development:
+
+.. figure:: epi_model_media/SIR_birth_model_zoom.png
+    :width: 90%
+
+    Stochastic simulation and ODE integration of the SIR-birth model.
+
+As we can see, ODE solution and stochastic solution line up relatively well.
+How does it look for longer times though?
+
+.. figure:: epi_model_media/SIR_birth_model_all.png
+    :width: 90%
+
+    Longer times.
+
+A new effect! Apparently, a second and a third wave rapidly depletes 
+the grown susceptible population in the deterministic system. In order to
+understand what's going on, we can take a look at the curves on a log scale.
+
+.. figure:: epi_model_media/SIR_birth_model_all_log.png
+    :width: 90%
+
+    Longer times with log scale.
+
+In the stochastic system, the number of infected individuals reaches :math:`I=1`
+and is then trapped in the absorbing state :math:`I=0`, while the deterministic system 
+reaches incredibly low values of :math:`I` until there are enough susceptible
+individuals such that another waves may occur. In reality, a value of 
+:math:`I=10^{-15}` would not result in 
+
+We can, however, assume that reimports of single infecteds can trigger second waves
+when there are enough susceptible individuals. Such a behavior may be mimicked
+by adding another birth process with a small rate and simulating again.
+
+.. code:: python
+
+    model.add_transition_processes([
+            (None, 1e-3, I),
+        ])
+    t, result_sim = model.simulate(4000)
+
+As we can see, doing so reconciles the stochastic system with the deterministic
+system, at least qualitatively. The first peak is reproduced. The second
+peak is not reproduced because no reimport happened up to time :math:`t=4000\mathrm{d}`
+in this particular simulation.
+
+.. figure:: epi_model_media/SIR_birth_model_reimports_all.png
+    :width: 90%
+
+    Stochastic system with reimports.
+
+.. figure:: epi_model_media/SIR_birth_model_reimports_all_log.png
+    :width: 90%
+
+    Stochastic system with reimports on a log scale.

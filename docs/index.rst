@@ -22,7 +22,7 @@ epipack
    :caption: Tutorial
 
    tutorial/intro.rst
-   tutorial/deterministics.rst
+   tutorial/numeric_models.rst
    tutorial/stochastics.rst
    tutorial/symbolics.rst
    tutorial/interactive.rst 

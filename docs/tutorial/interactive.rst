@@ -15,7 +15,7 @@ The most efficient way to define a model for which parameter
 values can be changed on the fly is by using a
 :class:`epipack.symbolic_epi_models.SymbolicEpiModel` (c.f. the
 class' method
-:func:`epipack.symbolic_epi_models.SymbolicEpiModel.set_parameter_values`).
+:func:`epipack.symbolic_epi_models.SymbolicMixin.set_parameter_values`).
 
 Also, we need the interactive integrator class and two range classes,
 one for linear sliders and one for log slides.

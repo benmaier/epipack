@@ -267,9 +267,9 @@ Let's come back to the model defined in the introduction:
 
 .. math::
 
-    S + I \stackrel{\alpha}{\longrightarrow} I + I
-    I \stackrel{\beta}{\longrightarrow} R.
-    \varnothing \stackrel{\gamma}{\longrightarrow} S.
+    S + I &\stackrel{\alpha}{\longrightarrow} I + I\\
+    I &\stackrel{\beta}{\longrightarrow} R\\
+    \varnothing &\stackrel{\gamma}{\longrightarrow} S.
 
 It's a modified SIR system where new susceptibles 
 are born with constant rate :math:`\gamma`.
@@ -356,10 +356,12 @@ understand what's going on, we can take a look at the curves on a log scale.
     Longer times with log scale.
 
 In the stochastic system, the number of infected individuals reaches :math:`I=1`
-and is then trapped in the absorbing state :math:`I=0`, while the deterministic system 
-reaches incredibly low values of :math:`I` until there are enough susceptible
+and is subsequently trapped in the absorbing state :math:`I=0` with the next recovery
+event, while the deterministic system 
+reaches incredibly low values of :math:`I\approx 10^{-15}` until there are enough susceptible
 individuals such that another waves may occur. In reality, a value of 
-:math:`I=10^{-15}` would not result in 
+:math:`I=10^{-15}` would not be reached, even in very large systems. Such a low
+value just implies that the disease dies out eventually.
 
 We can, however, assume that reimports of single infecteds can trigger second waves
 when there are enough susceptible individuals. Such a behavior may be mimicked

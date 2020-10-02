@@ -152,7 +152,7 @@ def get_random_layout(N_nodes,
     N = N_nodes
     N_side = int(np.ceil(np.sqrt(N)))
     dx = w / N_side
-    radius = dx/4
+    radius = dx/3
 
     network = {}
     stylized_network = {

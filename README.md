@@ -3,7 +3,9 @@
 
 # epipack
 
-Fast prototyping of epidemiological models based on reaction equations. Analyze the ODEs analytically or numerically, or run/animate stochastic simulations on networks/well-mixed systems.
+Fast prototyping of epidemiological models based on reaction equations.
+Analyze the ODEs analytically or numerically, or run/animate stochastic 
+simulations on networks/well-mixed systems.
 
 * repository: https://github.com/benmaier/epipack/
 * documentation: https://epipack.readthedocs.io/
@@ -80,6 +82,8 @@ So far, the package's functionality was tested on Mac OS X only.
 * `scipy>=1.3`
 * `sympy==1.6`
 * `pyglet<1.6`
+* `ipython>=7.17.0`
+* `ipywidgets>=7.5.1`
 
 Please note that **fast network simulations are only available if you install** 
 
@@ -95,79 +99,79 @@ The full documentation is available at epipack.benmaier.org.
 
 Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and waning immunity rate `omega` and analyze the system
 
-### Numeric evaluations
+### Pure Numeric Models
 
-In order to numerically integrate the ODEs, use `DeterministicEpiModel`
+Define a pure numeric model with `EpiModel`.
+Integrate the ODEs or simulate the system stochastically.
 
 ```python
-from epipack import DeterministicEpiModel
+from epipack import EpiModel
+import matplotlib.pyplot as plt
+
 S, I, R = list("SIR")
-R0 = 2.5
-rho = recovery_rate = 1 # let's say 1/days
-eta = infection_rate = R0 * recovery_rate
-omega = 1/14 # in units of 1/days
+N = 1000
 
-SIRS = EpiModel([S,I,R])
+SIRS = EpiModel([S,I,R],N)\
+    .set_processes([
+        #### transmission process ####
+        # S + I (eta=2.5/d)-> I + I
+        (S, I, 2.5, I, I),
 
-SIRS.set_processes([
-    #### transmission process ####
-    # S + I (eta)-> I + I
-    (S, I, eta, I, I),
-
-    #### transition processes ####
-    # I (rho)-> R
-    # R (omega)-> S
-    (I, rho, R),
-    (R, omega, S),
-
-])
-
-SIRS.set_initial_conditions({S:1-0.01, I:0.01})
+        #### transition processes ####
+        # I (rho=1/d)-> R
+        # R (omega=1/14d)-> S
+        (I, 1, R),
+        (R, 1/14, S),
+    ])\
+    .set_initial_conditions({S:N-10, I:10})
 
 t = np.linspace(0,40,1000) 
 result_int = SIRS.integrate(t)
 t_sim, result_sim = SIRS.simulate(t[-1])
+
+for C in model.compartments:
+    plt.plot(t, result_int[C])
+    plt.plot(t_sim, result_sim[C])
 ```
 
-![integrated-ODEs](https://github.com/benmaier/epipack/raw/master/img/integrated_ODEs.png)
+![numeric-model](https://github.com/benmaier/epipack/raw/master/img/numeric_model.png)
 
-### Stochastic simulations
-
-Let's simulate the system on a random graph (using the parameter definitions above).
+It's also straight-forward to define temporally varying rates.
 
 ```python
-from epipack import StochasticEpiModel
-import networkx as nx
+import numpy as np
+from epipack import SISModel
 
-k0 = 50
-eta = R0 * rho / k0
-N = int(1e4)
-edges = [ (e[0], e[1], 1.0) for e in nx.fast_gnp_random_graph(N,k0/(N-1)).edges() ]
+N = 100
+recovery_rate = 1.0
 
-SIRS = StochasticEpiModel([S,I,R],N,edge_weight_tuples=edges)
+def infection_rate(t, y, *args, **kwargs):
+    return 3 + np.sin(2*np.pi*t/100)
 
-SIRS.set_link_transmission_processes([
-    #### transmission process ####
-    # I + S (eta)-> I + I
-    (I, S, eta, I, I),
-])
+SIS = SISModel(
+            infection_rate=infection_rate, 
+            recovery_rate=recovery_rate,
+            initial_population_size=N
+            )\
+        .set_initial_conditions({
+            'S': 90,
+            'I': 10,
+        })
 
-SIRS.set_node_transition_processes([
-    #### transition processes ####
-    # I (rho)-> R
-    # R (omega)-> S
-    (I, rho, R),
-    (R, omega, S),
+t = np.arange(200)
+result_int = SIS.integrate(t)
+t_sim, result_sim = SIS.simulate(199)
 
-])
-
-SIRS.set_random_initial_conditions({S:N-int(1e-2*N), I:int(1e-2*N)})
-t_s, result_s = SIRS.simulate(40)
+for C in SIS.compartments:
+    plt.plot(t_sim, result_sim[C])
+    plt.plot(t, result_int[C])
 ```
-![stochastic-simulation](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
 
+### Symbolic Models
 
-### Symbolic evaluations
+Symbolic models are more powerful because they can 
+do the same as the pure numeric models while 
+also offering the possibility to do analytical evaluations
 
 ```python
 from epipack import SymbolicEpiModel
@@ -175,20 +179,12 @@ import sympy as sy
 
 S, I, R, eta, rho, omega = sy.symbols("S I R eta rho omega")
 
-SIRS = SymbolicEpiModel([S,I,R])
-
-SIRS.set_processes([
-    #### transmission process ####
-    # S + I (eta)-> I + I
-    (S, I, eta, I, I),
-
-    #### transition processes ####
-    # I (rho)-> R
-    # R (omega)-> S
-    (I, rho, R),
-    (R, omega, S),
-
-])
+SIRS = SymbolicEpiModel([S,I,R])\
+    .set_processes([
+        (S, I, eta, I, I),
+        (I, rho, R),
+        (R, omega, S),
+    ])    
 ```
 
 Print the ODE system in a Jupyter notebook
@@ -222,9 +218,80 @@ Get the eigenvalues at the disease-free state in order to find the epidemic thre
 {-omega: 1, eta - rho: 1, 0: 1}
 ```
 
+Set numerical parameter values
+Integrate the ODEs numerically
+
+```python
+>>> t = np.linspace(0,40,1000)
+>>> result = SIRS.integrate(t)
+```
+
+If set up as
+
+```python
+>>> N = 10000
+>>> SIRS = SymbolicEpiModel([S,I,R],N)
+```
+
+the system can simulated directly.
+
+```python
+>>> t_sim, result_sim = SIRS.simulate(40)
+```
+
+
+
 ## Changelog
 
 Changes are logged in a [separate file](https://github.com/benmaier/epipack/blob/master/CHANGELOG.md).
+
+### Pure Stochastic Models
+
+Let's simulate an SIRS system on a random graph
+(using the parameter definitions above).
+
+```python
+from epipack import StochasticEpiModel
+import networkx as nx
+
+k0 = 50
+R0 = 2.5
+rho = 1
+eta = R0 * rho / k0
+omega = 1/14
+N = int(1e4)
+edges = [ (e[0], e[1], 1.0) for e in nx.fast_gnp_random_graph(N,k0/(N-1)).edges() ]
+
+SIRS = StochasticEpiModel(
+            compartments=list('SIR'),
+            N=N,
+            edge_weight_tuples=edges
+            )\
+        .set_link_transmission_processes([
+            ('I', 'S', eta, 'I', 'I'),
+        ])\
+        .set_node_transition_processes([
+            ('I', rho, 'R'),
+            ('R', omega, 'S'),
+
+        ])\        
+        .set_random_initial_conditions({
+                                        'S': N-100,
+                                        'I': 100
+                                       })
+t_s, result_s = SIRS.simulate(40)
+```
+
+![stochastic-simulation](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
+
+Likewise, it's straight-forward to visualize this system
+
+```python
+>>> from epipack.vis import visualize
+>>> from epipack.networks import get_random_layout
+>>> layouted_network = get_random_layout(N, edges)
+>>> visualize(SIRS, layouted_network, sampling_dt=0.1)
+```
 
 ## License
 

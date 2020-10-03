@@ -105,6 +105,32 @@ Documentation
 
 The full documentation is available at epipack.benmaier.org.
 
+Changelog
+---------
+
+Changes are logged in a `separate
+file <https://github.com/benmaier/epipack/blob/master/CHANGELOG.md>`__.
+
+License
+-------
+
+This project is licensed under the `MIT
+License <https://github.com/benmaier/epipack/blob/master/LICENSE>`__.
+
+Contributing
+------------
+
+If you want to contribute to this project, please make sure to read the
+`code of
+conduct <https://github.com/benmaier/epipack/blob/master/CODE_OF_CONDUCT.md>`__
+and the `contributing
+guidelines <https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md>`__.
+In case you're wondering about what to contribute, we're always
+collecting ideas of what we want to implement next in the `outlook
+notes <https://github.com/benmaier/epipack/blob/master/OUTLOOK.md>`__.
+
+|Contributor Covenant|
+
 Examples
 --------
 
@@ -121,6 +147,7 @@ simulate the system stochastically.
 
    from epipack import EpiModel
    import matplotlib.pyplot as plt
+   import numpy as np
 
    S, I, R = list("SIR")
    N = 1000
@@ -180,6 +207,8 @@ It's also straight-forward to define temporally varying rates.
        plt.plot(t_sim, result_sim[C])
        plt.plot(t, result_int[C])
 
+|numeric-model-time-varying|
+
 Symbolic Models
 ~~~~~~~~~~~~~~~
 
@@ -233,10 +262,11 @@ epidemic threshold
    >>> SIRS.get_eigenvalues_at_disease_free_state()
    {-omega: 1, eta - rho: 1, 0: 1}
 
-Set numerical parameter values Integrate the ODEs numerically
+Set numerical parameter values and integrate the ODEs numerically
 
 .. code:: python
 
+   >>> SIRS.set_parameter_values({eta: 2.5, rho: 1.0, omega:1/14})
    >>> t = np.linspace(0,40,1000)
    >>> result = SIRS.integrate(t)
 
@@ -253,11 +283,45 @@ the system can simulated directly.
 
    >>> t_sim, result_sim = SIRS.simulate(40)
 
-Changelog
----------
+Let's set up some temporally varying rates
 
-Changes are logged in a `separate
-file <https://github.com/benmaier/epipack/blob/master/CHANGELOG.md>`__.
+.. code:: python
+
+   from epipack import SymbolicEpiModel
+   import sympy as sy
+
+   S, I, R, eta, rho, omega, t, T = \
+           sy.symbols("S I R eta rho omega t T")
+
+   N = 1000
+   SIRS = SymbolicEpiModel([S,I,R],N)\
+       .set_processes([
+           (S, I, 2+sy.cos(2*sy.pi*t/T), I, I),
+           (I, rho, R),
+           (R, omega, S),
+       ])  
+
+   SIRS.ODEs_jupyter()
+
+|SIRS-forced-ODEs|
+
+Let's integrate/simulate these equations
+
+.. code:: python
+
+   import numpy as np
+
+   SIRS.set_parameter_values({
+       rho : 1,
+       omega : 1/14,
+       T : 100,
+   })
+   SIRS.set_initial_conditions({S:N-100, I:100})
+   _t = np.linspace(0,200,1000)
+   result = SIRS.integrate(_t)
+   t_sim, result_sim = SIRS.simulate(max(_t))
+
+|SIRS-forced-results|
 
 Pure Stochastic Models
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -276,7 +340,8 @@ definitions above).
    eta = R0 * rho / k0
    omega = 1/14
    N = int(1e4)
-   edges = [ (e[0], e[1], 1.0) for e in nx.fast_gnp_random_graph(N,k0/(N-1)).edges() ]
+   edges = [ (e[0], e[1], 1.0) for e in \
+             nx.fast_gnp_random_graph(N,k0/(N-1)).edges() ]
 
    SIRS = StochasticEpiModel(
                compartments=list('SIR'),
@@ -289,7 +354,6 @@ definitions above).
            .set_node_transition_processes([
                ('I', rho, 'R'),
                ('R', omega, 'S'),
-
            ])\        
            .set_random_initial_conditions({
                                            'S': N-100,
@@ -297,7 +361,7 @@ definitions above).
                                           })
    t_s, result_s = SIRS.simulate(40)
 
-|stochastic-simulation|
+|network-simulation|
 
 Likewise, it's straight-forward to visualize this system
 
@@ -306,27 +370,9 @@ Likewise, it's straight-forward to visualize this system
    >>> from epipack.vis import visualize
    >>> from epipack.networks import get_random_layout
    >>> layouted_network = get_random_layout(N, edges)
-   >>> visualize(SIRS, layouted_network, sampling_dt=0.1)
+   >>> visualize(SIRS, layouted_network, sampling_dt=0.1, config={'draw_links': False})
 
-License
--------
-
-This project is licensed under the `MIT
-License <https://github.com/benmaier/epipack/blob/master/LICENSE>`__.
-
-Contributing
-------------
-
-If you want to contribute to this project, please make sure to read the
-`code of
-conduct <https://github.com/benmaier/epipack/blob/master/CODE_OF_CONDUCT.md>`__
-and the `contributing
-guidelines <https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md>`__.
-In case you're wondering about what to contribute, we're always
-collecting ideas of what we want to implement next in the `outlook
-notes <https://github.com/benmaier/epipack/blob/master/OUTLOOK.md>`__.
-
-|Contributor Covenant|
+|sirs-example|
 
 Dev notes
 ---------
@@ -361,10 +407,14 @@ until the warnings disappear. Then do
 
 .. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_flatter_medium.png
 .. |sir-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
+.. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg
+   :target: code-of-conduct.md
 .. |numeric-model| image:: https://github.com/benmaier/epipack/raw/master/img/numeric_model.png
+.. |numeric-model-time-varying| image:: https://github.com/benmaier/epipack/raw/master/img/numeric_model_time_varying_rate.png
 .. |ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/ODEs.png
 .. |Jacobian| image:: https://github.com/benmaier/epipack/raw/master/img/jacobian.png
 .. |fixedpoints| image:: https://github.com/benmaier/epipack/raw/master/img/fixed_points.png
-.. |stochastic-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png
-.. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg
-   :target: code-of-conduct.md
+.. |SIRS-forced-ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS-forced-ODEs.png
+.. |SIRS-forced-results| image:: https://github.com/benmaier/epipack/raw/master/img/symbolic_model_time_varying_rate.png
+.. |network-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/network_simulation.png
+.. |sirs-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif

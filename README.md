@@ -95,6 +95,20 @@ Please note that **fast network simulations are only available if you install**
 
 The full documentation is available at epipack.benmaier.org.
 
+## Changelog
+
+Changes are logged in a [separate file](https://github.com/benmaier/epipack/blob/master/CHANGELOG.md).
+
+## License
+
+This project is licensed under the [MIT License](https://github.com/benmaier/epipack/blob/master/LICENSE).
+
+## Contributing
+
+If you want to contribute to this project, please make sure to read the [code of conduct](https://github.com/benmaier/epipack/blob/master/CODE_OF_CONDUCT.md) and the [contributing guidelines](https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md). In case you're wondering about what to contribute, we're always collecting ideas of what we want to implement next in the [outlook notes](https://github.com/benmaier/epipack/blob/master/OUTLOOK.md).
+
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](code-of-conduct.md)
+
 ## Examples
 
 Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and waning immunity rate `omega` and analyze the system
@@ -107,6 +121,7 @@ Integrate the ODEs or simulate the system stochastically.
 ```python
 from epipack import EpiModel
 import matplotlib.pyplot as plt
+import numpy as np
 
 S, I, R = list("SIR")
 N = 1000
@@ -167,6 +182,8 @@ for C in SIS.compartments:
     plt.plot(t, result_int[C])
 ```
 
+![numeric-model-time-varying](https://github.com/benmaier/epipack/raw/master/img/numeric_model_time_varying_rate.png)
+
 ### Symbolic Models
 
 Symbolic models are more powerful because they can 
@@ -218,10 +235,11 @@ Get the eigenvalues at the disease-free state in order to find the epidemic thre
 {-omega: 1, eta - rho: 1, 0: 1}
 ```
 
-Set numerical parameter values
-Integrate the ODEs numerically
+Set numerical parameter values and
+integrate the ODEs numerically
 
 ```python
+>>> SIRS.set_parameter_values({eta: 2.5, rho: 1.0, omega:1/14})
 >>> t = np.linspace(0,40,1000)
 >>> result = SIRS.integrate(t)
 ```
@@ -239,11 +257,45 @@ the system can simulated directly.
 >>> t_sim, result_sim = SIRS.simulate(40)
 ```
 
+Let's set up some temporally varying rates
 
+```python
+from epipack import SymbolicEpiModel
+import sympy as sy
 
-## Changelog
+S, I, R, eta, rho, omega, t, T = \
+        sy.symbols("S I R eta rho omega t T")
 
-Changes are logged in a [separate file](https://github.com/benmaier/epipack/blob/master/CHANGELOG.md).
+N = 1000
+SIRS = SymbolicEpiModel([S,I,R],N)\
+    .set_processes([
+        (S, I, 2+sy.cos(2*sy.pi*t/T), I, I),
+        (I, rho, R),
+        (R, omega, S),
+    ])  
+
+SIRS.ODEs_jupyter()
+```
+
+![SIRS-forced-ODEs](https://github.com/benmaier/epipack/raw/master/img/SIRS-forced-ODEs.png)
+
+Let's integrate/simulate these equations
+
+```python
+import numpy as np
+
+SIRS.set_parameter_values({
+    rho : 1,
+    omega : 1/14,
+    T : 100,
+})
+SIRS.set_initial_conditions({S:N-100, I:100})
+_t = np.linspace(0,200,1000)
+result = SIRS.integrate(_t)
+t_sim, result_sim = SIRS.simulate(max(_t))
+```
+
+![SIRS-forced-results](https://github.com/benmaier/epipack/raw/master/img/symbolic_model_time_varying_rate.png)
 
 ### Pure Stochastic Models
 
@@ -260,7 +312,8 @@ rho = 1
 eta = R0 * rho / k0
 omega = 1/14
 N = int(1e4)
-edges = [ (e[0], e[1], 1.0) for e in nx.fast_gnp_random_graph(N,k0/(N-1)).edges() ]
+edges = [ (e[0], e[1], 1.0) for e in \
+          nx.fast_gnp_random_graph(N,k0/(N-1)).edges() ]
 
 SIRS = StochasticEpiModel(
             compartments=list('SIR'),
@@ -273,7 +326,6 @@ SIRS = StochasticEpiModel(
         .set_node_transition_processes([
             ('I', rho, 'R'),
             ('R', omega, 'S'),
-
         ])\        
         .set_random_initial_conditions({
                                         'S': N-100,
@@ -282,7 +334,7 @@ SIRS = StochasticEpiModel(
 t_s, result_s = SIRS.simulate(40)
 ```
 
-![stochastic-simulation](https://github.com/benmaier/epipack/raw/master/img/stochastic_simulation.png)
+![network-simulation](https://github.com/benmaier/epipack/raw/master/img/network_simulation.png)
 
 Likewise, it's straight-forward to visualize this system
 
@@ -290,18 +342,10 @@ Likewise, it's straight-forward to visualize this system
 >>> from epipack.vis import visualize
 >>> from epipack.networks import get_random_layout
 >>> layouted_network = get_random_layout(N, edges)
->>> visualize(SIRS, layouted_network, sampling_dt=0.1)
+>>> visualize(SIRS, layouted_network, sampling_dt=0.1, config={'draw_links': False})
 ```
 
-## License
-
-This project is licensed under the [MIT License](https://github.com/benmaier/epipack/blob/master/LICENSE).
-
-## Contributing
-
-If you want to contribute to this project, please make sure to read the [code of conduct](https://github.com/benmaier/epipack/blob/master/CODE_OF_CONDUCT.md) and the [contributing guidelines](https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md). In case you're wondering about what to contribute, we're always collecting ideas of what we want to implement next in the [outlook notes](https://github.com/benmaier/epipack/blob/master/OUTLOOK.md).
-
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](code-of-conduct.md)
+![sirs-example](https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif)
 
 ## Dev notes
 

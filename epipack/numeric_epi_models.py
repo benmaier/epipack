@@ -823,7 +823,7 @@ class EpiModel(IntegrationMixin):
             get_compartment_changes = self.get_compartment_changes
 
         if self.rates_have_explicit_time_dependence:
-            # solve the integral ally
+            # solve the integral numerically
             integrand = lambda _t : get_event_rates(_t, self.y0).sum()
             integral = lambda _t : quad(integrand, t, _t)[0]
             _1_minus_r = 1 - np.random.rand()

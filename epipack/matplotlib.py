@@ -24,7 +24,7 @@ mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=colors)
 
 def plot(t,result,ax=None, curve_label_format='{}'):
     """
-    Plot epipack result.
+    Plot an epipack result.
 
     Parameters
     ==========

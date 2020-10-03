@@ -115,6 +115,8 @@ Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and w
 
 ### Pure Numeric Models
 
+#### Basic Definition
+
 Define a pure numeric model with `EpiModel`.
 Integrate the ODEs or simulate the system stochastically.
 
@@ -150,6 +152,8 @@ for C in model.compartments:
 ```
 
 ![numeric-model](https://github.com/benmaier/epipack/raw/master/img/numeric_model.png)
+
+#### Temporally Varying Rates
 
 It's also straight-forward to define temporally varying rates.
 
@@ -442,7 +446,7 @@ visualize(model,lattice,sampling_dt,
           )
 ```
 
-![sir-lattice](https://github.com/benmaier/epipack/raw/master/img/SIRS_lattice_vis.gif)
+![sir-lattice](https://github.com/benmaier/epipack/raw/master/img/SIR_lattice_vis.gif)
 
 ### Reaction-Diffusion Models
 

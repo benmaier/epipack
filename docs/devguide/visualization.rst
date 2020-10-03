@@ -22,3 +22,11 @@ Here's three commands I usually use:
     mv Screen\ Recording\ 2020-08-03\ at\ 16.56.15.mov lattice_SIR.mov
     ffmpeg -i lattice_SIR.mov -q:v 15 lattice_SIR.mp4
     mv lattice_SIR.mp4 ~/forschung/disease_dynamics/epipack/docs/_static/
+
+Conversion to gif:
+
+.. code:: bash
+
+    mv Screen\ Recording\ 2020-08-03\ at\ 16.56.15.mov out.mov
+    ffmpeg -i out.mov -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 out.gif
+    mv out.gif ~/forschung/disease_dynamics/epipack/docs/

@@ -212,6 +212,9 @@ It's also straight-forward to define temporally varying rates.
 Symbolic Models
 ~~~~~~~~~~~~~~~
 
+Basic Definition
+^^^^^^^^^^^^^^^^
+
 Symbolic models are more powerful because they can do the same as the
 pure numeric models while also offering the possibility to do analytical
 evaluations
@@ -229,6 +232,9 @@ evaluations
            (I, rho, R),
            (R, omega, S),
        ])    
+
+Analytical Evaluations
+^^^^^^^^^^^^^^^^^^^^^^
 
 Print the ODE system in a Jupyter notebook
 
@@ -262,6 +268,9 @@ epidemic threshold
    >>> SIRS.get_eigenvalues_at_disease_free_state()
    {-omega: 1, eta - rho: 1, 0: 1}
 
+Numerical Evaluations
+^^^^^^^^^^^^^^^^^^^^^
+
 Set numerical parameter values and integrate the ODEs numerically
 
 .. code:: python
@@ -282,6 +291,9 @@ the system can simulated directly.
 .. code:: python
 
    >>> t_sim, result_sim = SIRS.simulate(40)
+
+Temporally Varying Rates
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Let's set up some temporally varying rates
 
@@ -305,7 +317,8 @@ Let's set up some temporally varying rates
 
 |SIRS-forced-ODEs|
 
-Let's integrate/simulate these equations
+Now we can integrate the ODEs or simulate the system using Gillespie's
+SSA for inhomogeneous Poisson processes.
 
 .. code:: python
 
@@ -323,8 +336,54 @@ Let's integrate/simulate these equations
 
 |SIRS-forced-results|
 
+Interactive Analyses
+^^^^^^^^^^^^^^^^^^^^
+
+``epipack`` offers a classs called ``InteractiveIntegrator`` that allows
+an interactive exploration of a system in a Jupyter notebook.
+
+Make sure to first run
+
+.. code:: bash
+
+   %matplotlib widget
+
+in a cell.
+
+.. code:: python
+
+   from epipack import SymbolicEpiModel
+   from epipack.interactive import InteractiveIntegrator, Range, LogRange
+   import sympy
+
+   S, I, R, R0, tau, omega = sympy.symbols("S I R R_0 tau omega")
+
+   I0 = 0.01
+   model = SymbolicEpiModel([S,I,R])\
+                .set_processes([
+                       (S, I, R0/tau, I, I),
+                       (I, 1/tau, R),
+                       (R, omega, S),
+                   ])\
+                .set_initial_conditions({S:1-I0, I:I0})
+
+   # define a log slider, a linear slider and a constant value
+   parameters = {
+       R0: LogRange(min=0.1,max=10,step_count=1000),
+       tau: Range(min=0.1,max=10,value=8.0),
+       omega: 1/14
+   }
+
+   t = np.logspace(-3,2,1000)
+   InteractiveIntegrator(model, parameters, t, figsize=(4,4))
+
+|interactive|
+
 Pure Stochastic Models
 ~~~~~~~~~~~~~~~~~~~~~~
+
+On a Network
+^^^^^^^^^^^^
 
 Let's simulate an SIRS system on a random graph (using the parameter
 definitions above).
@@ -363,6 +422,9 @@ definitions above).
 
 |network-simulation|
 
+Visualize
+^^^^^^^^^
+
 Likewise, it's straight-forward to visualize this system
 
 .. code:: python
@@ -373,6 +435,97 @@ Likewise, it's straight-forward to visualize this system
    >>> visualize(SIRS, layouted_network, sampling_dt=0.1, config={'draw_links': False})
 
 |sirs-example|
+
+On a Lattice
+^^^^^^^^^^^^
+
+A lattice is nothing but a network, we can use ``get_grid_layout`` and
+``get_2D_lattice_links`` to set up a visualization.
+
+.. code:: python
+
+   from epipack.vis import visualize
+   from epipack import (
+       StochasticSIRModel, 
+       get_2D_lattice_links, 
+       get_grid_layout
+   )
+
+   # define links and network layout
+   N_side = 100
+   N = N_side**2
+   links = get_2D_lattice_links(N_side, periodic=True, diagonal_links=True)
+   lattice = get_grid_layout(N)
+
+   # define model
+   R0 = 3; recovery_rate = 1/8
+   model = StochasticSIRModel(N,R0,recovery_rate,
+                              edge_weight_tuples=links)
+   model.set_random_initial_conditions({'I':20,'S':N-20})
+
+   sampling_dt = 1
+
+   visualize(model,lattice,sampling_dt,
+           config={
+                    'draw_nodes_as_rectangles':True,
+                    'draw_links':False,
+                  }
+             )
+
+|sir-lattice|
+
+Reaction-Diffusion Models
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since reaction-diffusion systems in discrete space can be interpreted as
+being based on reaction equations, we can set those up using
+``epipack``'s framework.
+
+Checkout the docs on `Reaction-Diffusion
+Systems <http://epipack.benmaier.org/tutorial/reaction_diffusion.html>`__.
+
+Every node in a network is associated with a compartment and we're using
+``MatrixEpiModel`` because it's faster than ``EpiModel``.
+
+.. code:: python
+
+   from epipack import MatrixEpiModel
+
+   N = 100
+   base_compartments = list("SIR")
+   compartments = [ (node, C) for node in range(N) for C in base_compartments ]
+   model = MatrixEpiModel(compartments)
+
+Now, we define both epidemiological and movement processes on a
+hypothetical list ``links``.
+
+.. code:: python
+
+   infection_rate = 2
+   recovery_rate = 1
+   mobility_rate = 0.1
+
+   quadratic_processes = []
+   linear_processes = []
+
+   for node in range(N):
+       quadratic_processes.append(
+               (  (node, "S"), (node, "I"), infection_rate, (node, "I"), (node, "I") ),
+           )
+
+       linear_processes.append(
+                 ( (node, "I"), recovery_rate, (node, "R") ) 
+           )
+
+   for u, v, w in links:
+       for C in base_compartments:
+
+           linear_processes.extend([
+                     ( (u, C), w*mobility_rate, (v, C) ),
+                     ( (v, C), w*mobility_rate, (u, C) ),
+               ])
+
+|reac-diff-lattice|
 
 Dev notes
 ---------
@@ -416,5 +569,8 @@ until the warnings disappear. Then do
 .. |fixedpoints| image:: https://github.com/benmaier/epipack/raw/master/img/fixed_points.png
 .. |SIRS-forced-ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS-forced-ODEs.png
 .. |SIRS-forced-results| image:: https://github.com/benmaier/epipack/raw/master/img/symbolic_model_time_varying_rate.png
+.. |interactive| image:: https://github.com/benmaier/epipack/raw/master/img/interactive.gif
 .. |network-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/network_simulation.png
 .. |sirs-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif
+.. |sir-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_lattice_vis.gif
+.. |reac-diff-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/reac_diff_lattice.gif

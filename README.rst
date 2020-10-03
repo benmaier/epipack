@@ -140,6 +140,9 @@ Let's define an SIRS model with infection rate ``eta``, recovery rate
 Pure Numeric Models
 ~~~~~~~~~~~~~~~~~~~
 
+Basic Definition (EpiModel)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Define a pure numeric model with ``EpiModel``. Integrate the ODEs or
 simulate the system stochastically.
 
@@ -176,7 +179,11 @@ simulate the system stochastically.
 
 |numeric-model|
 
-It's also straight-forward to define temporally varying rates.
+Functional Rates
+^^^^^^^^^^^^^^^^
+
+It's also straight-forward to define temporally varying (functional)
+rates.
 
 .. code:: python
 
@@ -572,5 +579,5 @@ until the warnings disappear. Then do
 .. |interactive| image:: https://github.com/benmaier/epipack/raw/master/img/interactive.gif
 .. |network-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/network_simulation.png
 .. |sirs-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif
-.. |sir-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_lattice_vis.gif
+.. |sir-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_lattice_vis.gif
 .. |reac-diff-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/reac_diff_lattice.gif

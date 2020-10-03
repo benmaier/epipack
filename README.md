@@ -115,7 +115,7 @@ Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and w
 
 ### Pure Numeric Models
 
-#### Basic Definition
+#### Basic Definition (EpiModel)
 
 Define a pure numeric model with `EpiModel`.
 Integrate the ODEs or simulate the system stochastically.
@@ -153,9 +153,9 @@ for C in model.compartments:
 
 ![numeric-model](https://github.com/benmaier/epipack/raw/master/img/numeric_model.png)
 
-#### Temporally Varying Rates
+#### Functional Rates
 
-It's also straight-forward to define temporally varying rates.
+It's also straight-forward to define temporally varying (functional) rates.
 
 ```python
 import numpy as np

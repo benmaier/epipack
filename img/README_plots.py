@@ -1,7 +1,7 @@
 
 def network_simulation():
     from epipack import StochasticEpiModel
-    from epipack.matplotlib import plot
+    from epipack.plottools import plot
     import matplotlib.pyplot as pl
     import networkx as nx
 
@@ -38,7 +38,7 @@ def network_simulation():
 
 def network_simulation_visualization():
     from epipack import StochasticEpiModel
-    from epipack.matplotlib import plot
+    from epipack.plottools import plot
     import matplotlib.pyplot as pl
     import networkx as nx
 
@@ -92,7 +92,7 @@ def MHRN_network_vis():
 def default_numeric_models():
     from epipack import EpiModel
     import matplotlib.pyplot as pl
-    from epipack.matplotlib import plot
+    from epipack.plottools import plot
     import numpy as np
 
     S, I, R = list("SIR")
@@ -124,7 +124,7 @@ def varying_rate_numeric_models():
 
     import numpy as np
     from epipack import SISModel
-    from epipack.matplotlib import plot
+    from epipack.plottools import plot
 
     N = 100
     recovery_rate = 1.0
@@ -153,7 +153,7 @@ def varying_rate_numeric_models():
 def symbolic_simulation_temporally_forced():
     from epipack import SymbolicEpiModel
     import sympy as sy
-    from epipack.matplotlib import plot
+    from epipack.plottools import plot
     import numpy as np
 
     S, I, R, eta, rho, omega, t, T = \

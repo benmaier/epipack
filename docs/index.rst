@@ -63,7 +63,7 @@ epipack
    api/colors
    api/numeric_matrix_epi_models
    api/symbolic_matrix_epi_models
-   api/matplotlib
+   api/plottools
 
 .. .. toctree::
 ..    :maxdepth: 2

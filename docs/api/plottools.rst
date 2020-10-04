@@ -1,7 +1,7 @@
-Matplotlib
+Plot Tools
 ----------
 
-.. automodule:: epipack.matplotlib
+.. automodule:: epipack.plottools
     :members:
     :undoc-members:
     :show-inheritance:

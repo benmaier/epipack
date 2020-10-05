@@ -321,7 +321,7 @@ class EpiTest(unittest.TestCase):
         theory = [ np.exp(-I2(bins[i-1]))-np.exp(-I2(bins[i])) for i in range(1,len(bins)) if measured[i-1] > 0]
         experi = [ measured[i-1] for i in range(1,len(bins)) if measured[i-1] > 0]
         # make sure the kullback-leibler divergence is below some threshold
-        if plot:
+        if plot: # pragma: no cover
             import matplotlib.pyplot as pl
             pl.figure()
             pl.hist(taus,bins=100,density=True)

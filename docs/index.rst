@@ -54,6 +54,7 @@ epipack
    api/numeric_epi_models
    api/symbolic_epi_models
    api/stochastic_epi_models   
+   api/temporal_networks
    api/process_conversions
    api/vis 
    api/interactive 

@@ -622,13 +622,14 @@ class StochasticEpiModel():
                 compartment_mins[compartment] += rate * kmin
                 compartment_maxs[compartment] += rate * kmax
 
-        if kmin == 0 and kmax == 0: 
-            # in case of empty network,
-            # set some default values.
-            # This is okay because
-            # the event set will still be empty
-            compartment_min = 0.1
-            compartment_max = 1.0
+        if np.all(compartment_mins==0):
+            if kmin == 0 and kmax == 0: 
+                # in case of empty network,
+                # set some default values.
+                # This is okay because
+                # the event set will still be empty
+                compartment_min = 1e-300
+                compartment_max = 1e300
         else:
             compartment_min = (compartment_mins[compartment_mins>0]).min()
             compartment_max = (compartment_maxs).max()

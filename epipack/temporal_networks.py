@@ -1,3 +1,8 @@
+"""
+Classes to define temporal networks and run stochastic simulations
+on them.
+"""
+
 import numpy as np
 
 class TemporalNetwork():
@@ -104,14 +109,6 @@ class TemporalNetwork():
         indefinitely when iterated.    
     """
 
-    t = None
-    tmax = None
-    edge_lists = None
-    N = None
-    weighted = False
-    directed = False
-    loop_network = True
-
     def __init__(self,
                  N,
                  edge_lists,
@@ -200,10 +197,48 @@ class TemporalNetwork():
         return edges, t, next_t
 
 class TemporalNetworkSimulation():
+    """
+    Simulation of a StochasticEpiModel on a 
+    temporal network.
+
+    Parameters
+    ==========
+    temporal_network : TemporalNetwork
+        A temporal network object.
+    stochastic_epi_model : epipack.stochastic_epi_models.StochasticEpiModel
+        An instance of StochasticEpiModel, initialized
+        with processes and initial conditions.
+
+    Example
+    =======
+
+    >>> model = StochasticEpiModel(["S","I","R"],3)\\
+    >>>             .set_link_transmission_processes([
+    >>>                     ("I", "S", 1.0, "I", "I"),
+    >>>                 ])\\
+    >>>             .set_node_transition_processes([
+    >>>                     ("I", 2.0, "R"),
+    >>>                 ])\\
+    >>>             .set_node_statuses([1,0,0])
+    >>> temporal_network = TemporalNetwork(3,edges,[0,0.5,1.2],1.5)
+    >>> sim = TemporalNetworkSimulation(temporal_network, model)
+    >>> sim.simulate(tmax=100)
+    [ 0.          0.38740794  0.8210494   3.60987397  9.46213129 12.14301704] {'S': array([2., 1., 0., 0., 0., 0.]), 'I': array([1., 2., 3., 2., 1., 0.]), 'R': array([0., 0., 0., 1., 2., 3.])}
+
+    
+    Attributes
+    ==========
+    temporal_network : TemporalNetwork
+        A temporal network object.
+    model : epipack.stochastic_epi_models.StochasticEpiModel
+        An instance of StochasticEpiModel, initialized
+        with processes and initial conditions.
+    """
 
     def __init__(self,temporal_network,stochastic_epi_model):
         self.temporal_network = temporal_network
         self.model = stochastic_epi_model
+        self._initial_node_status = np.array(self.model.node_status)
 
         assert(self.temporal_network.N == self.model.N_nodes)
 
@@ -291,26 +326,93 @@ class TemporalNetworkSimulation():
 
         return time, result
 
+    def reset(self,node_status=None):
+        """Reset the model"""
+        if node_status is not None:
+            self._initial_node_status = np.array(node_status)
+
+        self.model.set_node_statuses(self._initial_node_status)
+
+
+
                     
-if __name__=="__main__":
+if __name__=="__main__": # pragma: no cover
     edges = [ [ (0,1) ], [ (0,1), (0,2) ], [] ]
     temporal_network = TemporalNetwork(3,edges,[0,0.5,0.6],1.0)
     for edge_list, t, next_t in temporal_network:
-        if t >= 5:
+        if t >= 3.0:
             break
         print(t, next_t, edge_list)
 
+    print("Delta T =",temporal_network._Delta_t)
+    for edge_list, t, next_t in temporal_network:
+        print("DeltaT =",temporal_network._Delta_t)
+        break
+
+
     from epipack import StochasticEpiModel
 
+    infection_rate = 1.0
+    recovery_rate = 0.2
     model = StochasticEpiModel(["S","I","R"],3)\
                 .set_link_transmission_processes([
-                        ("I", "S", 1.0, "I", "I"),
+                        ("I", "S", infection_rate, "I", "I"),
                     ])\
                 .set_node_transition_processes([
-                        ("I", 0.2, "R"),
+                        ("I", recovery_rate, "R"),
                     ])\
-                .set_random_initial_conditions({'I': 1, 'S':2})
+                .set_node_statuses([1,0,0])
 
+    temporal_network = TemporalNetwork(3,edges,[0,0.5,1.2],1.5)
     sim = TemporalNetworkSimulation(temporal_network, model)
-    t, res = sim.simulate(10)
+    t, res = sim.simulate(100)
     print(t, res)
+    sim.reset()
+    print(sim.model.node_status)
+    t, res = sim.simulate(100)
+    print(t, res)
+
+    import matplotlib.pyplot as pl
+    from tqdm import tqdm
+
+    N_meas = 10000
+    #model = StochasticEpiModel(["S","I","R"],3)\
+    #            .set_link_transmission_processes([
+    #                    ("I", "S", infection_rate, "I", "I"),
+    #                ])\
+    #            .set_node_transition_processes([
+    #                    ("I", recovery_rate, "R"),
+    #                ])\
+    model.set_node_statuses([1,0,0])
+
+    #temporal_network = TemporalNetwork(3,edges,[0,0.5,1.5],3.0)
+    #sim = TemporalNetworkSimulation(temporal_network, model)
+
+    taus = []
+    for meas in tqdm(range(N_meas)):
+        sim.reset()
+        t, res = sim.simulate(1000)
+        if t[-1] == 0:
+            continue
+        else:
+            taus.append(t[1])
+
+    pl.hist(taus,bins=200,density=True)
+
+    def rate(t):
+        t = t % 1.5
+        if t < 0.5:
+            return infection_rate + recovery_rate
+        elif t < 1.2:
+            return 2*infection_rate + recovery_rate
+        elif t < 1.5:
+            return recovery_rate
+
+    from scipy.integrate import cumtrapz
+
+    t = np.linspace(0,max(taus),10000)
+    rates = np.array([rate(_t) for _t in t])
+    RATES = cumtrapz(rates,t,initial=0.0)
+    pl.plot(t,rates*np.exp(-RATES))
+    #pl.yscale('log')
+    pl.show()

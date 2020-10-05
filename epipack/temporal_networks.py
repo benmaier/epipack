@@ -255,13 +255,13 @@ class TemporalNetworkSimulation():
             if t >= tmax or self.model.simulation_has_ended():
                 break
 
-            self.stochastic_epi_model.set_network(
+            self.model.set_network(
                     N_nodes=self.temporal_network.N,
                     edge_weight_tuples=edges,
                     directed=self.temporal_network.directed,
                     )
 
-            _t, _res = self.stochastic_epi_model.simulate(
+            _t, _res = self.model.simulate(
                     t0=t,
                     tmax=next_t,
                     return_compartments=return_compartments,
@@ -299,3 +299,18 @@ if __name__=="__main__":
         if t >= 5:
             break
         print(t, next_t, edge_list)
+
+    from epipack import StochasticEpiModel
+
+    model = StochasticEpiModel(["S","I","R"],3)\
+                .set_link_transmission_processes([
+                        ("I", "S", 1.0, "I", "I"),
+                    ])\
+                .set_node_transition_processes([
+                        ("I", 0.2, "R"),
+                    ])\
+                .set_random_initial_conditions({'I': 1, 'S':2})
+
+    sim = TemporalNetworkSimulation(temporal_network, model)
+    t, res = sim.simulate(10)
+    print(t, res)

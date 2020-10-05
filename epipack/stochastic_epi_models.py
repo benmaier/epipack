@@ -110,6 +110,8 @@ class StochasticEpiModel():
         self.node_and_link_events = None
         self.conditional_link_transmission_events = None
         self.transitioning_compartments = None
+        self.transmitting_compartments = None
+        self.node_status = None
 
         # check whether to initiate as a network or well-mixed simulation
         if edge_weight_tuples is not None:
@@ -167,6 +169,9 @@ class StochasticEpiModel():
 
         # compute out degrees in order to compute the maximum reaction rate for link processes
         self.out_degree = np.array([ neighbors.total_weight() for neighbors in self.graph ], dtype=int)
+
+        if self.node_status is not None:
+            self.set_node_statuses(self.node_status)
 
         return self
 
@@ -468,12 +473,25 @@ class StochasticEpiModel():
 
         return self
 
+    def reactions_may_still_occur(self,state):
+        """
+        Reactions can only take place if there's still nodes
+        that can transmit AND nodes that can be 
+        infected or spontaneously change state.
+        """
+        if len(self.transmitting_compartments) > 0:
+            return state[self.transitioning_compartments].sum() > 0 or\
+                (state[self.transmitting_compartments[:,0]] * state[self.transmitting_compartments[:,1]]).sum() > 0
+        else:
+            return state[self.transitioning_compartments].sum() > 0
+
     def _zip_events(self):
         """
         Concatenate link and node events.
         """
         self.node_and_link_events = [ None for n in range(self.N_comp) ]
         transitioning_compartments = set()
+        transmitting_compartments = set()
 
         # for each compartment, concatenate node and link event lists
         for comp in range(self.N_comp):
@@ -507,9 +525,13 @@ class StochasticEpiModel():
             # have a non-zero reaction rate but no targets left
             # at which point the simulation does never halt.
             for infecting, transitioning, _ in events:
-                transitioning_compartments.add(transitioning)
+                if infecting < 0:
+                    transitioning_compartments.add(transitioning)
+                else:
+                    transmitting_compartments.add((infecting,transitioning))
 
         self.transitioning_compartments = np.array(list(transitioning_compartments),dtype=int)
+        self.transmitting_compartments = np.array(list(transmitting_compartments),dtype=int)
 
     def set_random_initial_conditions(self, initial_conditions):
         """
@@ -600,8 +622,16 @@ class StochasticEpiModel():
                 compartment_mins[compartment] += rate * kmin
                 compartment_maxs[compartment] += rate * kmax
 
-        compartment_min = (compartment_mins[compartment_mins>0]).min()
-        compartment_max = (compartment_maxs).max()
+        if kmin == 0 and kmax == 0: 
+            # in case of empty network,
+            # set some default values.
+            # This is okay because
+            # the event set will still be empty
+            compartment_min = 0.1
+            compartment_max = 1.0
+        else:
+            compartment_min = (compartment_mins[compartment_mins>0]).min()
+            compartment_max = (compartment_maxs).max()
 
         # set these node statuses
         self.node_status = node_status.copy()    
@@ -653,10 +683,13 @@ class StochasticEpiModel():
             scale_from, scale_to = status_events[_LINK_PROCESS_INDICES]
             these_rates[scale_from:scale_to] *= self.out_degree[node]
             total_rate = these_rates.sum()
-            # add the node to the node event set 
-            self.all_node_events[node] = total_rate
-            # save the probabilities with which each of the node's events happens
-            self.node_event_probabilities[node] = these_rates / total_rate
+            # add the node to the node event set, IF it can react
+            # after all (it may not be able to react if it has no
+            # neighbors).
+            if total_rate > 0:
+                self.all_node_events[node] = total_rate
+                # save the probabilities with which each of the node's events happens
+                self.node_event_probabilities[node] = these_rates / total_rate
 
         # finally, set node status
         self.node_status[node] = status
@@ -900,7 +933,15 @@ class StochasticEpiModel():
 
         return compartment_changes
 
-    def simulate(self,tmax,return_compartments=None,sampling_dt=None,max_unsuccessful=None,sampling_callback=None,t0=0.0,**kwargs):
+    def simulate(self,
+                 tmax,
+                 return_compartments=None,
+                 sampling_dt=None,
+                 max_unsuccessful=None,
+                 sampling_callback=None,
+                 t0=0.0,
+                 stop_simulation_on_empty_network=True,
+                 **kwargs):
         """
         Returns values of the given compartments at the demanded
         time points (as a numpy.ndarray of shape 
@@ -964,7 +1005,7 @@ class StochasticEpiModel():
         while t < tmax and \
               not self.simulation_has_ended() and\
               total_event_rate > 0 and \
-              current_state[self.transitioning_compartments].sum() > 0:
+              self.reactions_may_still_occur(current_state):
 
             # sample and advance time according to current total rate
             tau = self.get_time_leap()
@@ -1034,6 +1075,10 @@ class StochasticEpiModel():
 
         if sampling_callback is not None:
             sampling_callback()
+
+        if not self.reactions_may_still_occur(current_state) or\
+           (total_event_rate == 0.0 and stop_simulation_on_empty_network): 
+            self.set_simulation_has_ended()
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
 

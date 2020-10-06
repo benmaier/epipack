@@ -28,6 +28,7 @@ epipack
    tutorial/interactive.rst 
    tutorial/visualizations.rst 
    tutorial/reaction_diffusion.rst
+   tutorial/temporal_networks.rst
 
 .. raw:: latex
 

@@ -300,8 +300,8 @@ Let's set up an ``EpiModel``.
 Note that we're hit the following warnings:
 
     UserWarning: This model has processes with a fluctuating number of agents.
-        Consider correcting the rates dynamically with the attribute
-        correct_for_dynamical_population_size = True
+    Consider correcting the rates dynamically with the attribute
+    correct_for_dynamical_population_size = True
     UserWarning: events do not sum to zero for each column: 1.0
 
 `epipack` noticed that the population size will not stay constant.

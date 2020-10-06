@@ -3,7 +3,7 @@ omit =
     epipack/tests/vis.py
     epipack/tests/SIR_weighted.py
     epipack/vis.py
-    epipack/matplotlib.py
+    epipack/plottools.py
 
 [report]
 exclude_lines =

@@ -92,6 +92,32 @@ class TemporalNetworkTest(unittest.TestCase):
             pl.show()
         assert(entropy(theory, experi) < 0.01)
 
+    def test_degree(self):
+
+        edges = [ [ (0,1) ], [ (0,1), (0,2) ], [] ]
+        temporal_network = TemporalNetwork(3,edges,[0,0.5,1.5],3.0)
+        k = temporal_network.mean_out_degree()
+        expected = 0.5*np.mean([1,1,0])+1.0*np.mean([2,1,1])
+        expected /= 3.0
+        assert( np.isclose(k, expected))
+        temporal_network = TemporalNetwork(3,edges,[0,0.5,1.5],3.0,directed=True,weighted=False,loop_network=False)
+        k = temporal_network.mean_out_degree()
+        expected = 0.5*np.mean([1,0,0])+1.0*np.mean([2,0,0])
+        expected /= 3.0
+        assert( np.isclose(k, expected))
+        edges = [ [ (0,1,1.0) ], [ (0,1,0.5), (0,2,2.0) ], [] ]
+        temporal_network = TemporalNetwork(3,edges,[0,0.5,1.5],3.0,directed=False,weighted=True)
+        k = temporal_network.mean_out_degree()
+        expected = 0.5*np.mean([1,1,0.])+1.0*np.mean([2.5,0.5,2.0])
+        expected /= 3.0
+        assert( np.isclose(k, expected))
+        temporal_network = TemporalNetwork(3,edges,[0,0.5,1.5],3.0,directed=True,weighted=True)
+        k = temporal_network.mean_out_degree()
+        expected = 0.5*np.mean([1,0,0.])+1.0*np.mean([2.5,0,0])
+        expected /= 3.0
+        assert( np.isclose(k, expected))
+
+
 
 if __name__ == "__main__":
 
@@ -99,4 +125,5 @@ if __name__ == "__main__":
 
     T = TemporalNetworkTest()
     T.test_temporal_network()
+    T.test_degree()
     T.test_temporal_gillespie(plot=True)

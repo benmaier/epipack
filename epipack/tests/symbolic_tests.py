@@ -305,7 +305,7 @@ class SymbolicEpiTest(unittest.TestCase):
         theory = [ rv.pmf(i) for i in range(0,len(bins)-1) if measured[i] > 0]
         experi = [ measured[i] for i in range(0,len(bins)-1) if measured[i] > 0]
         # make sure the kullback-leibler divergence is below some threshold
-        assert(entropy(theory, experi) < 1e-3)
+        assert(entropy(theory, experi) < 2e-3)
         assert(np.median(res[A]) == 1)
 
 

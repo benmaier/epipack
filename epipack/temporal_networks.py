@@ -151,6 +151,36 @@ class TemporalNetwork():
         """Obtain the initial time"""
         return self.t[0]
 
+    def mean_out_degree(self):
+        """Obtain the temporally averaged mean out-degree"""
+        if not self.weighted:
+            k = 0.0
+            if not self.directed:
+                factor = 2
+            else:
+                factor = 1
+            for edges, t, next_t in self:
+                if self._has_looped():
+                    break
+                k += (next_t - t) * factor*len(edges)/self.N
+            k /= self.T
+        else:
+            k = np.zeros(self.N,dtype=float)
+            for edges, t, next_t in self:
+                if self._has_looped():
+                    break
+                dt = next_t - t
+                for u, v, w in edges:
+                    k[u] += w * dt
+                    if not self.directed:
+                        k[v] += w * dt
+            k = k.mean() / self.T
+        return k
+
+    def _has_looped(self):
+        """Whether or not the network has looped at least once"""
+        return self._Delta_t >= self.T
+
     def __iter__(self):
         self._ndx = 0
         self._Delta_t = 0

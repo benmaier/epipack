@@ -8,6 +8,13 @@ from scipy.stats import entropy, poisson
 from epipack import StochasticEpiModel
 from epipack.temporal_networks import TemporalNetwork, TemporalNetworkSimulation
 
+class FakeTacomaNetwork():
+
+    t = [0,0.5,0.6]
+    edges = [ [ (0,1) ], [ (0,1), (0,2) ], [] ]
+    N = 3
+    tmax = 1.0
+
 class TemporalNetworkTest(unittest.TestCase):
 
     def test_temporal_network(self):
@@ -117,6 +124,28 @@ class TemporalNetworkTest(unittest.TestCase):
         expected /= 3.0
         assert( np.isclose(k, expected))
 
+    def test_tacoma_network(self):
+
+        expected = [
+            (0, 0.5, [(0, 1, 1.0)]),
+            (0.5, 0.6, [(0, 1, 1.0), (0, 2, 1.0)]),
+            (0.6, 1.0, []),
+            (1.0, 1.5, [(0, 1, 1.0)]),
+            (1.5, 1.6, [(0, 1, 1.0), (0, 2, 1.0)]),
+            (1.6, 2.0, []),
+            (2.0, 2.5, [(0, 1, 1.0)]),
+            (2.5, 2.6, [(0, 1, 1.0), (0, 2, 1.0)]),
+            (2.6, 3.0, []),
+        ]
+        
+        temporal_network = TemporalNetwork.from_tacoma(FakeTacomaNetwork())
+        for (edge_list, t, next_t), (_t, _next_t, _edge_list) in zip(temporal_network, expected):
+            if t >= 3.0:
+                break
+            assert(t == _t)
+            assert(next_t == _next_t)
+            assert(set(edge_list) == set(_edge_list))
+
 
 
 if __name__ == "__main__":
@@ -124,6 +153,7 @@ if __name__ == "__main__":
     import sys
 
     T = TemporalNetworkTest()
+    T.test_tacoma_network()
     T.test_temporal_network()
     T.test_degree()
     T.test_temporal_gillespie(plot=True)

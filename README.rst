@@ -8,7 +8,7 @@ Analyze the ODEs analytically or numerically, or run/animate stochastic
 simulations on networks/well-mixed systems.
 
 -  repository: https://github.com/benmaier/epipack/
--  documentation: https://epipack.readthedocs.io/
+-  documentation: http://epipack.benmaier.org/
 
 .. code:: python
 

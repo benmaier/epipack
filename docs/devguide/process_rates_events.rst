@@ -219,3 +219,5 @@ Node-Based Events
 For StochasticEpiModels, processes are converted to node-based events.
 Here, the algorithm needs to know which events a node can take part in
 leading the active (transmitting) role or a transitioning role.
+
+Please check out the section on :ref:`dev-stochastic-sims` for more info. 

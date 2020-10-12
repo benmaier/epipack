@@ -39,7 +39,7 @@ epipack
    :caption: Dev Guide
 
    devguide/process_rates_events.rst
-   devguide/deterministics.rst
+   devguide/matrixmodels.rst
    devguide/stochastics.rst
    devguide/testing.rst
    devguide/visualization.rst

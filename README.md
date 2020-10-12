@@ -55,8 +55,8 @@ three base classes to accomodate different problems.
   simulate the stochastic systems using Gillespie's algorithm.
 * `StochasticEpiModel`: Define a model based on node transition and
   link transmission reactions. Add conditional link transmission reactions.
-  Simulate your model on any (un-/)directed, (un-/)weighted static network,
-  or in a well-mixed system.
+  Simulate your model on any (un-/)directed, (un-/)weighted static/temporal
+  network, or in a well-mixed system.
 
 Additionally, epipack provides a visualization framework to animate
 stochastic simulations on networks, lattices,  or well-mixed systems.

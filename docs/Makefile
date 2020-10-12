@@ -221,8 +221,7 @@ rst:
 	sphinx-apidoc -f -o . ..
 
 show:
-	open -n -a "Google Chrome" "http://localhost:1313"
-	cd _build/html && python -m "http.server" 1313 & 
+	cd _build/html; python -m "http.server" 1313 
 
 adev:
 	make clean

@@ -58,7 +58,7 @@ different problems.
 -  ``StochasticEpiModel``: Define a model based on node transition and
    link transmission reactions. Add conditional link transmission
    reactions. Simulate your model on any (un-/)directed, (un-/)weighted
-   static network, or in a well-mixed system.
+   static/temporal network, or in a well-mixed system.
 
 Additionally, epipack provides a visualization framework to animate
 stochastic simulations on networks, lattices, or well-mixed systems.

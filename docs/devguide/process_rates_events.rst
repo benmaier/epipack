@@ -1,5 +1,5 @@
-State-Altering Objects
-----------------------
+State-Altering Tuples
+---------------------
 
 Processes
 =========
@@ -31,7 +31,9 @@ There are five allowed processes
 
 ``epipack`` identifies the process based on the length of the tuple, the rate (an entry not being a compartment) and. For ``SymbolicEpiModel``, rates can be equal to compartments, but then processes have to be set with ``ignore_rate_position_checks``. This might change in the future to be default behavior for ``SymbolicEpiModel``.
 
-Death and birth processes are identified by one of the compartments being ``None``. An involved compartment can only be ``None`` in birth and death processes. Furthermore, link transmission processes have a stricter format: (i) they must be processes where one compartment stays constant while the other compartment changes, and (ii) the compartment remaining constant has to be in the first position on each side of the reaction. For instance,
+Death and birth processes are identified by one of the compartments being ``None``. An involved compartment can only be ``None`` in birth and death processes. 
+
+For a StochasticEpiModel, link transmission processes have a stricter format: (i) they must be processes where one compartment stays constant while the other compartment changes, and (ii) the compartment remaining constant has to be in the first position on each side of the reaction. For instance,
 
 .. code:: python
 
@@ -91,8 +93,82 @@ In this case, ``epipack`` adds a "nothing happens"-process ``(target_base, sourc
 that any of the possible processes happens to the ``source``-neighbor (with corresponding probability :math:`p`, :math:`q`, or
 :math:`1-p-q`).
 
+Events
+======
+
+Event tuples are used in the default implementations of
+EpiModels (EpiModel, StochasticEpiModel), because they're
+flexible enough that we can construct both mean-field
+ODEs as well as stochastic simulations. Events are defined
+in a way such that coupling of one or two compartments leads
+to a change in the overall state by applying a difference
+vector to the current state as
+
+.. math::
+
+    \Delta Y^{(e)} = ( +1, 0, 0, -1, ... ).
+
+Hence, for event tuples we need to define
+
+1. Coupling compartments
+2. A rate value
+3. The state change vector. 
+
+We do that as follows:
+
+.. code:: python
+
+    events = [
+        (
+            (coupling_compartment_0, coupling_compartment_1,),
+            rate_value,
+            ( (affected_compartment_0, 1), (affected_compartment_1, -1), ... )
+        )
+    ]
+
+For linear events, the first entry of an event tuple
+will just be a single-element-tuple. All un-mentioned
+compartments in the event tuple's last entry will be
+assumed to not change (a zero entry in the state change
+vector).
+
+For instance, for an SEIR model, we would set
+
+.. code:: python
+
+    [
+        (
+            ('E',),
+            1/incubation_time,
+            ( ('E', -1), ('I', +1) )
+        ),
+        (
+            ('I',),
+            1/infectious_period,
+            ( ('I', -1), ('R', +1) )
+        )
+    ]
+
+For infection events, e.g. in an SEIR model, we would set
+    
+.. code:: python
+
+    [
+        (
+            ('S','I'),
+            infection_rate,
+            ( ('S', -1), ('E', +1) )
+        ),
+    ]
+
 Rates
 =====
+
+Rate tuples are used for constant-rate EpiModels like
+MatrixEpiModel and SymbolicMatrixEpiModel. Only
+constant values can be set in MatrixEpiModel, because
+it makes use of scipy's sparse matrix API which
+is quite efficient for large systems.
 
 Linear rates look like this:
 
@@ -100,20 +176,46 @@ Linear rates look like this:
 
     ( source_compartment, affected_compartment, rate_value ).
 
-quadratic rates look like this:
+For instance, for an SEIR model, we would set
+
+.. code:: python
+    
+    [
+        ('E', 'E', -1/incubation_time),
+        ('E', 'I', +1/incubation_time),
+        ('I', 'I', -1/infectious_period),
+        ('I', 'R', +1/infectious_period),
+    ]
+
+Quadratic rates look like this:
 
 .. code:: python
 
     ( coupling_compartment0, coupling_compartment_1, affected_compartment, rate_value ).
 
+E.g. for a model where both asymptomatic infecteds `A` as well as
+symptomatic infecteds `I` could infect susceptibles, we would define
+
+.. code:: python
+
+    [
+        ('I', 'S', 'S', -inf_to_inf_rate),
+        ('I', 'S', 'I', +inf_to_inf_rate),
+        ('I', 'S', 'S', -inf_to_asymp_rate),
+        ('I', 'S', 'A', +inf_to_asymp_rate),
+        ('A', 'S', 'S', -asymp_to_asymp_rate),
+        ('A', 'S', 'A', +asymp_to_asymp_rate),
+        ('A', 'S', 'S', -asymp_to_inf_rate),
+        ('A', 'S', 'I', +asymp_to_inf_rate),
+    ]
+
 The reasoning here is that, sometimes, you just want to create a model by
 copying an existing ODE system. Then, it's easier to directly set the rates
 instead of converting them to reaction processes in your head.
 
+Node-Based Events
+=================
 
-Events
-======
-    
-    
-
-
+For StochasticEpiModels, processes are converted to node-based events.
+Here, the algorithm needs to know which events a node can take part in
+leading the active (transmitting) role or a transitioning role.

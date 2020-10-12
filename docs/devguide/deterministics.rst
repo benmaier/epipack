@@ -1,5 +1,5 @@
-Deterministic Simulations
--------------------------
+Matrix-Based Models
+-------------------
 
 Intro
 =====
@@ -11,7 +11,7 @@ ordinary differential equations (ODEs) as
 
     \frac{d}{dt}Y_i = \sum_{j,k} \alpha_{ijk} Y_jY_k + \sum_j \beta_{ij} Y_j + \gamma_i.
 
-To this end, :class:`epipack.deterministic_epi_models.DeterministicEpiModel` contains three
+To this end, :class:`epipack.numeric_matrix_epi_models.MatrixEpiModel` contains three
 parameter-carrying linear algebra objects, the numpy array ``birth_rates`` that is equal to the vector :math:`\gamma`,
 the scipy sparse matrix ``linear_rates`` that is equal to the matrix :math:`\beta` and a list
 of scipy sparse matrices ``quadratic_rates`` that contains a scipy sparse matrix in each of 
@@ -53,5 +53,3 @@ Integrating ODEs
 
 The momenta :math:`dY_i/dt` are automatically computed by means of dot products. They are integrated using
 a Runge-Kutta 4(5) method with adaptive step size (Dormand-Prince) (see :func:`epipack.integrators.integrate_dopri5`).
-
-

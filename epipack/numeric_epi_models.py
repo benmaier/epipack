@@ -9,6 +9,8 @@ import warnings
 
 from epipack.integrators import (
             IntegrationMixin,
+            time_leap_newton,
+            time_leap_ivp,
         )
 
 from epipack.process_conversions import (
@@ -189,6 +191,11 @@ class EpiModel(IntegrationMixin):
     correct_for_dynamical_population_size : bool, default = False
         If ``True``, the quadratic coupling terms will be
         divided by the population size.
+    integral_solver : str, default = 'solve_ivp'
+        Whether or not to use the initial-value solver ``solve_ivp``.
+        to determine a time leap for time-varying rates.
+        If not ``'solve_ivp'``, a Newton-Raphson method will be
+        used on the upper bound of a quad-integrator.
 
     Attributes
     ----------
@@ -234,6 +241,11 @@ class EpiModel(IntegrationMixin):
     rates_have_explicit_time_dependence : bool
         Internal switch that's flipped when a non-constant
         rate is passed to the model.
+    use_ivp_solver : bool
+        Whether or not to use the initial-value solver
+        to determine a time leap for time-varying rates.
+        If ``False``, a Newton-Raphson method will be
+        used on the upper bound of a quad-integrator.
         
     Example
     -------
@@ -247,10 +259,12 @@ class EpiModel(IntegrationMixin):
 
     """
 
-    def __init__(self,compartments,
+    def __init__(self,
+                      compartments,
                       initial_population_size=1,
-                      correct_for_dynamical_population_size=False,
-                      ):
+                      correct_for_dynamical_population_size=False,                      
+                      integral_solver='solve_ivp',
+                  ):
 
         self.y0 = None
 
@@ -267,6 +281,7 @@ class EpiModel(IntegrationMixin):
         self.linear_event_updates = []
         self.quadratic_rate_functions = []
         self.quadratic_event_updates = []
+        self.use_ivp_solver = integral_solver == 'solve_ivp'
 
         self.rates_have_explicit_time_dependence = False
 
@@ -824,11 +839,11 @@ class EpiModel(IntegrationMixin):
 
         if self.rates_have_explicit_time_dependence:
             # solve the integral numerically
-            integrand = lambda _t : get_event_rates(_t, self.y0).sum()
-            integral = lambda _t : quad(integrand, t, _t)[0]
-            _1_minus_r = 1 - np.random.rand()
-            rootfunction = lambda _t: - np.log(_1_minus_r) - integral(_t)
-            new_t = newton(rootfunction, t)
+            if self.use_ivp_solver:
+                new_t = time_leap_ivp(t, self.y0, get_event_rates)
+            else:
+                new_t = time_leap_newton(t, self.y0, get_event_rates)
+
             tau = new_t - t
             proposed_event_rates = get_event_rates(new_t, self.y0)
             dy = get_compartment_changes(proposed_event_rates)

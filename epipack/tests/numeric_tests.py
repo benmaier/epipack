@@ -19,7 +19,9 @@ from epipack.numeric_epi_models import (
             SIRSModel,
         )
 
-from epipack import StochasticEpiModel
+from epipack.integrators import time_leap_ivp, time_leap_newton
+
+from epipack.stochastic_epi_models import StochasticEpiModel
 
 class EpiTest(unittest.TestCase):
 
@@ -491,6 +493,20 @@ class EpiTest(unittest.TestCase):
         assert(all([a==b for a, b in zip(res['S'], samples)]))
 
 
+    def test_integral_solvers(self):
+
+        def get_event_rates(t, y):
+            return y * (0.05 + 0.03 * np.array([ np.cos(t), np.sin(t), np.cos(t)**2, np.sin(t)**2 ]))
+
+        rand = 0.834053
+        t0 = 1.0
+        y0 = np.array([0.1,0.2,0.3,0.4])
+        t_nwt = time_leap_newton(t0, y0, get_event_rates, rand)
+        t_ivp = time_leap_ivp(t0, y0, get_event_rates, rand)
+        expected = 30.76 
+        numeric = np.array([t_nwt, t_ivp])
+        assert(np.all( np.abs(numeric-expected)/numeric < 1e-3) )
+
 
 
 
@@ -499,6 +515,7 @@ if __name__ == "__main__":
     import sys
 
     T = EpiTest()
+    T.test_integral_solvers()
     T.test_temporal_gillespie_repeated_simulation()
     T.test_sampling_callback()
     T.test_birth_stochastics()

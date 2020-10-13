@@ -3,17 +3,37 @@
 Stochastic Simulations
 ----------------------
 
-The whole generalized algorithm is based on this phenomenal paper by
+The whole generalized algorithm is based on the following paper by
 St-Onge `et al.`:
 
-"Efficient sampling of spreading processes on complex networks using a composition and rejection algorithm", G.St-Onge, J.-G. Young, L. Hébert-Dufresne, and L. J. Dubé, Comput. Phys. Commun. 240, 30-37 (2019), http://arxiv.org/abs/1808.05859.
+"Efficient sampling of spreading processes on complex networks 
+using a composition and rejection algorithm", G.St-Onge, 
+J.-G. Young, L. Hébert-Dufresne, and L. J. Dubé, Comput.
+Phys. Commun. 240, 30-37 (2019), http://arxiv.org/abs/1808.05859.
 
+St-Onge `et al.` developed a simple and fast method called
+the rejection sampling algorithm. It's based on Gillespie's
+stochastic simulation algorithm, but instead of tediously
+keeping track of every possible event, their method introduces
+a maximal super set of events that contains processes that
+may not actually happen. When such an event is sampled,
+it is rejected but time is advanced anyway. This is a valid
+procedure because the method's underlying 
+process is a Poisson process. Not constructing an entire
+correct event set saves time in bookkeeping.
+
+Furthermore,
+St-Onge `et al.` introduced a tree-based data structure
+that allows fast sampling from the event super set.
 In fact, the simulations are tremendously sped up if you install
 their samplable set that `epipack` will use automatically
 if it succeeds at importing it (by default,
 if ``SamplableSet`` is not installed, `epipack` will fall back on 
 a numpy-based internal ``MockSamplableSet`` that mimicks ``SamplableSet``'s
 behavior).
+
+In the following, we describe how event set construction
+methods work in `epipack`.
 
 Node-Based Events
 =================
@@ -249,6 +269,22 @@ with total rate 30.0.
 
 In principle, the algorithm has to choose one of the events from this list and then reject it if can't happen (i.e. if the neighboring node of the chosen event does not have the correct compartment). Instead, what it does is to sample
 (i) a general event, i.e. either 'A' with rate 24.0 or 'B' with rate 6.0. Then, it samples (ii) a neighbor according to the link's weight that connects the origin node to this neighbor. If the neighbor has a compartment that fits with the previously sampled event, the event can take place. If not, the event is rejected, time is advanced, and a new event is sampled.
-This second method can be interpreted as deciding first from which bulk of this event super set we sample from and deciding for an event from this bulk afterwards.
+This second method can be interpreted as deciding first from which bulk of this event super set we sample from and deciding for an event from this bulk afterwards:
 
-Hence, it doesn't matter whether a single event is sampled from the entire list or whether it's decided first which bulk of this list the event will be chosen from. After the decision of the bulk has been made (i.e. by choosing the target compartment), only the link weight is important in determining which event is chosen.
+.. code:: python
+
+    # choose which of these bulks will be sampled from
+    # bulk A
+    [
+      (1, '->', 'A', 20.0),
+      (2, '->', 'A', 2.0),
+      (3, '->', 'A', 2.0),
+    ]
+    # bulk B
+    [                       # if sampled from bulk B, a neighbor is chosen according to link weight
+      (1, '->', 'B', 5.0),  # => 1 -> probability = 5/6
+      (2, '->', 'B', 0.5),  # => 2 -> probability = 1/12
+      (3, '->', 'B', 0.5),  # => 3 -> probability = 1/12
+    ]
+
+Hence, it doesn't matter whether a single event is sampled from the entire list or whether it's decided first which bulk of this complete list the event will be chosen from. After a bulk has been sampled (i.e. by choosing the target compartment), only the link weight is important in determining which exact event is chosen.

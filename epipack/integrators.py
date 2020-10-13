@@ -6,7 +6,8 @@ to integrate ODEs or SDEs.
 import warnings
 
 import numpy as np
-from scipy.integrate import ode
+from scipy.integrate import ode, solve_ivp, quad
+from scipy.optimize import newton
 
 def integrate_dopri5(dydt, t, y0, *args):
     """
@@ -233,6 +234,85 @@ class IntegrationMixin():
             warnings.warn('Sum of initial conditions does not equal unity.')
 
         return self
+
+def time_leap_newton(t0, y0, get_event_rates, rand=None):
+    """
+    Compute a time leap for time-varying rate functions
+    based on Gillespie's SSA using Newton's method
+    on a quad-integrator.
+
+    Parameters
+    ==========
+    t0 : float
+        The current time
+    y0 : numpy.ndarray
+        Current state of the system
+    get_event_rates : function
+        A function that takes time t and state y
+        as input and returns an array of corresponding
+        event rates
+    rand : float, default = None
+        A random number from the unit interval.
+    
+    Returns
+    =======
+    new_t : float
+        A new time.
+    """
+    integrand = lambda _t : get_event_rates(_t, y0).sum()
+    integral = lambda _t : quad(integrand, t0, _t)[0]
+
+    if rand is None:
+        rand = np.random.rand()
+    else:
+        assert(rand >= 0)
+        assert(rand < 1)
+    _1_minus_r = 1 - rand
+
+    rootfunction = lambda _t: - np.log(_1_minus_r) - integral(_t)
+    new_t = newton(rootfunction, t0, fprime=lambda _t: -integrand(_t))
+
+    return new_t
+
+def time_leap_ivp(t0, y0, get_event_rates, rand=None):
+    """
+    Compute a time leap for time-varying rate functions
+    based on Gillespie's SSA using Newton's method
+    on a quad-integrator.
+
+    Parameters
+    ==========
+    t0 : float
+        The current time
+    y0 : numpy.ndarray
+        Current state of the system
+    get_event_rates : function
+        A function that takes time t and state y
+        as input and returns an array of corresponding
+        event rates
+    rand : float, default = None
+        A random number from the unit interval.
+    
+    Returns
+    =======
+    new_t : float
+        A new time.
+    """
+    integrand = lambda _t, _y: [get_event_rates(_t, y0).sum()]
+    initial = integrand(t0,None)
+
+    if rand is None:
+        rand = np.random.rand()
+    else:
+        assert(rand >= 0)
+        assert(rand < 1)
+    _1_minus_r = 1 - rand
+
+    rootfunction = lambda _t, _y: - np.log(_1_minus_r) - _y[0]
+    rootfunction.terminal = True
+    result = solve_ivp(integrand,[t0,np.inf],y0=[0],method='RK23',events=rootfunction) 
+
+    return result.t_events[0][0]
 
 if __name__ == "__main__":     # pragma: no cover
 

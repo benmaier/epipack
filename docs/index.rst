@@ -41,6 +41,7 @@ epipack
    devguide/process_rates_events.rst
    devguide/matrixmodels.rst
    devguide/stochastics.rst
+   devguide/gillespie.rst
    devguide/testing.rst
    devguide/visualization.rst
 

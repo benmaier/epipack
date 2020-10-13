@@ -1,4 +1,4 @@
-.. _dev-time-varying-rates:
+.. _dev-gillespie:
 
 Gillespie's SSA
 ---------------
@@ -96,14 +96,47 @@ an initial value problem
 And applies a Runge-Kutta 2(3) method until :math:`\tilde\Theta = \Theta(\tau)`.
 This method is faster and has therefore been chosen as the default method.
 
-Both methods yield results that lie within 0.1% of each other.
+Both methods yield values of :math:`tau` that lie within 0.1% of each other.
 
 Temporal Networks
 =================
 
 In principle, temporal networks lead to rate functions that change
 as step functions. Vestergaard and Génois have used this to come 
-up with a fast 
+up with a fast simulation algorithm for temporal networks:
+
+"Temporal Gillespie algorithm: Fast simulation of contagion
+processes on time-varying networks". C.L. Vestergaard & M. Génois. 
+PLoS Computational Biology (2015) 11, e1004579 
+(http://arxiv.org/abs/1504.01298).
+
+We do not use this algorithm here though. We simply make use of
+the fact that we're dealing with Poisson processes. I.e.
+we treat a network as static first and simulate model
+processes until we overshoot the time at which the network changes next. 
+As soon as we overshoot a time value at which the network changes, we simply
+stop at this time value, reset the model with the new network
+structure and restart the simulation again.
+Doing so does not lead to erroneous results. Since we're
+dealing with Poisson processes, we can restart the 
+simulation at this time point, because we've already decided
+that the next event will happen after this time point.
+If the rates would not have changed, 
+restarting the simulation is equal to
+resampling from the tail of the original distribution
+that was cut off after the network change time.
+
+Resetting the entire model/event set every time the network
+changes is quite inefficient. Yet, our primary goal here
+is to have a framework where we can prototype epidemiological
+models in a fast manner while simulation efficacy is left
+aside for now.
+
+If you want to simulate classic models on temporal networks
+efficiently, check out tacoma_ where Vestergaard's and Génois's method
+is implemented (it's really fast).
+
+.. _`tacoma`: http://tacoma.benmaier.org/
 
 
 

@@ -44,6 +44,7 @@ epipack
    devguide/gillespie.rst
    devguide/testing.rst
    devguide/visualization.rst
+   devguide/colors.rst
 
 .. raw:: latex
 

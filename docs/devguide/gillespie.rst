@@ -102,8 +102,8 @@ Temporal Networks
 =================
 
 In principle, temporal networks lead to rate functions that change
-as step functions. Vestergaard and Génois have used this to come 
-up with a fast simulation algorithm for temporal networks:
+as step functions. Vestergaard and Génois have used this circumstance
+to come up with a fast simulation algorithm for temporal networks:
 
 "Temporal Gillespie algorithm: Fast simulation of contagion
 processes on time-varying networks". C.L. Vestergaard & M. Génois. 
@@ -132,7 +132,7 @@ is to have a framework where we can prototype epidemiological
 models in a fast manner while simulation efficacy is left
 aside for now.
 
-If you want to simulate classic models on temporal networks
+If you want to simulate canonical models on temporal networks
 efficiently, check out tacoma_ where Vestergaard's and Génois's method
 is implemented (it's really fast).
 

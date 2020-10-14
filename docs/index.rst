@@ -24,7 +24,7 @@ epipack
    tutorial/intro.rst
    tutorial/numeric_models.rst
    tutorial/symbolics.rst
-   tutorial/stochastics.rst
+   tutorial/networks.rst
    tutorial/time_varying_systems.rst
    tutorial/interactive.rst 
    tutorial/visualizations.rst 

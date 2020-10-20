@@ -15,7 +15,7 @@ A visualization can be started using :func:`epipack.vis.visualize`. A ``model``
 object is passed to this function, alongside a stylized network and a time delta
 which represents the amount of simulation time that is supposed to pass between
 two consecutive visualization updates. Optionally, a config dictionary can
-be passed
+be passed.
 
 The function then opens a window that comprises three basic elements:
 
@@ -56,12 +56,11 @@ is
                 'show_curves':True,
                 'draw_nodes_as_rectangles':False,
                 'show_legend': True,
-                'legend_font_color':'#fafaef',
+                'legend_font_color':None,
                 'legend_font_size':10,
                 'padding':10,
-                'compartment_colors': _colors,
-                # _colors is a list of 3-tuples containing
-                # rgb values in the range of [0, 255]
+                'compartment_colors':_colors,
+                'palette': "dark",
             }
 
 Note that you can interact with the visualization up to a certain level:
@@ -76,7 +75,7 @@ Note that you can interact with the visualization up to a certain level:
 Network Layout
 ==============
 
-We will the `"Social circles: Facebook" data from SNAP`_
+We will use the `"Social circles: Facebook" data from SNAP`_
 in the following. First, download the data. In the console, do
 
 .. code:: bash
@@ -219,9 +218,9 @@ Lattice simulation
 ==================
 
 The grid layout can also be more than just showing a well-mixed simulation.
-It is the natural presentation of a lattice. In order to simulate on a 2D lattice,
+It is the natural representation of a lattice. In order to simulate on a 2D lattice,
 construct the stochastic model with lattice links that you can get from
-:func:`epipack.network_models.get_2D_lattice_links`.
+:func:`epipack.networks.get_2D_lattice_links`.
 
 .. code:: python
 

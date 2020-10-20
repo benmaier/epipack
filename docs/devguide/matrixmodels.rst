@@ -22,7 +22,7 @@ Choice of Data Structures
 
 We chose scipy sparse matrices because their API is simple and tailored for
 fast execution of dot products. The ODEs are computed using a current-state vector
-:math:`X` and dot products between the operators ``linear_rates`` and ``quadratic_rates``.
+:math:`Y` and dot products between the operators ``linear_rates`` and ``quadratic_rates``.
 
 One might wonder about the specific choice of sparse matrices instead of arrays. The reasoning
 here is that these models can be potentially used to set up reaction-diffusion systems where a spatial
@@ -45,7 +45,7 @@ There are two ways to set rates
     while methods whose name begins with ``add`` will not override previously set processes.
 
 When rates for quadratic processes are set, the components that are affected by quadratic processes are
-saved in `model.affected_by_quadratic_process` as integers. This saves time in situations where there are
+saved in ``model.affected_by_quadratic_process`` as integers. This saves time in situations where there are
 many compartments but only few transmission processes.
 
 Integrating ODEs

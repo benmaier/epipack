@@ -2,7 +2,7 @@
 epipack
 =======
 
-.. image:: img/logo_flatter_medium.png
+.. image:: img/logo_bw_grey_large.png
 
 .. raw:: latex
 

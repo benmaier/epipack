@@ -69,7 +69,7 @@ a time leap :math:`\tau`. We find that the quantity
     \Theta(\tau) = \int\limits_t^{t+\tau} dt' \sum_{e\in E}\Lambda(t')
 
 is exponentially distributed as :math:`\Theta \sim \mathcal E(1)`.
-Hence, we draw a value for :\math:`\tilde\Theta` from the default
+Hence, we draw a value for :math:`\tilde\Theta` from the default
 exponential distribution and solve the integral :math:`\Theta(\tau)`
 for :math:`\tau`.
 
@@ -96,13 +96,13 @@ an initial value problem
 And applies a Runge-Kutta 2(3) method until :math:`\tilde\Theta = \Theta(\tau)`.
 This method is faster and has therefore been chosen as the default method.
 
-Both methods yield values of :math:`tau` that lie within 0.1% of each other.
+Both methods yield values of :math:`\tau` that lie within 0.1% of each other.
 
 Temporal Networks
 =================
 
 In principle, temporal networks lead to rate functions that change
-as step functions. Vestergaard and Génois have used this circumstance
+as step functions. Vestergaard and Génois have used this fact
 to come up with a fast simulation algorithm for temporal networks:
 
 "Temporal Gillespie algorithm: Fast simulation of contagion

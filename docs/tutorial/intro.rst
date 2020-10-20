@@ -60,8 +60,8 @@ in the population, etc.
 
 Sometimes, models also assume that previously non-existent 
 susceptible individuals
-are born with constant rate :math:`\gamma` while individuals
-from 
+are born with constant rate :math:`\gamma`
+as
 
 .. math::
 
@@ -103,7 +103,7 @@ where :math:`Y_i` is any of :math:`C` compartments and
 equations. These reaction equations are still somewhat restrictive,
 considering that in odd cases, asymmetric reactions are mathematically
 allowed. For constant rates, a generalized deterministic epidemiological model
-can therefor be defined based on a system of second-order coupled 
+can therefore be defined based on a system of second-order coupled 
 ordinary differential equations (ODEs)
 
 .. math::

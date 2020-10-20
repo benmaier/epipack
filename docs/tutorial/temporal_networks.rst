@@ -1,7 +1,7 @@
 Temporal Networks
 =================
 
-`epipack` provides a tiny interface to simulate StochasticEpiModels
+`epipack` provides a tiny interface to simulate `StochasticEpiModels`
 on temporal networks, see :mod:`epipack.temporal_networks`.
 Note that such simulations are based on the simulation routine
 for static networks and therefore numerically correct
@@ -91,7 +91,7 @@ And this is the outcome:
 
 Two things can be noticed immediately. First, a default edge 
 weight of ``1.0`` is added to every node pair of the originally
-unweighted network. This is done because StochasticEpiModel
+unweighted network. This is done because `StochasticEpiModel`
 expects weighted edge tuples.
 Second, temporal networks are looped indefinitely per default,
 which is why we have to break the loop manually. If you don't

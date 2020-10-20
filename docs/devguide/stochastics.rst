@@ -38,7 +38,7 @@ methods work in `epipack`.
 Node-Based Events
 =================
 
-For StochasticEpiModels, processes are converted to node-based events.
+For `StochasticEpiModels`, processes are converted to node-based events.
 Here, the algorithm needs to know which events a node can take part in
 leading the active (transmitting) role or a transitioning role.
 
@@ -54,7 +54,7 @@ Two class attributes
 - ``node_transition_events``
 
 carry event tuples that classify transition descriptors. Each of these
-lists has :math:`N_c` entries (once for each compartment) and each
+lists has :math:`N_c` entries (one for each compartment) and each
 entry has two elements. The first element is a :math:`N_\mathrm{events,C} \times 3`
 matrix where each row contains all three changes associated with one of
 :math:`N_\mathrm{events,C}` events.
@@ -115,7 +115,8 @@ The second entry (second compartment is `A`) of this list is a 2-tuple.
 Its first element
 contains a matrix with a single row and three columns. The single
 row represents the single infection event a node of compartment `A`
-can cause. ``[1,0,1]`` represents that the infection event: a node
+can cause. ``[1,0,1]`` represents the following infection event:
+A node
 of compartment 1 (represents `A`) coupled with a node of compartment 0
 (represents `S`) lets `S` transition to `A` (compartment 0 to compartment 1,
 respectively). The array ``array([ 1.0 ])`` contains the single rate 
@@ -204,12 +205,12 @@ Every time a node changes its compartment, the corresponding event set of
 this compartment is loaded from ``model.node_and_link_events``, and 
 the rate vector's entries in the range of the specified link event range
 will be scaled by the node's out-degree. The sum of this vector is then
-passed to the global event set. The vector itself is saved 
+passed to the global event set. The vector itself is saved in 
 ``model.node_event_probabilities``. After the global event set has
 been sampled for an event and a node has been chosen, 
 a specific node-event is sampled. If this event is a node event, 
 it simply happens. If it is a link event, a random neighbor is sampled
-proportional to its link weight
+proportional to the corresponding link weight.
 If the neighbor has the right compartment, the infection event takes place
 and time is advanced. If the neighbor does not have the right compartment,
 the proposed event is rejected and time is advanced nevertheless.
@@ -251,7 +252,7 @@ Now these are the true events that may happen:
 
 with total event rate 21.0.
 
-However, these are the events epipack's algorithm assumes might happen 
+However, these are the events `epipack`'s algorithm assumes might happen 
 (as per the rejection sampling algorithm):
 
 .. code:: python

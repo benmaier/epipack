@@ -1,6 +1,8 @@
 State-Altering Tuples
 ---------------------
 
+.. _dev-processes:
+
 Processes
 =========
 
@@ -16,7 +18,8 @@ There are five allowed processes
     ( source_compartment, rate, target_compartment),
 
     # transmission process
-    ( coupling_compartment_0, coupling_compartment_1, rate, target_compartment_0, target_ccompartment_1),
+    ( coupling_compartment_0, coupling_compartment_1, rate, target_compartment_0, target_compartment_1),
+    
     # fission process
     ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
     
@@ -29,11 +32,11 @@ There are five allowed processes
     # birth process
     ( None, rate, target_compartment),
 
-``epipack`` identifies the process based on the length of the tuple, the rate (an entry not being a compartment) and. For ``SymbolicEpiModel``, rates can be equal to compartments, but then processes have to be set with ``ignore_rate_position_checks``. This might change in the future to be default behavior for ``SymbolicEpiModel``.
+`epipack` identifies the process based on the length of the tuple and the position of the rate (an entry not being a compartment). For `SymbolicEpiModel`, rates can be equal to compartments, but then processes have to be set with ``ignore_rate_position_checks``. This might change in the future to be default behavior for `SymbolicEpiModel`.
 
 Death and birth processes are identified by one of the compartments being ``None``. An involved compartment can only be ``None`` in birth and death processes. 
 
-For a StochasticEpiModel, link transmission processes have a stricter format: (i) they must be processes where one compartment stays constant while the other compartment changes, and (ii) the compartment remaining constant has to be in the first position on each side of the reaction. For instance,
+For a `StochasticEpiModel`, link transmission processes have a stricter format: (i) they must be processes where one compartment stays constant while the other compartment changes, and (ii) the compartment remaining constant has to be in the first position on each side of the reaction. For instance,
 
 .. code:: python
 
@@ -41,14 +44,14 @@ For a StochasticEpiModel, link transmission processes have a stricter format: (i
 
 is a valid transition, but ``("S", "I", rate, "I", "I")`` is not. The reasoning behind this restriction is to make sure that the user really thinks about which node is reacting and transmitting.
 
-For ``StochasticEpiModel``, only node transition and link transmission processes are allowed. Additionally, there is the possibility to set conditional link transmission processes that are executed immediately after a base process happened. Base reactions are encoded like this
+For `StochasticEpiModel`, only node transition and link transmission processes are allowed. Additionally, there is the possibility to set conditional link transmission processes that are executed immediately after a base process happened. Base reactions are encoded like this
 
 .. code:: python
 
     (source_base, "->", target_base) # or
     (transmitting, source, "->", transmitting, target)
 
-Conditional transmission process are always formulated as dictionaries with lists of processes.
+Conditional transmission processes are always formulated as dictionaries with lists of processes.
 
 .. code:: python
 
@@ -97,7 +100,7 @@ Events
 ======
 
 Event tuples are used in the default implementations of
-EpiModels (EpiModel, StochasticEpiModel), because they're
+EpiModels (`EpiModel`, `StochasticEpiModel`), because they're
 flexible enough that we can construct both mean-field
 ODEs as well as stochastic simulations. Events are defined
 in a way such that coupling of one or two compartments leads
@@ -165,8 +168,8 @@ Rates
 =====
 
 Rate tuples are used for constant-rate EpiModels like
-MatrixEpiModel and SymbolicMatrixEpiModel. Only
-constant values can be set in MatrixEpiModel, because
+`MatrixEpiModel` and `SymbolicMatrixEpiModel`. Only
+constant values can be set in `MatrixEpiModel`, because
 it makes use of scipy's sparse matrix API which
 is quite efficient for large systems.
 
@@ -216,7 +219,7 @@ instead of converting them to reaction processes in your head.
 Node-Based Events
 =================
 
-For StochasticEpiModels, processes are converted to node-based events.
+For `StochasticEpiModels`, processes are converted to node-based events.
 Here, the algorithm needs to know which events a node can take part in
 leading the active (transmitting) role or a transitioning role.
 

@@ -168,7 +168,7 @@ Finally:
 Visualization
 =============
 
-Reaction-diffusion systems are fun to watch unfold. Because we know this,
+Reaction-diffusion systems are interesting to watch unfold. Because we know this,
 ``epipack`` provides a visualization function for reaction diffusion systems:
 :func:`epipack.vis.visualize_reaction_diffusion`.
 
@@ -202,7 +202,7 @@ it
 Subsequently, we set up the model exactly as above.
 
 One thing that you should know is that internally, an instance of
-``MatrixEpiModel`` creates a one-dimensional :\math:`N\times C`-long
+``MatrixEpiModel`` creates a one-dimensional :math:`N\times C`-long
 vector that contains the state of each compartment. In order
 for the visualization function to know which entry it should plot for each node,
 we have to provide it with the appropriate compartments. To this end, we construct

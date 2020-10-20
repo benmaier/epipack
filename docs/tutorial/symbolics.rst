@@ -32,6 +32,10 @@ With these symbols, we can set up the base model
         ])
 
 That's all. Now we can analyze the system analytically.
+
+ODEs
+^^^^
+
 Let's begin by looking at the ODEs of the deterministic model.
 
 .. code::
@@ -42,13 +46,16 @@ Let's begin by looking at the ODEs of the deterministic model.
      Eq(Derivative(I, t), I*(S*eta - rho)),
      Eq(Derivative(R, t), I*rho - R*omega)]
 
-In a jupyter notebook, we can display the ODEs set with LaTeX.
+In a jupyter notebook, we can display the ODEs with LaTeX.
 
 .. code:: python 
 
     SIRS.ODEs_jupyter()
 
 .. image:: symbolic_media/ODEs.png
+
+Fixed Points and Linear Stability
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Usually, we're interested in fixed points of the system.
 You can let sympy find them.
@@ -108,6 +115,9 @@ is given as
 
     \eta / \rho = 1.
 
+Jacobian
+^^^^^^^^
+
 In order to analyze linear stability, we need access to the system's
 Jacobian that can be found as 
 
@@ -159,7 +169,7 @@ Make sure to first run
 Now we define the model as before, but
 as parameters we use the infectious period :math:`\tau`
 (instead of the recovery rate :math:`\rho`) and 
-the basic reproduction number :math:`R0 = \eta\tau`.
+the basic reproduction number :math:`R_0 = \eta\tau`.
 
 .. code:: python
 

@@ -20,7 +20,7 @@ The reaction equations read
 
 i.e. symptomatic infecteds infect susceptibles upon contact with rate :math:`\alpha`,
 who become then exposed. Exposed individuals become symptomatically infected and 
-infectious with rate :math:`\omega`, symptomatic infecteds recovert with rate
+infectious with rate :math:`\omega`, symptomatic infecteds recover with rate
 :math:`\beta` or are discovered and quarantined with rate :math:`\kappa`.
 
 The first thing we need to do is to set up a model with the right compartments
@@ -80,7 +80,7 @@ Let's say that initially, we have 1% infecteds.
     model.set_initial_conditions({S: 1-I0, I: I0})
 
 `epipack` assumes that all compartments that are not explicitly set
-have an initial condition of `Y_i = 0`.
+are associated with an initial condition of :math:`Y_i = 0`.
 
 Now, we can integrate the ODEs and plot the result
 
@@ -297,7 +297,9 @@ Let's set up an ``EpiModel``.
             (None, gamma, S),
         ])
 
-Note that we're hit the following warnings:
+Note that we're hit with the following warnings:
+
+.. code::
 
     UserWarning: This model has processes with a fluctuating number of agents.
     Consider correcting the rates dynamically with the attribute

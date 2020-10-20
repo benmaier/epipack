@@ -38,10 +38,10 @@ investigate effects of certain processes on disease dissemination. Using
 pen and paper, quickly adding/removing compartments and transition
 processes is easy, yet the analytical and numerical analysis or
 stochastic simulations can be tedious to set up and debug—especially
-when the model changes (even slightly). ``epipack`` aims to streamline
+when the model changes (even slightly). ``epipack`` aims at streamlining
 this process such that all the analysis steps can be performed in an
 efficient manner, simply by defining processes based on reaction
-equations. ``epipack`` provides three base classes to accomodate
+equations. ``epipack`` provides three main base classes to accomodate
 different problems.
 
 -  ``EpiModel``: Define a model based on transition, birth, death,
@@ -62,23 +62,32 @@ different problems.
    static/temporal network, or in a well-mixed system.
 
 Additionally, epipack provides a visualization framework to animate
-stochastic simulations on networks, lattices, or well-mixed systems.
+stochastic simulations on networks, lattices, well-mixed systems, or
+reaction-diffusion systems based on ``MatrixEpiModel``.
 
 Check out the `Example <#examples>`__ section for some demos.
+
+Note that the internal simulation algorithm for network simulations is
+based on the following paper:
+
+"Efficient sampling of spreading processes on complex networks using a
+composition and rejection algorithm", G.St-Onge, J.-G. Young, L.
+Hébert-Dufresne, and L. J. Dubé, Comput. Phys. Commun. 240, 30-37
+(2019), http://arxiv.org/abs/1808.05859.
 
 Install
 -------
 
 .. code:: bash
 
-   git clone git@github.com:benmaier/epipack.git
-   pip install ./epipack
+   pip install epipack
 
 ``epipack`` was developed and tested for
 
 -  Python 3.7
 
-So far, the package's functionality was tested on Mac OS X only.
+So far, the package's functionality was tested on Mac OS X and CentOS
+only.
 
 Dependencies
 ------------
@@ -104,7 +113,8 @@ install**
 Documentation
 -------------
 
-The full documentation is available at epipack.benmaier.org.
+The full documentation is available at
+`epipack.benmaier.org <epipack.benmaier.org>`__.
 
 Changelog
 ---------
@@ -117,6 +127,8 @@ License
 
 This project is licensed under the `MIT
 License <https://github.com/benmaier/epipack/blob/master/LICENSE>`__.
+Note that this excludes any images/pictures/figures shown here or in the
+documentation.
 
 Contributing
 ------------
@@ -566,7 +578,7 @@ until the warnings disappear. Then do
 
    make upload
 
-.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_flatter_medium.png
+.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_bw_red_large.png
 .. |sir-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
 .. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg
    :target: code-of-conduct.md

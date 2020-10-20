@@ -67,6 +67,14 @@ reaction-diffusion systems based on ``MatrixEpiModel``.
 
 Check out the `Example <#examples>`__ section for some demos.
 
+Note that the internal simulation algorithm for network simulations is
+based on the following paper:
+
+"Efficient sampling of spreading processes on complex networks using a
+composition and rejection algorithm", G.St-Onge, J.-G. Young, L.
+Hébert-Dufresne, and L. J. Dubé, Comput. Phys. Commun. 240, 30-37
+(2019), http://arxiv.org/abs/1808.05859.
+
 Install
 -------
 
@@ -570,7 +578,7 @@ until the warnings disappear. Then do
 
    make upload
 
-.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_bw_grey_large.png
+.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_bw_red_large.png
 .. |sir-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
 .. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg
    :target: code-of-conduct.md

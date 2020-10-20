@@ -2,7 +2,7 @@
 epipack
 =======
 
-.. image:: img/logo_bw_grey_large.png
+.. image:: img/logo_bw_red_large.png
 
 .. raw:: latex
 

@@ -167,6 +167,8 @@ else:
                 }
             }
 
+def setup(app):
+    app.add_css_file('custom.css')
 
 # -- Options for HTML output ----------------------------------------------
 

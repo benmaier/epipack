@@ -360,7 +360,10 @@ class EpiTest(unittest.TestCase):
 
         taus = []
         N_sample = 10000
-        from tqdm import tqdm
+        if plot:
+            from tqdm import tqdm
+        else:
+            tqdm = lambda x: x
         tt = np.linspace(0,1,100)
         for sample in tqdm(range(N_sample)):
             tau = None

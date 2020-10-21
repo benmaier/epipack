@@ -91,7 +91,9 @@ So far, the package's functionality was tested on Mac OS X and CentOS only.
 * `scipy>=1.3`
 * `sympy==1.6`
 * `pyglet<1.6`
-* `ipython>=7.17.0`
+* `matplotlib>=3.0.0`
+* `bfmplot>=0.0.7`
+* `ipython>=7.14.0`
 * `ipywidgets>=7.5.1`
 
 Please note that **fast network simulations are only available if you install** 

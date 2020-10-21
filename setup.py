@@ -25,6 +25,7 @@ setup(
                 'tqdm',
                 'ipython>=7.14.0',
                 'ipywidgets>=7.5.1',
+                "matplotlib>=3.0.0",
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],
@@ -40,7 +41,7 @@ setup(
         'PyPI': 'https://pypi.org/project/epipack/',
     },
     extras_require={
-        'plotting' : ["matplotlib>=3.0.0", "bfmplot>=0.0.7"]
+        'plotting' : ["bfmplot>=0.0.7"]
     },
     include_package_data=True,
     zip_safe=False,

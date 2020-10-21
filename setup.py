@@ -37,6 +37,9 @@ setup(
         'Source': 'https://github.com/benmaier/epipack/',
         'PyPI': 'https://pypi.org/project/epipack/',
     },
+    extras_require={
+        'plotting' : ["matplotlib>=3.0.0", "bfmplot>=0.0.7"]
+    },
     include_package_data=True,
     zip_safe=False,
 )

@@ -178,7 +178,7 @@ class InteractiveIntegrator(widgets.HBox):
                  parameter_values,
                  t,
                  return_compartments=None,
-                 figsize=None,
+                 figsize=(4,4),
                  palette='dark',
                  integrator='dopri5',
                  continuous_update=False,

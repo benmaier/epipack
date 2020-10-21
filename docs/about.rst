@@ -1,7 +1,6 @@
-|logo|
-
 About
 =====
+|logo|
 
 Fast prototyping of epidemiological models based on reaction equations.
 Analyze the ODEs analytically or numerically, or run/animate stochastic
@@ -578,7 +577,7 @@ until the warnings disappear. Then do
 
    make upload
 
-.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_bw_red_large.png
+.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_12_lila_medium.png
 .. |sir-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
 .. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg
    :target: code-of-conduct.md

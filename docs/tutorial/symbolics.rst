@@ -214,5 +214,34 @@ And then we just run the integrator.
 .. video:: ../_static/interactive_integrator.mp4
     :width: 500
 
+    
+Pure ODE Models
+---------------
+
+In case you already have an ODE system ready to go, 
+you can define it with :class:`epipack.symbolic_epi_models.SymbolicODEModel`
+without going through the hassle of converting it
+to reaction processes. Simply define the equations
+as a list of sympy equation objects:
+
+.. code:: python
+
+    import sympy as sy
+    from epipack import SymbolicODEModel
+    
+    S, I, R, alpha, beta, t = sy.symbols("S I R alpha beta t")
+
+    ODEs = [
+        sy.Eq(sy.Derivative(S, t), -alpha*S*I),
+        sy.Eq(sy.Derivative(I, t), +alpha*S*I - beta*I),
+        sy.Eq(sy.Derivative(R, t), +beta*I),
+    ]
+
+    model = SymbolicODEModel(ODEs)
+
+`epipack` infers the compartments automatically. Note
+that stochastic simulations are not possible with this
+model since events cannot be inferred from ODEs.
+
 
 .. _`sympy`: https://www.sympy.org/en/index.html

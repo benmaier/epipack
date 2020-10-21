@@ -28,7 +28,7 @@ visualize(model, network, sampling_dt=0.1)
 
 ![sir-example](https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif)
 
-# Idea
+## Idea
 
 Simple compartmental models of infectious diseases are useful
 to investigate effects of certain processes on disease dissemination.
@@ -71,7 +71,7 @@ using a composition and rejection algorithm", G.St-Onge,
 J.-G. Young, L. Hébert-Dufresne, and L. J. Dubé, Comput.
 Phys. Commun. 240, 30-37 (2019), http://arxiv.org/abs/1808.05859.
 
-# Install
+## Install
 
     pip install epipack
 
@@ -81,7 +81,7 @@ Phys. Commun. 240, 30-37 (2019), http://arxiv.org/abs/1808.05859.
 
 So far, the package's functionality was tested on Mac OS X and CentOS only.
 
-# Dependencies
+## Dependencies
 
 `epipack` directly depends on the following packages which will be installed by `pip` during the installation process
 
@@ -98,32 +98,32 @@ Please note that **fast network simulations are only available if you install**
 
 **manually** (pip won't do it for you).
 
-# Documentation
+## Documentation
 
 The full documentation is available at [epipack.benmaier.org](epipack.benmaier.org).
 
-# Changelog
+## Changelog
 
 Changes are logged in a [separate file](https://github.com/benmaier/epipack/blob/master/CHANGELOG.md).
 
-# License
+## License
 
 This project is licensed under the [MIT License](https://github.com/benmaier/epipack/blob/master/LICENSE).
 Note that this excludes any images/pictures/figures shown here or in the documentation.
 
-# Contributing
+## Contributing
 
 If you want to contribute to this project, please make sure to read the [code of conduct](https://github.com/benmaier/epipack/blob/master/CODE_OF_CONDUCT.md) and the [contributing guidelines](https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md). In case you're wondering about what to contribute, we're always collecting ideas of what we want to implement next in the [outlook notes](https://github.com/benmaier/epipack/blob/master/OUTLOOK.md).
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](code-of-conduct.md)
 
-# Examples
+## Examples
 
 Let's define an SIRS model with infection rate `eta`, recovery rate `rho`, and waning immunity rate `omega` and analyze the system
 
-## Pure Numeric Models
+### Pure Numeric Models
 
-## Basic Definition (EpiModel)
+#### Basic Definition (EpiModel)
 
 Define a pure numeric model with `EpiModel`.
 Integrate the ODEs or simulate the system stochastically.
@@ -138,11 +138,11 @@ N = 1000
 
 SIRS = EpiModel([S,I,R],N)\
     .set_processes([
-        ## transmission process ##
+        #### transmission process ####
         # S + I (eta=2.5/d)-> I + I
         (S, I, 2.5, I, I),
 
-        ## transition processes ##
+        #### transition processes ####
         # I (rho=1/d)-> R
         # R (omega=1/14d)-> S
         (I, 1, R),
@@ -161,7 +161,7 @@ for C in model.compartments:
 
 ![numeric-model](https://github.com/benmaier/epipack/raw/master/img/numeric_model.png)
 
-## Functional Rates
+#### Functional Rates
 
 It's also straight-forward to define temporally varying (functional) rates.
 
@@ -196,9 +196,9 @@ for C in SIS.compartments:
 
 ![numeric-model-time-varying](https://github.com/benmaier/epipack/raw/master/img/numeric_model_time_varying_rate.png)
 
-## Symbolic Models
+### Symbolic Models
 
-## Basic Definition
+#### Basic Definition
 
 Symbolic models are more powerful because they can 
 do the same as the pure numeric models while 
@@ -218,7 +218,7 @@ SIRS = SymbolicEpiModel([S,I,R])\
     ])    
 ```
 
-## Analytical Evaluations
+#### Analytical Evaluations
 
 Print the ODE system in a Jupyter notebook
 
@@ -251,7 +251,7 @@ Get the eigenvalues at the disease-free state in order to find the epidemic thre
 {-omega: 1, eta - rho: 1, 0: 1}
 ```
 
-## Numerical Evaluations
+#### Numerical Evaluations
 
 Set numerical parameter values and
 integrate the ODEs numerically
@@ -275,7 +275,7 @@ the system can simulated directly.
 >>> t_sim, result_sim = SIRS.simulate(40)
 ```
 
-## Temporally Varying Rates
+#### Temporally Varying Rates
 
 Let's set up some temporally varying rates
 
@@ -320,7 +320,7 @@ t_sim, result_sim = SIRS.simulate(max(_t))
 
 ![SIRS-forced-results](https://github.com/benmaier/epipack/raw/master/img/symbolic_model_time_varying_rate.png)
 
-## Interactive Analyses
+#### Interactive Analyses
 
 `epipack` offers a classs called `InteractiveIntegrator`
 that allows an interactive exploration of a system 
@@ -363,9 +363,9 @@ InteractiveIntegrator(model, parameters, t, figsize=(4,4))
 
 ![interactive](https://github.com/benmaier/epipack/raw/master/img/interactive.gif)
 
-## Pure Stochastic Models
+### Pure Stochastic Models
 
-## On a Network
+#### On a Network
 
 Let's simulate an SIRS system on a random graph
 (using the parameter definitions above).
@@ -404,7 +404,7 @@ t_s, result_s = SIRS.simulate(40)
 
 ![network-simulation](https://github.com/benmaier/epipack/raw/master/img/network_simulation.png)
 
-## Visualize
+#### Visualize
 
 Likewise, it's straight-forward to visualize this system
 
@@ -418,7 +418,7 @@ Likewise, it's straight-forward to visualize this system
 ![sirs-example](https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif)
 
 
-## On a Lattice
+#### On a Lattice
 
 A lattice is nothing but a network, we can use
 `get_grid_layout` and `get_2D_lattice_links`
@@ -456,7 +456,7 @@ visualize(model,lattice,sampling_dt,
 
 ![sir-lattice](https://github.com/benmaier/epipack/raw/master/img/SIR_lattice_vis.gif)
 
-## Reaction-Diffusion Models
+### Reaction-Diffusion Models
 
 Since reaction-diffusion systems in discrete space
 can be interpreted as being based on reaction
@@ -511,7 +511,7 @@ for u, v, w in links:
 
 ![reac-diff-lattice](https://github.com/benmaier/epipack/raw/master/img/reac_diff_lattice.gif)
 
-# Dev notes
+## Dev notes
 
 Fork this repository, clone it, and install it in dev mode.
 

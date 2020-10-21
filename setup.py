@@ -23,7 +23,7 @@ setup(
                 'sympy>=1.6',
                 'pyglet<1.6',
                 'tqdm',
-                'ipython>=7.17.0',
+                'ipython>=7.14.0',
                 'ipywidgets>=7.5.1',
     ],
     tests_require=['pytest', 'pytest-cov'],

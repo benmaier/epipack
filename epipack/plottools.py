@@ -56,6 +56,6 @@ def plot(t,result,ax=None, curve_label_format='{}',figsize=None):
     ax.set_xlim([t.min(), t.max()])
     ax.set_ylim([0,N.max()])
     ax.set_xlabel('time')
-    ax.set_ylabel('incidence')
+    ax.set_ylabel('frequency')
     ax.get_figure().tight_layout()
     return ax

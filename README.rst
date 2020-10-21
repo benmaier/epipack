@@ -115,7 +115,7 @@ Documentation
 -------------
 
 The full documentation is available at
-`epipack.benmaier.org <epipack.benmaier.org>`__.
+`epipack.benmaier.org <http://epipack.benmaier.org>`__.
 
 Changelog
 ---------

@@ -104,7 +104,7 @@ Please note that **fast network simulations are only available if you install**
 
 ## Documentation
 
-The full documentation is available at [epipack.benmaier.org](epipack.benmaier.org).
+The full documentation is available at [epipack.benmaier.org](http://epipack.benmaier.org).
 
 ## Changelog
 

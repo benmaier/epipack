@@ -83,7 +83,9 @@ Install
 
 ``epipack`` was developed and tested for
 
+-  Python 3.6
 -  Python 3.7
+-  Python 3.8
 
 So far, the package's functionality was tested on Mac OS X and CentOS
 only.

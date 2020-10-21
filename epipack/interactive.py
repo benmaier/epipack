@@ -130,6 +130,8 @@ class InteractiveIntegrator(widgets.HBox):
         The time points over which the model will be integrated
     return_compartments : list, default = None
         A list of compartments that should be displayed
+    figsize : tuple, default = (4,4)
+        Width and height of the created figure.
     palette : str, default = 'dark'
         A palette from ``epipack.colors``. Choose from
 

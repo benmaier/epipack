@@ -79,6 +79,7 @@ Phys. Commun. 240, 30-37 (2019), http://arxiv.org/abs/1808.05859.
 
 * Python 3.6
 * Python 3.7
+* Python 3.8
 
 So far, the package's functionality was tested on Mac OS X and CentOS only.
 

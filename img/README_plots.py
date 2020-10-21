@@ -184,7 +184,7 @@ def symbolic_simulation_temporally_forced():
 
 if  __name__=="__main__":
     default_numeric_models()
-    #varying_rate_numeric_models()
-    #symbolic_simulation_temporally_forced()
-    #network_simulation()
-    #network_simulation_visualization()
+    varying_rate_numeric_models()
+    symbolic_simulation_temporally_forced()
+    network_simulation()
+    network_simulation_visualization()

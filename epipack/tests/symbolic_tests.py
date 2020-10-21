@@ -9,6 +9,7 @@ from scipy.stats import poisson, entropy
 
 from epipack import (
             SymbolicEpiModel,
+            SymbolicODEModel,
             SymbolicSISModel,
             SymbolicSIRModel,
             SymbolicSIRSModel,
@@ -334,6 +335,26 @@ class SymbolicEpiTest(unittest.TestCase):
             #print(c, np.abs(1-res[-1]/result_sim[c][-1]))
             assert(np.abs(1-res[-1]/result_int[c][-1]) < 0.05)
 
+    def test_ODE_model(self):
+
+        eta, rho = sympy.symbols("eta rho")
+
+        orig_model = SymbolicSISModel(eta, rho)
+
+        ode_model = SymbolicODEModel(orig_model.ODEs())
+
+        assert(all([eq0 == eq1 for eq0, eq1 in zip(orig_model.ODEs(), ode_model.ODEs())]))
+
+        self.assertRaises(AttributeError, ode_model.simulate)
+        self.assertRaises(AttributeError, ode_model.set_linear_events)
+        self.assertRaises(AttributeError, ode_model.set_quadratic_events)
+        self.assertRaises(AttributeError, ode_model.set_processes)
+        self.assertRaises(AttributeError, ode_model.add_linear_events)
+        self.assertRaises(AttributeError, ode_model.add_quadratic_events)
+        self.assertRaises(AttributeError, ode_model.add_transition_processes)
+        self.assertRaises(AttributeError, ode_model.add_fission_processes)
+        self.assertRaises(AttributeError, ode_model.add_fusion_processes)
+        self.assertRaises(AttributeError, ode_model.add_transmission_processes)
 
 
 
@@ -341,6 +362,8 @@ class SymbolicEpiTest(unittest.TestCase):
 if __name__ == "__main__":
 
     T = SymbolicEpiTest()
+    T.test_ODE_model()
+    sys.exit(0)
     T.test_changing_population_size()
     T.test_stochastic_well_mixed()
     T.test_SIS_with_simulation_restart_and_euler()

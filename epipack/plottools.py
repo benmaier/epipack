@@ -22,7 +22,7 @@ from epipack.colors import hex_colors, palettes
 colors = [hex_colors[c] for c in  palettes['dark']]
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=colors)
 
-def plot(t,result,ax=None, curve_label_format='{}'):
+def plot(t,result,ax=None, curve_label_format='{}',figsize=None):
     """
     Plot an epipack result.
 
@@ -36,6 +36,9 @@ def plot(t,result,ax=None, curve_label_format='{}'):
         The axis on which to plot
     curve_label_format : str, default = '{}'
         How to display a curve label
+    figsize : tuple, default = None
+        A tuple containing width and height of the figure
+        that's produced
 
     Returns
     =======
@@ -43,7 +46,7 @@ def plot(t,result,ax=None, curve_label_format='{}'):
         The axis on which results were drawn
     """
     if ax is None:
-        fig, ax = pl.subplots(1,1)
+        fig, ax = pl.subplots(1,1,figsize=figsize)
     _res = list(result.values())[0]
     N = np.zeros_like(_res)
     for C, timeseries in result.items():

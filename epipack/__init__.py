@@ -32,6 +32,7 @@ from .stochastic_epi_models import (
 
 from .symbolic_epi_models import (
         SymbolicEpiModel,
+        SymbolicODEModel,
         SymbolicSIModel,
         SymbolicSISModel,
         SymbolicSIRModel,

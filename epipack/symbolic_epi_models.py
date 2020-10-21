@@ -695,6 +695,96 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
 
         return ynew
 
+class SymbolicODEModel(SymbolicEpiModel):
+    """
+    Define a model purely based on a list of ODEs.
+
+    Parameters
+    ==========
+    ODEs : list
+        A list of symbolic ODEs in format
+
+        .. code:: python
+
+            sympy.Eq(sympy.Derivative(Y, t), expr)
+    """
+
+    def __init__(self, ODEs):
+
+        compartments = self._get_compartments_and_assert_derivatives(ODEs)
+        self._dydt = [ eq.rhs for eq in ODEs ]
+
+        SymbolicEpiModel.__init__(self, compartments)
+
+    def _get_compartments_and_assert_derivatives(self, ODEs):
+        """
+        Iterate through a list of ODES, assert that
+        each of them is of format 
+
+        .. code:: python
+
+            sympy.Eq(sympy.Derivative(Y, t), expr)
+
+        and return a list of `Y` symbols that
+        are assumed to be compartments (ordered
+        by appearance in ``ODEs``).
+        """
+
+        t = sympy.symbols("t")
+        compartments = []
+
+        for eq in ODEs:
+
+            lhs, rhs = eq.lhs, eq.rhs    
+            assert(isinstance(lhs, sympy.Derivative))
+
+            expr = lhs.expr
+            variables = lhs.variables
+            assert(len(expr.free_symbols) == 1)
+            assert(len(variables) == 1)
+            assert(variables[0] == t)
+            compartments.append(list(expr.free_symbols)[0])
+
+        return compartments
+
+    def dydt(self):
+        """
+        Return the momenta of the epidemiological model as
+        symbolic expressions.
+        """
+
+        return self._dydt
+
+    def simulate(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'simulate'")
+
+    def set_linear_events(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'set_linear_events'")
+
+    def set_quadratic_events(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'set_quadratic_events'")
+
+    def set_processes(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'set_processes'")
+
+    def add_transition_processes(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'add_transition_processes'")
+
+    def add_fission_processes(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'add_fission_processes'")
+
+    def add_fusion_processes(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'add_fusion_processes'")
+
+    def add_transmission_processes(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'add_transmission_processes'")
+
+    def add_quadratic_events(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'add_quadratic_events'")
+
+    def add_linear_events(self,*args,**kwargs):
+        raise AttributeError("'SymbolicODEModel' object has no attribute 'add_linear_events")
+
 
 class SymbolicSIModel(SymbolicEpiModel):
     """

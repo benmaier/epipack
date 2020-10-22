@@ -60,7 +60,40 @@ class Range(dict):
             assert(min <= value and max >= value)
             self['value'] = value
         self['step'] = (max-min)/step_count
- 
+
+    def __float__(self):
+        return self['value']
+
+    def __add__(self, other):
+        return other + float(self)
+
+    def __radd__(self, other):
+        return other + float(self)
+
+    def __mul__(self, other):
+        return other * float(self)
+
+    def __rmul__(self, other):
+        return other * float(self)
+
+    def __truediv__(self, other):
+        return float(self) / other
+
+    def __rtruediv__(self, other):
+        return other / float(self)
+
+    def __pow__(self, other):
+        return float(self)**other
+
+    def __rpow__(self, other):
+        return other**float(self)
+
+    def __sub__(self, other):
+        return float(self) - other
+
+    def __rsub__(self, other):
+        return other - float(self)
+
 class LogRange(dict):
     """
     Defines a value range for an interactive logarithmic 
@@ -110,6 +143,39 @@ class LogRange(dict):
 
         self['step'] = (logB(max)-logB(min))/step_count
         self['base'] = base
+
+    def __float__(self):
+        return self['value']
+
+    def __add__(self, other):
+        return other + float(self)
+
+    def __radd__(self, other):
+        return other + float(self)
+
+    def __mul__(self, other):
+        return other * float(self)
+
+    def __rmul__(self, other):
+        return other * float(self)
+
+    def __truediv__(self, other):
+        return float(self) / other
+
+    def __rtruediv__(self, other):
+        return other / float(self)
+
+    def __pow__(self, other):
+        return float(self)**other
+
+    def __rpow__(self, other):
+        return other**float(self)
+
+    def __sub__(self, other):
+        return float(self) - other
+
+    def __rsub__(self, other):
+        return other - float(self)
 
 class InteractiveIntegrator(widgets.HBox):
     """
@@ -303,3 +369,19 @@ class InteractiveIntegrator(widgets.HBox):
         if change.new:
             scale = 'log'
         self.ax.set_yscale(scale)
+
+
+if __name__=="__main__": # pragma: no cover
+
+    A = LogRange(0.1,1,value=0.5)
+
+    print(A + 2)
+    print(2 + A)
+    print(A * 2)
+    print(2 * A)
+    print(A / 2)
+    print(2 / A)
+    print(A**2)
+    print(2**A)
+    print(A - 2)
+    print(2 - A)

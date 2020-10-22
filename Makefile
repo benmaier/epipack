@@ -24,6 +24,8 @@ checkdocs:
 	python setup.py checkdocs
 
 pypi:
+	mkdir -p dist
+	touch dist/foobar
 	rm dist/*
 	python setup.py sdist
 	twine check dist/*

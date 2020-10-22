@@ -35,7 +35,7 @@ setup(
                  'Programming Language :: Python :: 3.8',
                  ],
     project_urls={
-        'Documentation': 'TODO',
+        'Documentation': 'http://epipack.benmaier.org',
         'Contributing Statement': 'https://github.com/benmaier/epipack/blob/master/CONTRIBUTING.md',
         'Bug Reports': 'https://github.com/benmaier/epipack/issues',
         'Source': 'https://github.com/benmaier/epipack/',

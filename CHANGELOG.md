@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- InteractiveIntegrator can now plot derivatives
+- Range and LogRange classes will behave like floats whenever necessary
+
 ## [v0.1.0] - 2020-10-21
 
 ### Added

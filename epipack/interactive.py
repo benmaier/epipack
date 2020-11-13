@@ -62,7 +62,7 @@ class Range(dict):
         self['step'] = (max-min)/step_count
 
     def __float__(self):
-        return self['value']
+        return float(self['value'])
 
     def __add__(self, other):
         return other + float(self)
@@ -145,7 +145,7 @@ class LogRange(dict):
         self['base'] = base
 
     def __float__(self):
-        return self['value']
+        return float(self['value'])
 
     def __add__(self, other):
         return other + float(self)
@@ -179,7 +179,8 @@ class LogRange(dict):
 
 class InteractiveIntegrator(widgets.HBox):
     """
-    An interactive widget that lets you control 
+    An interactive widget that lets you control parameters
+    of a SymbolicEpiModel and shows you the output.
 
     Based on this tutorial: https://kapernikov.com/ipywidgets-with-matplotlib/
 
@@ -195,7 +196,11 @@ class InteractiveIntegrator(widgets.HBox):
     t : numpy.ndarray
         The time points over which the model will be integrated
     return_compartments : list, default = None
-        A list of compartments that should be displayed
+        A list of compartments that should be displayed.
+        If ``None``, all compartments will be displayed.
+    return_derivatives : list, default = None
+        A list of derivatives that should be displayed
+        If ``None``, no derivatives will be displayed.
     figsize : tuple, default = (4,4)
         Width and height of the created figure.
     palette : str, default = 'dark'
@@ -246,6 +251,7 @@ class InteractiveIntegrator(widgets.HBox):
                  parameter_values,
                  t,
                  return_compartments=None,
+                 return_derivatives=None,
                  figsize=(4,4),
                  palette='dark',
                  integrator='dopri5',
@@ -262,6 +268,7 @@ class InteractiveIntegrator(widgets.HBox):
             self.return_compartments = self.model.compartments
         else:
             self.return_compartments = return_compartments
+        self.return_derivatives = return_derivatives
         self.integrator = integrator
         self.lines = None
         self.continuous_update = continuous_update
@@ -271,7 +278,7 @@ class InteractiveIntegrator(widgets.HBox):
         with output:
             self.fig, self.ax = pl.subplots(constrained_layout=True, figsize=figsize)
             self.ax.set_xlabel('time')
-            self.ax.set_ylabel('incidence')
+            self.ax.set_ylabel('frequency')
             self.ax.grid(show_grid)
 
          
@@ -281,8 +288,8 @@ class InteractiveIntegrator(widgets.HBox):
         self.fixed_parameters = {}
         self.sliders = {}
         for parameter, value in parameter_values.items():
+            self.fixed_parameters[parameter] = float(value)
             if type(value) not in [Range, LogRange]:
-                self.fixed_parameters[parameter] = value
                 continue
             else:
                 these_vals = copy.deepcopy(value)
@@ -300,7 +307,7 @@ class InteractiveIntegrator(widgets.HBox):
         )
         checkb_yscale = widgets.Checkbox(
             value=False, 
-            description='logscale incidence', 
+            description='logscale frequency', 
         )
  
         controls = widgets.VBox(
@@ -335,21 +342,45 @@ class InteractiveIntegrator(widgets.HBox):
 
         self.model.set_parameter_values(parameters)
 
-        res = self.model.integrate(
-                self.t,
-                return_compartments=self.return_compartments,
-                integrator=self.integrator)
+        if self.return_derivatives is None:
+            res = self.model.integrate(
+                    self.t,
+                    return_compartments=self.return_compartments,
+                    integrator=self.integrator)
+
+        else:
+            res = self.model.integrate_and_return_by_index(
+                    self.t,
+                    integrator=self.integrator)
+            ndx = [ self.model.get_compartment_id(C) for C in self.return_derivatives ]
+            dydt = self.model.get_numerical_dydt()
+            derivatives = np.array([ dydt(t,res[:,it]) for it, t in enumerate(self.t) ]).T
+            res = {C: res[self.model.get_compartment_id(C),:] for C in self.return_compartments}
+            der = {C: derivatives[self.model.get_compartment_id(C),:] for C in self.return_derivatives}
 
         is_initial_run = self.lines is None
         if is_initial_run:
             self.lines = {}
 
+        # plot compartments 
         for iC, C in enumerate(self.return_compartments):
             ydata = res[C]
             if is_initial_run:
                 self.lines[C], = self.ax.plot(self.t,ydata,label=str(C),color=self.colors[iC])                
             else:
                 self.lines[C].set_ydata(ydata)
+
+        # plot derivatives
+        if self.return_derivatives is not None:
+
+            for iC, C in enumerate(self.return_derivatives):            
+                ydata = der[C]
+                _C = 'd' + str(C) + '/dt'
+                if is_initial_run:
+                    self.lines[_C], = self.ax.plot(self.t,ydata,ls='--',label=_C,color=self.colors[iC])                
+                else:
+                    self.lines[_C].set_ydata(ydata)
+
 
         if is_initial_run:
             self.ax.legend()

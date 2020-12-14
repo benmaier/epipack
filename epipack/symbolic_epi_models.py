@@ -5,13 +5,14 @@ models in terms of sympy symbolic expressions.
 
 import warnings
 
-import numpy as np 
+import numpy as np
 import scipy.sparse as sprs
 
 import sympy
 
 from epipack.numeric_epi_models import EpiModel, custom_choice
 from IPython.display import Math, display
+from sympy.printing.theanocode import theano_function
 
 class SymbolicMixin():
     """
@@ -214,11 +215,11 @@ class SymbolicMixin():
             numerical values.
         """
         self.parameter_values = parameter_values
-        
-    def get_numerical_dydt(self):
+
+    def get_numerical_dydt(self,lambdify_modules='numpy'):
         r"""
         Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
+        time points (as a numpy.ndarray of shape
         ``(return_compartments), len(time_points)``.
 
         Parameters
@@ -263,13 +264,79 @@ class SymbolicMixin():
             raise ValueError("Parameters", set(not_set), "have not been set. Please set them using",
                              "SymbolicEpiModel.parameter_values()")
 
-        F_sympy = sympy.lambdify(these_symbols, odes)
+        F_sympy = sympy.lambdify(these_symbols, odes, modules=lambdify_modules)
 
         def dydt(t, y, *args, **kwargs):
             these_args = [t] + y.tolist()
             return np.array(F_sympy(*these_args))
 
         return dydt
+
+    def get_pymc3_dydt(self,parameterorder,lambdify_modules='numpy'):
+        """
+        Get the model as a function that computes
+        the momenta as its needed for pymc3.
+
+        Parameters
+        ==========
+        parameterorder : list of symbols
+            The order in which parameters will be passed
+            to the constructed function ``dydt(y, t, p)``
+            as variable ``p``.
+
+        Returns
+        =======
+        dydt : function
+            A function that returns the momenta of the
+            ODEs of the model as if it would've been
+            defined like
+
+                .. code:: python
+
+                    def dydt(y, t, p):
+                        ...
+                        return dy
+
+        """
+
+        these_symbols = [sympy.symbols("t")] + self.compartments
+
+        params = list(parameterorder)
+        N_params = len(params)
+        N_comp = len(self.compartments)
+        these_symbols = these_symbols + params
+
+        all_symbols = set(these_symbols)
+
+        odes = [ ode for ode in self.dydt() ]
+        print(odes)
+
+        not_set = []
+        for ode in odes:
+            not_set.extend(ode.free_symbols)
+
+        not_set = set(not_set) - set(all_symbols)
+
+        if len(not_set) > 0:
+            raise ValueError(f"Parameters {set(not_set)} have not been included in `parameterorder`.")
+
+        #F_sympy = sympy.lambdify(these_symbols, odes, modules=lambdify_modules)
+        print(these_symbols, odes)
+        dims = {s: 1 for s in all_symbols}
+        dims[self.t] = 0
+        F_sympy = theano_function(these_symbols, odes,
+                                     dims=dims,
+                                     dtypes={s: 'float64' for s in all_symbols},
+                                     on_unused_input='ignore')
+        print(F_sympy)
+
+        def dydt(y, _t, p):
+            these_args = [_t] + [ y[i] for i in range(N_comp)] + [ p[i] for i in range(N_params) ]
+            print(these_args)
+            return F_sympy(*these_args)
+
+        return dydt
+
 
     def get_numerical_event_and_rate_functions(self):
         """

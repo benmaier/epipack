@@ -115,7 +115,8 @@ def integrate_SDE(dydt, t, y0, diffusion_constants, *args):
         Initial conditions
     diffusion_constants : numpy.ndarray
         Scalar and constant diffusion coefficients as prefactors
-        for each compartment's Wiener process.
+        for each compartment's Wiener process (has to be of same
+        length as y0)
     *args : :obj:`list`
         List of parameters that will be passed to the
         momenta function.
@@ -198,6 +199,10 @@ class IntegrationMixin():
             of consecutive entries in ``time_points``.
         adopt_final_state : bool, default = False
             Whether or not to adopt the final state of the integration
+        diffusion_constants : numpy.ndarray
+            Scalar and constant diffusion coefficients as prefactors
+            for each compartment's Wiener process (has to be of same
+            length as y0)
         """
 
         dydt = self.get_numerical_dydt()
@@ -251,6 +256,10 @@ class IntegrationMixin():
         adopt_final_state : bool, default = False
             Whether or not to adopt the final state of the integration
             as new initial conditions.
+        diffusion_constants : numpy.ndarray
+            Scalar and constant diffusion coefficients as prefactors
+            for each compartment's Wiener process (has to be of same
+            length as y0)
         """
         if return_compartments is None:
             return_compartments = self.compartments

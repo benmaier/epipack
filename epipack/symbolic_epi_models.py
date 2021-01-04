@@ -72,8 +72,8 @@ class SymbolicMixin():
 
         if has_matrix and not self.has_functional_rates:
             y = sympy.Matrix(self.compartments)
-            J = sympy.Matrix(self.linear_rates) 
-            
+            J = sympy.Matrix(self.linear_rates)
+
             for i in range(self.N_comp):
                 J[i,:] += (self.quadratic_rates[i] * y + self.quadratic_rates[i].T * y).T
 
@@ -98,7 +98,7 @@ class SymbolicMixin():
         ----------
         fixed_point_dict : dict
             A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
+            (the value of this compartment in the fixed point).
             If compartments are missing, it is implicitly assumed
             that this compartment has a value of zero.
         simplify : bool
@@ -110,11 +110,11 @@ class SymbolicMixin():
             The Jacobian matrix at the given fixed point.
 
         """
-        
+
         fixed_point = self._convert_fixed_point_dict(fixed_point_dict)
 
         J = self.jacobian(False)
-        
+
         for compartment, value in fixed_point:
             J = J.subs(compartment, value)
 
@@ -142,7 +142,7 @@ class SymbolicMixin():
         """
         J = self.get_jacobian_at_fixed_point(fixed_point_dict)
         return J.eigenvals()
-        
+
 
     def get_eigenvalues_at_disease_free_state(self,disease_free_state=None):
         """
@@ -152,7 +152,7 @@ class SymbolicMixin():
         ----------
         disease_free_state : dict, default = None
             A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
+            (the value of this compartment in the fixed point).
             If compartments are missing, it is implicitly assumed
             that this compartment has a value of zero.
 
@@ -184,7 +184,7 @@ class SymbolicMixin():
         ----------
         fixed_point_dict : dict
             A dictionary where a compartment symbol maps to an expression
-            (the value of this compartment in the fixed point). 
+            (the value of this compartment in the fixed point).
             If compartments are missing, it is implicitly assumed
             that this compartment has a value of zero.
 
@@ -192,7 +192,7 @@ class SymbolicMixin():
         -------
         fixed_point : iterator of list of tuple
             A list that is ``N_comp`` entries long.
-            Each entry contains a compartment symbol and 
+            Each entry contains a compartment symbol and
             an expression that corresponds to the value
             this compartment assumes in the fixed point.
         """
@@ -309,7 +309,6 @@ class SymbolicMixin():
         all_symbols = set(these_symbols)
 
         odes = [ ode for ode in self.dydt() ]
-        print(odes)
 
         not_set = []
         for ode in odes:
@@ -321,14 +320,12 @@ class SymbolicMixin():
             raise ValueError(f"Parameters {set(not_set)} have not been included in `parameterorder`.")
 
         #F_sympy = sympy.lambdify(these_symbols, odes, modules=lambdify_modules)
-        print(these_symbols, odes)
         dims = {s: 1 for s in all_symbols}
         dims[self.t] = 0
         F_sympy = theano_function(these_symbols, odes,
                                      dims=dims,
                                      dtypes={s: 'float64' for s in all_symbols},
                                      on_unused_input='ignore')
-        print(F_sympy)
 
         def dydt(y, _t, p):
             these_args = [_t] + [ y[i] for i in range(N_comp)] + [ p[i] for i in range(N_params) ]
@@ -345,7 +342,7 @@ class SymbolicMixin():
         event lists and numeric rates based on the current
         time and state vector.
 
-        This function is needed in the 
+        This function is needed in the
         :class:`epipack.numeric_epi_models.EpiModel`
         base class for stochastic simulations.
 
@@ -353,7 +350,7 @@ class SymbolicMixin():
         -------
         get_event_rates : func
             A function that takes the current time ``t`` and
-            state vector ``y`` 
+            state vector ``y``
             and returns numerical event rate lists.
         get_compartment_changes : funx
             A function that takes a numerical list of event ``rates``
@@ -367,7 +364,7 @@ class SymbolicMixin():
             population_size = self.initial_population_size
         rates += [ r/population_size for r in self.quadratic_rate_functions ]
         events = self.birth_event_updates + self.linear_event_updates + self.quadratic_event_updates
-        
+
         these_symbols = [sympy.symbols("t")] + self.compartments
 
         params = list(self.parameter_values.items())
@@ -468,7 +465,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
     N_comp : :obj:`int`
         Number of compartments (including population number)
     parameter_values : dict
-        Maps parameter symbols to numerical values, 
+        Maps parameter symbols to numerical values,
     initial_population_size : float
         The population size at :math:`t = 0`.
     correct_for_dynamical_population_size : bool
@@ -480,7 +477,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         and state vector ``y``. Each entry corresponds to an event update
         in ``self.birth_event_updates``.
     birth_event_updates : list of sympy.Matrix
-        A list of vectors. Each entry corresponds to a rate in 
+        A list of vectors. Each entry corresponds to a rate in
         ``birth_rate_functions`` and quantifies the change in
         individual counts in the compartments.
     linear_rate_functions : list of symbolic expressions
@@ -488,7 +485,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         and state vector ``y``. Each entry corresponds to an event update
         in ``self.linear_event_updates``.
     linear_event_updates : list of sympy.Matrix
-        A list of vectors. Each entry corresponds to a rate in 
+        A list of vectors. Each entry corresponds to a rate in
         ``linear_rate_functions`` and quantifies the change in
         individual counts in the compartments.
     quadratic_rate_functions : list of symbolic expressions
@@ -496,7 +493,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
         and state vector ``y``. Each entry corresponds to an event update
         in ``self.quadratic_event_updates``.
     quadratic_event_updates : list of sympy.Matrix
-        A list of vectors. Each entry corresponds to a rate in 
+        A list of vectors. Each entry corresponds to a rate in
         ``quadratic_rate_functions`` and quantifies the change in
         individual counts in the compartments.
     y0 : numpy.ndarray
@@ -504,7 +501,7 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
     rates_have_explicit_time_dependence : bool
         Internal switch that's flipped when a non-constant
         rate is passed to the model.
-        
+
 
     """
 

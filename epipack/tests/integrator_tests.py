@@ -24,7 +24,7 @@ class IntegratorTest(unittest.TestCase):
         y0 = [ym,ym]
         y = integrate_SDE(dydt, t, y0, D)
 
-        assert(np.all(np.isclose(y,ym)))
+        assert(np.all(np.isclose(y[0],ym)))
 
         _std = np.std(y[1,:])
         _ym = np.mean(y[1,:])

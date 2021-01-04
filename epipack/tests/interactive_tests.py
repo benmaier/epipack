@@ -33,6 +33,21 @@ class InteractiveTest(unittest.TestCase):
 
         assert_dicts_equal(r, expected)
 
+        A = LogRange(0.1,1,value=0.5)
+        B = Range(0.1,1,value=0.5)
+        
+        for R in [A, B]:
+            assert(np.isclose(R + 2,2.5))
+            assert(np.isclose(2 + R,2.5))
+            assert(np.isclose(R - 2,-1.5))
+            assert(np.isclose(2 - R,1.5))
+            assert(np.isclose(R * 2,1.0))
+            assert(np.isclose(2 * R,1.0))
+            assert(np.isclose(R / 2,0.25))
+            assert(np.isclose(2 / R,4.0))
+            assert(np.isclose(R**2,0.25))
+            assert(np.isclose(2**R,np.sqrt(2)))
+
     def test_interactive_integrator(self):
         S, I, R, R0, tau, omega = sympy.symbols("S I R R_0 tau omega")
 

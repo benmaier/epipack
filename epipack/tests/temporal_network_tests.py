@@ -30,7 +30,7 @@ class TemporalNetworkTest(unittest.TestCase):
             (2.5, 2.6, [(0, 1, 1.0), (0, 2, 1.0)]),
             (2.6, 3.0, []),
         ]
-        
+
         edges = [ [ (0,1) ], [ (0,1), (0,2) ], [] ]
         temporal_network = TemporalNetwork(3,edges,[0,0.5,0.6],1.0)
         for (edge_list, t, next_t), (_t, _next_t, _edge_list) in zip(temporal_network, expected):

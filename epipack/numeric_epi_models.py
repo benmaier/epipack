@@ -2,7 +2,7 @@
 Provides an API to define  epidemiological models.
 """
 
-import numpy as np 
+import numpy as np
 import scipy.sparse as sprs
 
 import warnings
@@ -177,7 +177,7 @@ class DynamicQuadraticRate:
 
 class EpiModel(IntegrationMixin):
     """
-    A general class to define a standard 
+    A general class to define a standard
     mean-field compartmental
     epidemiological model, based on reaction
     events.
@@ -217,7 +217,7 @@ class EpiModel(IntegrationMixin):
         and state vector ``y``. Each entry corresponds to an event update
         in ``self.birth_event_updates``.
     birth_event_updates : list of numpy.ndarray
-        A list of vectors. Each entry corresponds to a rate in 
+        A list of vectors. Each entry corresponds to a rate in
         ``birth_rate_functions`` and quantifies the change in
         individual counts in the compartments.
     linear_rate_functions : list of ConstantLinearRate or DynamicLinearRate
@@ -225,7 +225,7 @@ class EpiModel(IntegrationMixin):
         and state vector ``y``. Each entry corresponds to an event update
         in ``self.linear_event_updates``.
     linear_event_updates : list of numpy.ndarray
-        A list of vectors. Each entry corresponds to a rate in 
+        A list of vectors. Each entry corresponds to a rate in
         ``linear_rate_functions`` and quantifies the change in
         individual counts in the compartments.
     quadratic_rate_functions : list of ConstantQuadraticRate or DynamicQuadraticRate
@@ -233,7 +233,7 @@ class EpiModel(IntegrationMixin):
         and state vector ``y``. Each entry corresponds to an event update
         in ``self.quadratic_event_updates``.
     quadratic_event_updates : list of numpy.ndarray
-        A list of vectors. Each entry corresponds to a rate in 
+        A list of vectors. Each entry corresponds to a rate in
         ``quadratic_rate_functions`` and quantifies the change in
         individual counts in the compartments.
     y0 : numpy.ndarray
@@ -246,12 +246,12 @@ class EpiModel(IntegrationMixin):
         to determine a time leap for time-varying rates.
         If ``False``, a Newton-Raphson method will be
         used on the upper bound of a quad-integrator.
-        
+
     Example
     -------
 
     .. code:: python
-        
+
         >>> epi = EpiModel(["S","I","R"])
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
@@ -262,7 +262,7 @@ class EpiModel(IntegrationMixin):
     def __init__(self,
                       compartments,
                       initial_population_size=1,
-                      correct_for_dynamical_population_size=False,                      
+                      correct_for_dynamical_population_size=False,
                       integral_solver='solve_ivp',
                   ):
 
@@ -317,7 +317,7 @@ class EpiModel(IntegrationMixin):
 
                     # fission process
                     ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
-                    
+
                     # fusion process
                     ( source_compartment_0, source_compartment_1, rate, target_compartment),
 
@@ -334,7 +334,7 @@ class EpiModel(IntegrationMixin):
         reset_events : bool, default : True
             If this is `True`, reset all events to zero before setting the new ones.
         ignore_rate_position_checks : bool, default = False
-            This function usually checks whether the rate of 
+            This function usually checks whether the rate of
             a reaction is positioned correctly. You can
             turn this behavior off for transition, birth, death, and
             transmission processes. (Useful if you want to define
@@ -408,12 +408,12 @@ class EpiModel(IntegrationMixin):
 
             epi.set_linear_events([
                 ( ("E",),
-                  1/theta, 
-                  [ ("E", -1), ("I", +1) ] 
+                  1/theta,
+                  [ ("E", -1), ("I", +1) ]
                 ),
                 ( ("I",),
-                  1/tau, 
-                  [ ("I", -1), ("R", +1) ] 
+                  1/tau,
+                  [ ("I", -1), ("R", +1) ]
                 ),
             ])
 
@@ -445,9 +445,9 @@ class EpiModel(IntegrationMixin):
                 else:
                     this_rate = ConstantBirthRate(rate)
                 birth_event_updates.append( dy )
-                birth_rate_functions.append( this_rate )                
+                birth_rate_functions.append( this_rate )
             else:
-                _s = self.get_compartment_id(acting_compartments[0])                
+                _s = self.get_compartment_id(acting_compartments[0])
                 if self._rate_has_functional_dependency(rate):
                     this_rate = DynamicLinearRate(rate, _s)
                 else:
@@ -547,7 +547,7 @@ class EpiModel(IntegrationMixin):
         return self.set_linear_events(linear_events,
                                       reset_events=False,
                                       allow_nonzero_column_sums=True)
-    
+
     def add_fusion_processes(self,process_list):
         """
         Define fusion processes between compartments.
@@ -603,9 +603,9 @@ class EpiModel(IntegrationMixin):
                 ("I", "S", R_0/k_0 * mu, "I", "I")
 
         For the mean-field system here, the corresponding reaction equation would read
-            
+
             .. code:: python
-                
+
                 ("I", "S", R_0 * mu, "I", "I")
 
         Parameters
@@ -1225,7 +1225,7 @@ if __name__=="__main__":    # pragma: no cover
         return 4 + np.cos(t/100*2*np.pi)
 
     model.set_processes([
-            (S, I, temporalR0, I, I),            
+            (S, I, temporalR0, I, I),
             (None, N, S),
             (I, 1, S),
             (S, 1, None),

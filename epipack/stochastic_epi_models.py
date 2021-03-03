@@ -162,7 +162,7 @@ class StochasticEpiModel():
                 graph[target][source] = weight
 
         # construct  network as list of SamplableSets, because we want to sample neighbors
-        self.graph = [ SamplableSet(min_weight,max_weight,neighbors) for neighbors in graph ]
+        self.graph = [ SamplableSet(min_weight,max_weight,neighbors,cpp_type='int') for neighbors in graph ]
 
         # this model is a network model
         self.is_network_model = True
@@ -177,8 +177,8 @@ class StochasticEpiModel():
 
     def set_well_mixed(self,N_nodes,mean_contact_number):
         """
-        Define the model to run in a well-mixed system. 
-        
+        Define the model to run in a well-mixed system.
+
         Parameters
         ---------
         N_nodes : int

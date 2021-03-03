@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.1] - 2020-03-03
+
 ### Added
+
+- GeneralInteractiveWidget was added to allow interactive display of general functions
+- a very basic SDE integrator was added (no diffusion coefficent matrix, and no system-dependent diffusion coefficients)
+
+### Changed
 
 - InteractiveIntegrator can now plot derivatives
 - Range and LogRange classes will behave like floats whenever necessary
+
+### Fixed
+
+- behavior of the SamplableSet class
+- a bug where the reaction rate of nodes in weighted networks is scaled by the node's degree and not by its strength
 
 ## [v0.1.0] - 2020-10-21
 
@@ -63,7 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.1...HEAD
+[v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.0...v0.1.1]
 [v0.1.0]: https://github.com/benmaier/epipack/compare/v0.0.5...v0.1.0]
 [v0.0.4]: https://github.com/benmaier/epipack/compare/v0.0.4...v0.0.5]
 [v0.0.4]: https://github.com/benmaier/epipack/compare/v0.0.3...v0.0.4]

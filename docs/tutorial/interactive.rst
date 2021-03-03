@@ -135,7 +135,7 @@ classes and tell Jupyter notebook that we're going to use widgets.
 .. code:: python
 
     import epipack as epk
-    
+
     from epipack.interactive import GeneralInteractiveWidget, Range, LogRange
     import numpy as np
     %matplotlib widget
@@ -166,4 +166,4 @@ Now, we can display the interactive widget
 
 |general-widget|
 
-.. |general-widget| image::interactive_media/general_widget.png
+.. |general-widget| image:: interactive_media/general_widget.png

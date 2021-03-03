@@ -8,7 +8,7 @@ import numpy as np
 class TemporalNetwork():
     """
     A simple temporal network class.
-    
+
     Parameters
     ==========
     N : int
@@ -72,7 +72,7 @@ class TemporalNetwork():
     Attributes
     ==========
     N : int
-        
+        Total and constant number of nodes in the system.
     t : list
         An increasingly ordered list of times.
     tmax : float
@@ -106,7 +106,7 @@ class TemporalNetwork():
         to be directed.
     loop_network : bool
         If `True`, the temporal network will be looped
-        indefinitely when iterated.    
+        indefinitely when iterated.
     """
 
     def __init__(self,
@@ -118,7 +118,7 @@ class TemporalNetwork():
                  directed=False,
                  loop_network=True,
                  ):
-        
+
         assert([ a == b for a, b in zip(sorted(t),t) ])
         assert(t[-1] < tmax)
         assert(len(edge_lists) == len(t))
@@ -228,7 +228,7 @@ class TemporalNetwork():
 
 class TemporalNetworkSimulation():
     """
-    Simulation of a StochasticEpiModel on a 
+    Simulation of a StochasticEpiModel on a
     temporal network.
 
     Parameters
@@ -255,7 +255,6 @@ class TemporalNetworkSimulation():
     >>> sim.simulate(tmax=100)
     [ 0.          0.38740794  0.8210494   3.60987397  9.46213129 12.14301704] {'S': array([2., 1., 0., 0., 0., 0.]), 'I': array([1., 2., 3., 2., 1., 0.]), 'R': array([0., 0., 0., 1., 2., 3.])}
 
-    
     Attributes
     ==========
     temporal_network : TemporalNetwork

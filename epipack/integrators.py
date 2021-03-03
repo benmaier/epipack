@@ -87,11 +87,11 @@ def integrate_euler(dydt, t, y0, *args):
 
 
     # loop through all demanded time points
-    for it, t_ in enumerate(t[1:]):        
+    for it, t_ in enumerate(t[1:]):
 
             # get result of ODE integration
             dt = t_ - old_t
-            y = result[:,it] + dt*dydt(old_t, result[:,it], *args) 
+            y = result[:,it] + dt*dydt(old_t, result[:,it], *args)
 
             # write result to result vector
             result[:,it+1] = y
@@ -99,6 +99,71 @@ def integrate_euler(dydt, t, y0, *args):
             old_t = t_
 
     return result
+
+def integrate_SDE(dydt, t, y0, diffusion_constants, *args):
+    """
+    Integrate an SDE system with Euler's method.
+
+    Parameters
+    ----------
+    dydt : function
+        A function returning the momenta of the deterministic ODE system.
+    t : numpy.ndarray of float
+        Array of time points at which the functions should
+        be evaluated. Time steps must be equally spaced.
+    y0 : numpy.ndarray
+        Initial conditions
+    diffusion_constants : numpy.ndarray
+        Scalar and constant diffusion coefficients as prefactors
+        for each compartment's Wiener process (has to be of same
+        length as y0)
+
+        corresponds to :math:`D_i` in
+
+        .. math::
+
+                dY_i = f_i(\mathbf Y,t) dt + D_i dW_i
+
+
+
+    *args : :obj:`list`
+        List of parameters that will be passed to the
+        momenta function.
+    """
+
+    # get copy
+    y0 = np.array(y0,dtype=float)
+    t = np.array(t,dtype=float)
+    D = np.array(diffusion_constants,dtype=float)
+
+    t0 = t[0]
+
+    dt = t[1]-t[0]
+    sqrt_dt = np.sqrt(dt)
+
+    assert(np.all(np.isclose(dt,t[1:]-t[:-1])))
+    assert(np.all(D>=0.))
+    ndx = np.where(D>0)[0]
+
+
+    # initiate integrator
+    result = np.zeros((len(y0),len(t)))
+    result[:,0] = y0
+
+    dW = np.zeros((len(y0),len(t)-1))
+    dW[ndx,:] = np.sqrt(dt) * np.random.randn(len(ndx),len(t)-1)
+
+    # loop through all demanded time points
+    for it, t_ in enumerate(t[1:]):
+
+            # get result of ODE integration
+            y = result[:,it] + dt * dydt(t[it], result[:,it], *args) + D * dW[:,it]
+
+            # write result to result vector
+            result[:,it+1] = y
+
+    return result
+
 
 class IntegrationMixin():
     """
@@ -120,10 +185,11 @@ class IntegrationMixin():
                                       return_compartments=None,
                                       integrator='dopri5',
                                       adopt_final_state=False,
+                                      diffusion_constants=None,
                                       ):
         r"""
         Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
+        time points (as a numpy.ndarray of shape
         ``(return_compartments), len(time_points)``.
 
         Parameters
@@ -142,15 +208,25 @@ class IntegrationMixin():
             of consecutive entries in ``time_points``.
         adopt_final_state : bool, default = False
             Whether or not to adopt the final state of the integration
+        diffusion_constants : numpy.ndarray
+            Scalar and constant diffusion coefficients as prefactors
+            for each compartment's Wiener process (has to be of same
+            length as y0)
         """
 
         dydt = self.get_numerical_dydt()
         self.t0 = time_points[0]
 
-        if integrator == 'dopri5':
+        if integrator.lower() == 'dopri5':
             result = integrate_dopri5(dydt, time_points, self.y0)
-        else:
+        elif integrator.lower() == 'euler':
             result = integrate_euler(dydt, time_points, self.y0)
+        elif integrator.lower() == 'sde':
+            if diffusion_constants is None:
+                raise ValueError("'diffusion_constants' undefined but necessary for SDE integration.")
+            result = integrate_euler(dydt, time_points, self.y0, diffusion_constants)
+        else:
+            raise ValueError(f"Unknown integrator {integrator}")
 
         if adopt_final_state:
             self.t0 = time_points[-1]
@@ -189,6 +265,10 @@ class IntegrationMixin():
         adopt_final_state : bool, default = False
             Whether or not to adopt the final state of the integration
             as new initial conditions.
+        diffusion_constants : numpy.ndarray
+            Scalar and constant diffusion coefficients as prefactors
+            for each compartment's Wiener process (has to be of same
+            length as y0)
         """
         if return_compartments is None:
             return_compartments = self.compartments
@@ -253,7 +333,7 @@ def time_leap_newton(t0, y0, get_event_rates, rand=None):
         event rates
     rand : float, default = None
         A random number from the unit interval.
-    
+
     Returns
     =======
     new_t : float
@@ -292,7 +372,7 @@ def time_leap_ivp(t0, y0, get_event_rates, rand=None):
         event rates
     rand : float, default = None
         A random number from the unit interval.
-    
+
     Returns
     =======
     new_t : float
@@ -310,7 +390,7 @@ def time_leap_ivp(t0, y0, get_event_rates, rand=None):
 
     rootfunction = lambda _t, _y: - np.log(_1_minus_r) - _y[0]
     rootfunction.terminal = True
-    result = solve_ivp(integrand,[t0,np.inf],y0=[0],method='RK23',events=rootfunction) 
+    result = solve_ivp(integrand,[t0,np.inf],y0=[0],method='RK23',events=rootfunction)
 
     return result.t_events[0][0]
 
@@ -332,5 +412,5 @@ if __name__ == "__main__":     # pragma: no cover
 
     pl.plot(tt, result[0,:])
     pl.plot(tt, result[1,:])
-    
+
     pl.show()

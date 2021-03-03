@@ -123,9 +123,6 @@ def integrate_SDE(dydt, t, y0, diffusion_constants, *args):
         .. math::
 
                 dY_i = f_i(\mathbf Y,t) dt + D_i dW_i
-
-
-
     *args : :obj:`list`
         List of parameters that will be passed to the
         momenta function.

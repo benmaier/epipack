@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import sympy
 
-from epipack.interactive import InteractiveIntegrator, LogRange, Range
+from epipack.interactive import GeneralInteractiveWidget, InteractiveIntegrator, LogRange, Range
 from epipack import SymbolicEpiModel
 
 def assert_dicts_equal(a,b):
@@ -92,6 +92,45 @@ class InteractiveTest(unittest.TestCase):
         assert(all([ a==b for a, b in zip(sorted([str(C) for C in model.compartments]), keys) ]))
 
 
+    def test_general_interactive_widget(self):
+
+
+        t = np.linspace(0,100,1000)
+        def get_trig(omega_0,T):
+            return {
+                'A': np.sin(2*np.pi*t/T+omega_0),
+                'B': np.cos(2*np.pi*t/T+omega_0),
+            }
+
+        parameters = {
+            'omega_0': Range(0,7,100),
+            'T': LogRange(10,1e3,100),
+        }
+        integrator = GeneralInteractiveWidget(get_trig, parameters, t)
+
+        keys = sorted([ str(k) for k in integrator.sliders.keys() ])
+        assert(all([a==b for a, b in zip(sorted(['omega_0', 'T']), keys) ]))
+
+        integrator.update_parameters()
+
+        keys = sorted([ str(k) for k in integrator.lines.keys() ])
+        assert(all([ a==b for a, b in zip(sorted(['A', 'B']), keys) ]))
+
+        class change():
+            new = True
+
+        integrator.update_xscale(change())
+        assert(integrator.ax.get_xscale() == 'log')
+        assert(integrator.ax.get_yscale() == 'linear')
+        integrator.update_yscale(change())
+        assert(integrator.ax.get_xscale() == 'log')
+        assert(integrator.ax.get_yscale() == 'log')
+
+        integrator = GeneralInteractiveWidget(get_trig, parameters, t, figsize=(3,4))
+        keys = sorted([ str(k) for k in integrator.lines.keys() ])
+        assert(all([ a==b for a, b in zip(sorted([str(C) for C in ['A','B']]), keys) ]))
+
+
 
 
 if __name__ == "__main__":
@@ -99,3 +138,4 @@ if __name__ == "__main__":
     T = InteractiveTest()
     T.test_ranges()
     T.test_interactive_integrator()
+    T.test_general_interactive_widget()

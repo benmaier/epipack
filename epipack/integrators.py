@@ -117,6 +117,15 @@ def integrate_SDE(dydt, t, y0, diffusion_constants, *args):
         Scalar and constant diffusion coefficients as prefactors
         for each compartment's Wiener process (has to be of same
         length as y0)
+
+        corresponds to :math:`D_i` in
+
+        .. math::
+
+                dY_i = f_i(\mathbf Y,t) dt + D_i dW_i
+
+
+
     *args : :obj:`list`
         List of parameters that will be passed to the
         momenta function.

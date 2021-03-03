@@ -564,7 +564,7 @@ class GeneralInteractiveWidget(widgets.HBox):
     def update_plot(self, parameters):
         """Recompute and -draw the epidemic curves with updated parameter values"""
 
-        res = self.get_result(parameters)
+        res = self.get_result(**parameters)
 
         is_initial_run = self.lines is None
         if is_initial_run:

@@ -119,3 +119,51 @@ Now, you can access the Axes object:
 .. code:: python
 
     integrator.ax.plot(t, data)
+
+General interaction widget
+--------------------------
+
+Of course, the general interactive integrator is rather strict in the sense that
+only model objects can be passed to display integrated results.
+
+Instead, one might want to display any kind of result. *epipack* offers the possibility
+to do just that, based on the :class:`epipack.interactive.GeneralInteractiveWidget`.
+
+Here's an example to run in a Jupyter notebook. First, we have to import the relevant
+classes and tell Jupyter notebook that we're going to use widgets.
+
+.. code:: python
+
+    import epipack as epk
+    
+    from epipack.interactive import GeneralInteractiveWidget, Range, LogRange
+    import numpy as np
+    %matplotlib widget
+
+Next, we define a function that takes parameter values and returns a dictionary with
+time series.
+
+.. code:: python
+
+    t = np.linspace(0,100,1000)
+
+    def get_trig(omega_0,T):
+        return {
+            'A': np.sin(2*np.pi*t/T+omega_0),
+            'B': np.cos(2*np.pi*t/T+omega_0),
+        }
+
+    parameter_values = {
+        'omega_0': Range(0,7,100),
+        'T': LogRange(10,1e3,100),
+    }
+
+Now, we can display the interactive widget
+
+.. code:: python
+
+    GeneralInteractiveWidget(get_trig,parameter_values,t,continuous_update=True)
+
+|general-widget|
+
+.. |general-widget| image::interactive_media/general_widget.png

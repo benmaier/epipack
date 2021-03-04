@@ -1,6 +1,16 @@
- Maier
-    orcid: 0000-0001-7414-8823
-    affiliation: "1, 2"
+---
+title: 'epipack: An infectious disease modeling package for Python'
+tags:
+  - Python
+  - infectious disease modeling
+  - stochastic simulations
+  - computer algebra systems
+  - networks
+  - visualization
+authors:
+  - name: Benjamin F. Maier
+   orcid: 0000-0001-7414-8823
+   affiliation: "1, 2"
 affiliations:
  - name: Institute for Theoretical Biology, Humboldt-University of Berlin, Philippstr. 13, D-10115 Berlin
    index: 1

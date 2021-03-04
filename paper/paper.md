@@ -113,7 +113,7 @@ network models with a simple and intuitive API.
 It thus presents a valuable tool for researchers
 of the infectious disease modeling community.
 
-![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and result from the ODE integration of the model defined for panel a. Both stochastic and deterministic results have been obtained from the same model instance. (c) A screen shot from a stochastic simulation of a model on a static network. (d) Screen shot of the interactive *Jupyter* notebook widget for a custom-built *StochasticEpiModel*.](Fig1.png)
+![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and result from the ODE integration of the model defined for panel a. Both stochastic and deterministic results have been obtained from the same model instance. (c) A screen shot from a stochastic simulation visualization of a model on a static network. (d) Screen shot of the interactive *Jupyter* notebook widget for a custom-built *StochasticEpiModel*.](Fig1.png)
 
 # Acknowledgments
 

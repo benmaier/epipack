@@ -1,14 +1,4 @@
----
-title: 'epipack: An infectious disease modeling suite for Python'
-tags:
-  - Python
-  - infectious disease modeling
-  - stochastic simulations
-  - computer algebra systems
-  - networks
-  - visualization
-authors:
-  - name: Benjamin F. Maier
+ Maier
     orcid: 0000-0001-7414-8823
     affiliation: "1, 2"
 affiliations:

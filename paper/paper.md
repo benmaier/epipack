@@ -47,7 +47,7 @@ deterministic well-mixed models as well as models that consider explicit contact
 *epipack* solves the raised issues by offering a simple, process-based
 framework that allows researchers to quickly prototype and modify
 compartmental epidemiological models
-and to investigate their behavior based on analytical, numerical, stochastical,
+and to investigate their behavior based on analytical, numerical, stochastic,
 and network-based simulations, facilitated by a visualization framework and
 parsimonious, customizable interactives.
 
@@ -75,16 +75,16 @@ numerical, or stochastical formulations.
   Simulate your model on any (un-/)directed, (un-/)weighted static/temporal
   network, or in a well-mixed system. We make use of a generalized
   version of the tree-based rejection sampling algorithm recently proposed [@st-onge_efficient_2019]
-  and the accompanying implementation of *SamplableSet* [@st-onge_samplableset_2019]. These
-  algorithms are based on exact continuous-time simulations, as 
-  discrete-time approximative simulation algorithms like the individual-based update algorithm
+  and the accompanying implementation of *SamplableSet* [@st-onge_samplableset_2019].
+  These algorithms are variants of exact continuous-time simulations, as 
+  discrete-time approximative simulation methods like the individual-based update algorithm
   are known to behave problematically at times
   [@givan_predicting_2011], [@maier_spreading_2020], [@kiss_mathematics_2017].
   The class further allows to define chained (i.e. conditional) reactions 
   using which public health interventions such as contact tracing can be simulated.
-  This class is comparable to the `Gillespie_simple_contagion` function of the `EoN` (Epidemics on Networks) package [@miller_eon_2019], which, however, does not yet support temporal networks or conditional reactions.
-* *MatrixEpiModel*: This is a static-rate version of the *EpiModel* class that runs faster
-  on complex models (e.g. reaction-diffusion systems) by making use
+  The *StochasticEpiModel* class is comparable to the `Gillespie_simple_contagion` function of the *EoN* (Epidemics on Networks) package [@miller_eon_2019], which does not yet, however, support temporal networks or conditional reactions at the time of writing.
+* *MatrixEpiModel*: This class is a static-rate version of the *EpiModel* class that runs faster
+  on more complex models (e.g. for meta-population reaction-diffusion systems) by making use
   of scipy's implementation of sparse matrices [@virtanen_scipy_2020].
 
 Moreover, we provide a simple OpenGL-based visualization framework to animate
@@ -95,22 +95,24 @@ facilitated by interactive analysis widgets for *Jupyter* notebooks
 that give immediate visual feedback
 regarding a system's inner workings.
 
-*epipack* and its usage is exhaustively documented, with the documentation available at [epipack.benmaier.org](http://epipack.benmaier.org) and in the repository.
+*epipack* and its usage is exhaustively documented, with the documentation being
+available at [epipack.benmaier.org](http://epipack.benmaier.org) and in the repository.
 
 While other reaction-based modeling packages exist, most focus either
 purely on ODE systems (e.g. *ChemPy* [@dahlgren_chempy_2018]) or
 simulations and analyses on static network systems
-(for instance *EoN* (Epidemics on Networks) [@miller_eon_2019] or
-*epydemic* [@dobson_epydemic_2017]).
+(for instance *EoN* (Epidemics on Networks) [@miller_eon_2019], *epydemic* [@dobson_epydemic_2017],
+and *GraphTool* [@peixoto_graph-tool_2014]).
 One exception is the *EpiModel* package, which is, however, 
 only available for the R language [@jenness_epimodel_2018].
 
 To the best of our knowledge, *epipack* is the first open source software suite for Python
-that offers extensive model building and analysis frameworks for both mean-field and networks models with a simple and intuitive API.
+that offers extensive model building and analysis frameworks for both mean-field and
+networks models with a simple and intuitive API.
 It thus presents a valuable tool for researchers
 in the infectious diseases modeling community.
 
-![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and ODE result of the model defined for panel a. (c) A screen shot from a stochastic simulation of a model on a static network. (d) Screen shot of the interactive widget for a custom-built *StochasticEpiModel*.](Fig1.png)
+![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and result from the ODE integration of the model defined for panel a. Both stochastic and deterministic results have been obtained from the same model instance. (c) A screen shot from a stochastic simulation of a model on a static network. (d) Screen shot of the interactive *Jupyter* notebook widget for a custom-built *StochasticEpiModel*.](Fig1.png)
 
 # Acknowledgments
 

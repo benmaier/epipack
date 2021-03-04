@@ -66,7 +66,7 @@ numerical, or stochastical formulations.
 * *SymbolicEpiModel*: Define a model based on transition, birth, 
   death, fission, fusion, or transmission reactions. Obtain the ODEs,
   fixed points, Jacobian, and the Jacobian's eigenvalues at fixed points
-  as symbolic expressions using sympy [@meurer_sympy_2017]. 
+  as symbolic expressions using *sympy* [@meurer_sympy_2017]. 
   Process rates can be symbolic expressions of time and system state.
   Set numerical parameter values and integrate the ODEs numerically, or
   simulate the stochastic formulation using Gillespie's algorithm [@gillespie_exact_1977].
@@ -113,7 +113,7 @@ network models with a simple and intuitive API.
 It thus presents a valuable tool for researchers
 of the infectious disease modeling community.
 
-![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and result from the ODE integration of the model defined for panel a. Both stochastic and deterministic results have been obtained from the same model instance. (c) A screen shot from a stochastic simulation visualization of a model on a static network. (d) Screen shot of the interactive *Jupyter* notebook widget for a custom-built *StochasticEpiModel*.](Fig1.png)
+![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and result from the ODE integration of the model defined for panel a. Both stochastic and deterministic results have been obtained from the same model instance. (c) A screen shot from a stochastic simulation visualization of a model on a static network. (d) Screen shot of the interactive *Jupyter* notebook widget for a custom-built *SymbolicEpiModel*, plotted against data.](Fig1.png)
 
 # Acknowledgments
 

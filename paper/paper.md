@@ -62,21 +62,22 @@ numerical, or stochastical formulations.
   death, fission, fusion, or transmission reactions to integrate the 
   ordinary differential equations (ODEs) of the corresponding well-mixed system
   numerically or simulate the system using Gillespie's algorithm [@gillespie_exact_1977].
-  Process rates can be numerical functions of time and the system state.
+  Process rates can be numerical functions of time and system state.
 * *SymbolicEpiModel*: Define a model based on transition, birth, 
   death, fission, fusion, or transmission reactions. Obtain the ODEs,
   fixed points, Jacobian, and the Jacobian's eigenvalues at fixed points
   as symbolic expressions using sympy [@meurer_sympy_2017]. 
-  Process rates can be symbolic expressions of time and the system state.
+  Process rates can be symbolic expressions of time and system state.
   Set numerical parameter values and integrate the ODEs numerically, or
-  simulate the stochastic systems using Gillespie's algorithm [@gillespie_exact_1977].
+  simulate the stochastic formulation using Gillespie's algorithm [@gillespie_exact_1977].
 * *StochasticEpiModel*: Define a network model based on node transition and
   link transmission reactions. Add conditional link transmission reactions.
-  Simulate your model on any (un-/)directed, (un-/)weighted static/temporal
+  Simulate your model on any (un)directed, (un)weighted static/temporal
   network, or in a well-mixed system. We make use of a generalized
   version of the tree-based rejection sampling algorithm recently proposed [@st-onge_efficient_2019]
   and the accompanying implementation of *SamplableSet* [@st-onge_samplableset_2019].
-  These algorithms are variants of exact continuous-time simulations, as 
+  This algorithm is a variant of Gillespie's continuous-time algorithm, which *epipack*
+  focuses on because 
   discrete-time approximative simulation methods like the individual-based update algorithm
   are known to behave problematically at times
   [@givan_predicting_2011], [@maier_spreading_2020], [@kiss_mathematics_2017].
@@ -108,9 +109,9 @@ only available for the R language [@jenness_epimodel_2018].
 
 To the best of our knowledge, *epipack* is the first open source software suite for Python
 that offers extensive model building and analysis frameworks for both mean-field and
-networks models with a simple and intuitive API.
+network models with a simple and intuitive API.
 It thus presents a valuable tool for researchers
-in the infectious diseases modeling community.
+of the infectious disease modeling community.
 
 ![Example use cases of *epipack*. (a) Equations that have been generated automatically in a *Jupyter* notebook from a *SymbolicEpiModel* instance that was built via reaction processes (here, a temporally forced SIRS model in a population of 1000 individuals). (b) Stochastic simulation and result from the ODE integration of the model defined for panel a. Both stochastic and deterministic results have been obtained from the same model instance. (c) A screen shot from a stochastic simulation of a model on a static network. (d) Screen shot of the interactive *Jupyter* notebook widget for a custom-built *StochasticEpiModel*.](Fig1.png)
 

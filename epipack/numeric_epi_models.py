@@ -345,9 +345,13 @@ class EpiModel(IntegrationMixin):
                                                               self.compartments,
                                                               ignore_rate_position_checks)
         self.set_linear_events(linear_events,
-                               allow_nonzero_column_sums=allow_nonzero_column_sums)
+                               allow_nonzero_column_sums=allow_nonzero_column_sums,
+                               reset_events=reset_events,
+                               )
         self.set_quadratic_events(quadratic_events,
-                                  allow_nonzero_column_sums=allow_nonzero_column_sums)
+                                  allow_nonzero_column_sums=allow_nonzero_column_sums,
+                                  reset_events=reset_events,
+                                  )
 
         return self
 

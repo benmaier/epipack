@@ -8,18 +8,18 @@ import scipy.sparse as sprs
 import warnings
 
 from epipack.integrators import (
-            IntegrationMixin,
-            time_leap_newton,
-            time_leap_ivp,
-        )
+        IntegrationMixin,
+        time_leap_newton,
+        time_leap_ivp,
+    )
 
 from epipack.process_conversions import (
-            processes_to_events,
-            transition_processes_to_events,
-            fission_processes_to_events,
-            fusion_processes_to_events,
-            transmission_processes_to_events,
-        )
+        processes_to_events,
+        transition_processes_to_events,
+        fission_processes_to_events,
+        fusion_processes_to_events,
+        transmission_processes_to_events,
+    )
 
 from scipy.optimize import newton
 from scipy.integrate import quad

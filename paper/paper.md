@@ -34,7 +34,7 @@ the influence of various mitigation and containment strategies, to only name a f
 [@estrada_covid-19_2020].
 
 The complexity of detailed epidemiological models often mitigates simple replication
-and/or adaption to local circumstances.
+and/or adaptation to local circumstances.
 Typically, modifications are quickly thought up, but their influence on system properties such as the 
 epidemic threshold or outbreak size are less clear.
 Variations in model formulation often entail the
@@ -42,7 +42,7 @@ reimplementation of simulation and analysis frameworks for every model iteration
 taking up valuable time and resources for debugging and reanalysis.
 Furthermore, researchers often need to cross-check their results by implementing both
 deterministic well-mixed models as well as models that consider explicit contact structures
-(i.e. static or temporal networks). Last but not least, analytical derivations are often done using separate computer algebra systems.
+(*i.e.*, static or temporal networks). Last but not least, analytical derivations are often done using separate computer algebra systems.
 
 *epipack* solves the raised issues by offering a simple, process-based
 framework that allows researchers to quickly prototype and modify
@@ -52,7 +52,8 @@ and network-based simulations, facilitated by a visualization framework and
 parsimonious, customizable interactives.
 
 Here, the overarching design principle focuses on defining epidemiological models via
-reaction processes or reaction events, from which ODEs and simulation classes are generated
+reaction processes or reaction events, from which ordinary differential equations (ODEs)
+and simulation classes are generated
 automatically. This allows the user to transfer implemented models quickly between analytical,
 numerical, or stochastical formulations.
 
@@ -81,7 +82,7 @@ numerical, or stochastical formulations.
   discrete-time approximative simulation methods like the individual-based update algorithm
   are known to behave problematically at times
   [@givan_predicting_2011], [@maier_spreading_2020], [@kiss_mathematics_2017].
-  The class further allows to define chained (i.e. conditional) reactions 
+  The class further allows to define chained (*i.e.*, conditional) reactions 
   using which public health interventions such as contact tracing can be simulated.
   The *StochasticEpiModel* class is comparable to the `Gillespie_simple_contagion` function of the *EoN* (Epidemics on Networks) package [@miller_eon_2019], which does not yet, however, support temporal networks or conditional reactions at the time of writing.
 * *MatrixEpiModel*: This class is a static-rate version of the *EpiModel* class that runs faster

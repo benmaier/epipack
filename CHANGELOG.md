@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.2] - 2020-04-01
+
+### Fixed
+
+- A bug where the `reset_events`-flag was ignored when setting processes
+
 ## [v0.1.1] - 2020-03-03
 
 ### Added
@@ -75,7 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.2...HEAD
+[v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.1...v0.1.2]
 [v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.0...v0.1.1]
 [v0.1.0]: https://github.com/benmaier/epipack/compare/v0.0.5...v0.1.0]
 [v0.0.4]: https://github.com/benmaier/epipack/compare/v0.0.4...v0.0.5]

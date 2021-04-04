@@ -24,7 +24,7 @@ bibliography: paper.bib
 
 Analyzing the spread of infectious diseases by means of compartmental mathematical models
 has been an active area of research for almost a century
-[@kermack_contributions_1991], [@keeling_modeling_2011], [@anderson_infectious_2010].
+[@kermack_contributions_1991; @keeling_modeling_2011; @anderson_infectious_2010].
 Since the emergence of the coronavirus disease 2019 pandemic in early 2020, 
 the field has seen yet another considerable boost in interest. Researchers
 have since been working on a
@@ -81,7 +81,7 @@ numerical, or stochastical formulations.
   focuses on because 
   discrete-time approximative simulation methods like the individual-based update algorithm
   are known to behave problematically at times
-  [@givan_predicting_2011], [@maier_spreading_2020], [@kiss_mathematics_2017].
+  [@givan_predicting_2011; @maier_spreading_2020; @kiss_mathematics_2017].
   The class further allows to define chained (*i.e.*, conditional) reactions 
   using which public health interventions such as contact tracing can be simulated.
   The *StochasticEpiModel* class is comparable to the `Gillespie_simple_contagion` function of the *EoN* (Epidemics on Networks) package [@miller_eon_2019], which does not yet, however, support temporal networks or conditional reactions at the time of writing.

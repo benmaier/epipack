@@ -18,7 +18,7 @@ pyclean:
 	-rm -rf ./build/
 
 python:
-	pip install -e ../${PKG} --no-binary :all:
+	pip install -e ../${PKG}
 
 checkdocs:
 	python setup.py checkdocs

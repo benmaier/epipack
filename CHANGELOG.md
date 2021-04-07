@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.3] - 2020-04-07
+
+### Fixed
+
+- dependency issues with pyglet, apparently the "shapes" module did not appear until lately. Defined a range of versions for pyglet
+- bug in example code in README.md
+
 ## [v0.1.2] - 2020-04-01
 
 ### Fixed
@@ -81,8 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.2...HEAD
-[v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.1...v0.1.2]
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.3...HEAD
+[v0.1.3]: https://github.com/benmaier/epipack/compare/v0.1.2...v0.1.3]
+[v0.1.2]: https://github.com/benmaier/epipack/compare/v0.1.1...v0.1.2]
 [v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.0...v0.1.1]
 [v0.1.0]: https://github.com/benmaier/epipack/compare/v0.0.5...v0.1.0]
 [v0.0.4]: https://github.com/benmaier/epipack/compare/v0.0.4...v0.0.5]

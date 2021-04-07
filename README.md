@@ -158,7 +158,7 @@ t = np.linspace(0,40,1000)
 result_int = SIRS.integrate(t)
 t_sim, result_sim = SIRS.simulate(t[-1])
 
-for C in model.compartments:
+for C in SIRS.compartments:
     plt.plot(t, result_int[C])
     plt.plot(t_sim, result_sim[C])
 ```

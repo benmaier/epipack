@@ -1,4 +1,5 @@
-|logo|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/logo_12_lila_medium.png
+   :alt: logo
 
 Fast prototyping of epidemiological models based on reaction equations.
 Analyze the ODEs analytically or numerically, or run/animate stochastic
@@ -25,7 +26,8 @@ simulations on networks/well-mixed systems.
 
    visualize(model, network, sampling_dt=0.1)
 
-|sir-example|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
+   :alt: sir-example
 
 Idea
 ----
@@ -187,11 +189,12 @@ simulate the system stochastically.
    result_int = SIRS.integrate(t)
    t_sim, result_sim = SIRS.simulate(t[-1])
 
-   for C in model.compartments:
+   for C in SIRS.compartments:
        plt.plot(t, result_int[C])
        plt.plot(t_sim, result_sim[C])
 
-|numeric-model|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/numeric_model.png
+   :alt: numeric-model
 
 Functional Rates
 ^^^^^^^^^^^^^^^^
@@ -228,7 +231,8 @@ rates.
        plt.plot(t_sim, result_sim[C])
        plt.plot(t, result_int[C])
 
-|numeric-model-time-varying|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/numeric_model_time_varying_rate.png
+   :alt: numeric-model-time-varying
 
 Symbolic Models
 ~~~~~~~~~~~~~~~
@@ -263,7 +267,8 @@ Print the ODE system in a Jupyter notebook
 
    >>> SIRS.ODEs_jupyter()
 
-|ODEs|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/ODEs.png
+   :alt: ODEs
 
 Get the Jacobian
 
@@ -271,7 +276,8 @@ Get the Jacobian
 
    >>> SIRS.jacobian()
 
-|Jacobian|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/jacobian.png
+   :alt: Jacobian
 
 Find the fixed points
 
@@ -279,7 +285,8 @@ Find the fixed points
 
    >>> SIRS.find_fixed_points()
 
-|fixedpoints|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/fixed_points.png
+   :alt: fixedpoints
 
 Get the eigenvalues at the disease-free state in order to find the
 epidemic threshold
@@ -336,7 +343,8 @@ Let's set up some temporally varying rates
 
    SIRS.ODEs_jupyter()
 
-|SIRS-forced-ODEs|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/SIRS-forced-ODEs.png
+   :alt: SIRS-forced-ODEs
 
 Now we can integrate the ODEs or simulate the system using Gillespie's
 SSA for inhomogeneous Poisson processes.
@@ -355,7 +363,8 @@ SSA for inhomogeneous Poisson processes.
    result = SIRS.integrate(_t)
    t_sim, result_sim = SIRS.simulate(max(_t))
 
-|SIRS-forced-results|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/symbolic_model_time_varying_rate.png
+   :alt: SIRS-forced-results
 
 Interactive Analyses
 ^^^^^^^^^^^^^^^^^^^^
@@ -398,7 +407,8 @@ in a cell.
    t = np.logspace(-3,2,1000)
    InteractiveIntegrator(model, parameters, t, figsize=(4,4))
 
-|interactive|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/interactive.gif
+   :alt: interactive
 
 Pure Stochastic Models
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -441,7 +451,8 @@ definitions above).
                                           })
    t_s, result_s = SIRS.simulate(40)
 
-|network-simulation|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/network_simulation.png
+   :alt: network-simulation
 
 Visualize
 ^^^^^^^^^
@@ -455,7 +466,8 @@ Likewise, it's straight-forward to visualize this system
    >>> layouted_network = get_random_layout(N, edges)
    >>> visualize(SIRS, layouted_network, sampling_dt=0.1, config={'draw_links': False})
 
-|sirs-example|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif
+   :alt: sirs-example
 
 On a Lattice
 ^^^^^^^^^^^^
@@ -493,7 +505,8 @@ A lattice is nothing but a network, we can use ``get_grid_layout`` and
                   }
              )
 
-|sir-lattice|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/SIR_lattice_vis.gif
+   :alt: sir-lattice
 
 Reaction-Diffusion Models
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -546,7 +559,8 @@ hypothetical list ``links``.
                      ( (v, C), w*mobility_rate, (u, C) ),
                ])
 
-|reac-diff-lattice|
+.. image:: https://github.com/benmaier/epipack/raw/master/img/reac_diff_lattice.gif
+   :alt: reac-diff-lattice
 
 Dev notes
 ---------
@@ -579,19 +593,5 @@ until the warnings disappear. Then do
 
    make upload
 
-.. |logo| image:: https://github.com/benmaier/epipack/raw/master/img/logo_12_lila_medium.png
-.. |sir-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_example.gif
 .. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg
    :target: code-of-conduct.md
-.. |numeric-model| image:: https://github.com/benmaier/epipack/raw/master/img/numeric_model.png
-.. |numeric-model-time-varying| image:: https://github.com/benmaier/epipack/raw/master/img/numeric_model_time_varying_rate.png
-.. |ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/ODEs.png
-.. |Jacobian| image:: https://github.com/benmaier/epipack/raw/master/img/jacobian.png
-.. |fixedpoints| image:: https://github.com/benmaier/epipack/raw/master/img/fixed_points.png
-.. |SIRS-forced-ODEs| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS-forced-ODEs.png
-.. |SIRS-forced-results| image:: https://github.com/benmaier/epipack/raw/master/img/symbolic_model_time_varying_rate.png
-.. |interactive| image:: https://github.com/benmaier/epipack/raw/master/img/interactive.gif
-.. |network-simulation| image:: https://github.com/benmaier/epipack/raw/master/img/network_simulation.png
-.. |sirs-example| image:: https://github.com/benmaier/epipack/raw/master/img/SIRS_visualization.gif
-.. |sir-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/SIR_lattice_vis.gif
-.. |reac-diff-lattice| image:: https://github.com/benmaier/epipack/raw/master/img/reac_diff_lattice.gif

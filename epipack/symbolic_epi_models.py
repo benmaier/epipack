@@ -57,10 +57,10 @@ class SymbolicMixin():
         Parameters
         ----------
         simplify : bool, default = True
-            If ``True``, `epipack` will try to simplify 
+            If ``True``, `epipack` will try to simplify
             the evaluated Jacobian. This might not be
             desirable in some cases due to its
-            long evaluation time, which is why 
+            long evaluation time, which is why
             it can be turned off.
         """
 
@@ -551,9 +551,11 @@ class SymbolicEpiModel(SymbolicMixin, EpiModel):
                 birth_event_updates.append( dy )
                 birth_rate_functions.append( rate )
             else:
-                _s = self.get_compartment_id(acting_compartments[0])
+                # check if compartment was defined as a function
+                this_compartment = acting_compartments[0]
+
                 self._check_rate_for_functional_dependency(rate)
-                this_rate = rate * acting_compartments[0]
+                this_rate = rate * this_compartment
                 linear_event_updates.append( dy )
                 linear_rate_functions.append( this_rate )
 

@@ -768,7 +768,7 @@ class EpiModel(IntegrationMixin):
 
             quadratic_event_updates.append( dy )
             quadratic_rate_functions.append( this_rate )
-            quadratic_events.append( coupling_compartments, rate, affected_compartments )
+            quadratic_events.append( (coupling_compartments, rate, affected_compartments) )
 
         if not allow_nonzero_column_sums and len(quadratic_rate_functions)>0:
             _y = np.ones(self.N_comp)

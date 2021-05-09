@@ -114,7 +114,7 @@ class MatrixEpiModel(IntegrationMixin):
 
                     # fission process
                     ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
-                    
+
                     # fusion process
                     ( source_compartment_0, source_compartment_1, rate, target_compartment),
 
@@ -131,7 +131,7 @@ class MatrixEpiModel(IntegrationMixin):
         reset_rates : bool, default : True
             If this is `True`, reset all rates to zero before setting the new ones.
         ignore_rate_position_checks : bool, default = False
-            This function usually checks whether the rate of 
+            This function usually checks whether the rate of
             a reaction is positioned correctly. You can
             turn this behavior off for transition, birth, death, and
             transmission processes. (Useful if you want to define
@@ -397,10 +397,10 @@ class MatrixEpiModel(IntegrationMixin):
             .. code:: python
 
                 [
-                    ("coupling_compartment_0", 
+                    ("coupling_compartment_0",
                      "coupling_compartment_1",
-                     "affected_compartment", 
-                     rate 
+                     "affected_compartment",
+                     rate
                      ),
                     ...
                 ]
@@ -423,10 +423,10 @@ class MatrixEpiModel(IntegrationMixin):
             ])
 
         Read  as
-        
-        "Coupling of *S* and *I* leads to 
+
+        "Coupling of *S* and *I* leads to
         a reduction in "S" proportional to :math:`S\times I` and rate -1/time_unit.
-        Furthermore, coupling of *S* and *I* leads to 
+        Furthermore, coupling of *S* and *I* leads to
         an increase in "E" proportional to :math:`S\times I` and rate +1/time_unit."
         """
 
@@ -443,7 +443,7 @@ class MatrixEpiModel(IntegrationMixin):
                 else:
                     matrices[iC] = [ [], [], [] ]
             all_affected = self.affected_by_quadratic_process if len(self.affected_by_quadratic_process)>0 else []
-        
+
         for coupling0, coupling1, affected, rate in rate_list:
 
             c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
@@ -490,7 +490,7 @@ class MatrixEpiModel(IntegrationMixin):
             The remaining entries are equal to the current fractions
             of the population of the respective compartments
         """
-        
+
         ynew = self.linear_rates.dot(y) + self.birth_rates
         if self.correct_for_dynamical_population_size:
             population_size = y.sum()
@@ -498,7 +498,7 @@ class MatrixEpiModel(IntegrationMixin):
             population_size = self.initial_population_size
         for c in self.affected_by_quadratic_process:
             ynew[c] += y.T.dot(self.quadratic_rates[c].dot(y)) / population_size
-            
+
         return ynew
 
     def get_numerical_dydt(self):
@@ -506,6 +506,111 @@ class MatrixEpiModel(IntegrationMixin):
         Return a function that obtains t and y as an input and returns dydt of this system
         """
         return self.dydt
+
+    def jacobian(self,y0=None):
+        """
+        Return Jacobian at point ``y0``. Will use ``self.y0`` if argument ``y0`` is ``None``.
+        """
+        return self.get_transmission_matrix(y0=y0) + self.get_transition_matrix()
+
+    def get_jacobian_leading_eigenvalue(self,y0=None,returntype='complex'):
+        """
+        Return leading eigenvalue of Jacobian at point ``y0``. Will use ``self.y0`` if argument ``y0`` is ``None``.
+        Use argument ``returntype='real'`` to only obtain the real part of the eigenvalue.
+        """
+        J = self.jacobian(y0=y0)
+        return self._get_leading_eigenvalue(J,returntype)
+
+    def get_transmission_matrix(self,y0=None):
+        """
+        Return transmission matrix at point ``y0``.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        """
+        if y0 is None:
+            y0 = self.y0
+
+        if y0 is None:
+            raise ValueError("No initial conditions have been given or set.")
+
+        if self.correct_for_dynamical_population_size:
+            raise NotImplementedError("transmission matrices for models with varying population size have not been implemented.")
+
+        rows = []
+        for M in self.quadratic_rates:
+            row = ((M+M.T).dot(y0)) / self.initial_population_size
+            row = row.reshape(1,self.N_comp)
+            row = sprs.csr_matrix(row)
+            rows.append(row)
+
+        T = sprs.vstack(rows,format='csr')
+
+        return T
+
+    def get_transition_matrix(self):
+        """
+        Return transition matrix.
+        """
+        return self.linear_rates
+
+    def get_next_generation_matrix(self,y0=None):
+        """
+        Return next generation matrix at point y0.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        """
+        T = self.get_transmission_matrix(y0=y0)
+        Sigma = self.get_transition_matrix()
+
+        # delete all compartments that contribute to the singularity
+        # of the transition matrix
+        del_cols = []
+        del_rows = []
+
+        n = Sigma.shape[0]
+
+        for i in range(n):
+            if np.all(Sigma[i,:].data==0):
+                del_rows.append(i)
+        for j in range(n):
+            if np.all(Sigma[:,j].data==0):
+                del_cols.append(j)
+
+        del_comp = set(del_cols) | set(del_rows)
+        use_comp = set(range(n)) - del_comp
+
+        use_comp = sorted(list(use_comp))
+
+        # filter our compartments that do not make the matrix singular
+        Sigma = (Sigma[use_comp,:])[:,use_comp]
+        T = (T[use_comp,:])[:,use_comp]
+
+        K = -T.dot(sprs.linalg.inv(Sigma))
+
+        return K
+
+    def get_next_generation_matrix_leading_eigenvalue(self,y0=None,returntype='real'):
+        """
+        Return the leading eigenvalue of the next generation matrix
+        at point ``y0``. Will use ``self.y0`` if argument
+        ``y0`` is ``None``. When ``y0`` is equal to the initial
+        disease-free state, this function will return the
+        basic reproduction number :math:`R_0`.
+
+        The function will return only the real part by default.
+        Use ``returntype='complex'`` to change this.
+        """
+        K = self.get_next_generation_matrix(y0=y0)
+        return self._get_leading_eigenvalue(K,returntype)
+
+    def _get_leading_eigenvalue(self,M,returntype='complex'):
+
+        # make sure that matrix is in CSC format (better for solver)
+        M_ = M.tocsc()
+        lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]),which='LR')[0]
+        lambdas = sorted(lambdas, key=lambda x: -np.real(x))
+        _lambda = lambdas[0]
+        if returntype == 'real':
+            _lambda = np.real(_lambda)
+        return _lambda
 
 
 class MatrixSIModel(MatrixEpiModel):

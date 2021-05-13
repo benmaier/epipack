@@ -605,9 +605,15 @@ class MatrixEpiModel(IntegrationMixin):
 
         # make sure that matrix is in CSC format (better for solver)
         M_ = M.tocsc()
-        lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]),which='LR')[0]
-        lambdas = sorted(lambdas, key=lambda x: -np.real(x))
-        _lambda = lambdas[0]
+        if M_.shape == (1,1):
+            _lambda = M_[0,0]
+        else:
+            if M_.shape == (2,2):
+                lambdas = np.linalg.eig(M_.toarray())[0]
+            else:
+                lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]-1),which='LR')[0]
+            lambdas = sorted(lambdas, key=lambda x: -np.real(x))
+            _lambda = lambdas[0]
         if returntype == 'real':
             _lambda = np.real(_lambda)
         return _lambda

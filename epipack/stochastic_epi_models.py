@@ -38,7 +38,7 @@ _LINK_PROCESS_INDICES = 2
 
 class StochasticEpiModel():
     """
-    A general class to define any 
+    A general class to define any
     compartmental epidemiological model
     that can be run in a well-mixed
     system or on a weighted, directed network.
@@ -86,7 +86,7 @@ class StochasticEpiModel():
     -------
 
     .. code:: python
-        
+
         >>> epi = StochasticEpiModel(["S","I","R"],10)
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
@@ -347,22 +347,22 @@ class StochasticEpiModel():
 
             .. code:: python
 
-                {  
+                {
                     ( "source_base", "->", "target_base" ): [
-                        ("target_base", 
+                        ("target_base",
                          "target_compartment_initial",
                          probability
-                         "target_base", 
-                         "target_compartment_final", 
+                         "target_base",
+                         "target_compartment_final",
                          ),
                     ...
                    ],
                     ( "infecting", "source_base", "->", "infecting", "target_base" ): [
-                        ("target_base", 
+                        ("target_base",
                          "target_compartment_initial",
                          "->"
-                         "target_base", 
-                         "target_compartment_final", 
+                         "target_base",
+                         "target_compartment_final",
                          ),
                     ...
                    ]
@@ -397,10 +397,11 @@ class StochasticEpiModel():
             if len(triggering_event) == 5:
                 coupling0, coupling1, _, affected0, affected1 = triggering_event
                 if coupling0 != affected0:
-                    raise ValueError("In process",
-                                      coupling0, coupling1, "->", affected0, affected1,
-                                      "The source (infecting) compartment", coupling0, "and first affected compartment (here: ", affected0,
-                                      "), must be equal on both sides of the reaction equation but are not.",
+                    raise ValueError("In process " +\
+                                      str((coupling0, coupling1, "->", affected0, affected1)) +\
+                                      " The source (infecting) compartment " + str(coupling0) +\
+                                      " and first affected compartment (here: " + str(affected0) +\
+                                      "), must be equal on both sides of the reaction equation but are not."
                                       )
                 _c0 = self.get_compartment_id(coupling0)
                 _s = self.get_compartment_id(coupling1)
@@ -411,7 +412,9 @@ class StochasticEpiModel():
                 _s = self.get_compartment_id(source)
                 _t = self.get_compartment_id(target)
             else:
-                raise ValueError("Only node transition or link transmission events are allowed to trigger conditional link transmission events (invalid event:", triggering_event,'"')
+                raise ValueError("Only node transition or link transmission events are "
+                                 "allowed to trigger conditional link transmission events "
+                                 '(invalid event: "'+ triggering_event+'"')
 
             event = (_c0, _s, _t)
             self.conditional_link_transmission_events[event] = {}
@@ -943,6 +946,7 @@ class StochasticEpiModel():
                  sampling_callback=None,
                  t0=0.0,
                  stop_simulation_on_empty_network=True,
+                 custom_stop_condition=None,
                  **kwargs):
         """
         Returns values of the given compartments at the demanded
@@ -1000,14 +1004,17 @@ class StochasticEpiModel():
         if sampling_callback is not None:
             sampling_callback()
 
+        custom_stop_condition_triggered = False
+
         # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
         # This is important because it might happen that nodes
         # have a non-zero reaction rate but no targets left
         # at which point the simulation will never halt.
-        while t < tmax and \
-              not self.simulation_has_ended() and\
-              total_event_rate > 0 and \
-              self.reactions_may_still_occur(current_state):
+        while (t < tmax) and \
+              (not self.simulation_has_ended()) and\
+              (total_event_rate > 0) and \
+              (self.reactions_may_still_occur(current_state)) and\
+              (not custom_stop_condition_triggered):
 
             # sample and advance time according to current total rate
             tau = self.get_time_leap()
@@ -1036,8 +1043,8 @@ class StochasticEpiModel():
 
                 # write losses and gains into the current state vector
                 for losing, gaining in changing_compartments:
-                    current_state[losing] -= 1 
-                    current_state[gaining] += 1 
+                    current_state[losing] -= 1
+                    current_state[gaining] += 1
 
                 # save the current state if sampling_dt wasn't specified
                 if sampling_dt is None:
@@ -1061,6 +1068,10 @@ class StochasticEpiModel():
             # advance time
             t = new_t
 
+            if custom_stop_condition is not None:
+                custom_stop_condition_triggered = custom_stop_condition(current_state,self.node_status)
+
+
 
         if sampling_dt is not None:
             next_sample = time[-1] + sampling_dt
@@ -1079,7 +1090,7 @@ class StochasticEpiModel():
             sampling_callback()
 
         if not self.reactions_may_still_occur(current_state) or\
-           (total_event_rate == 0.0 and stop_simulation_on_empty_network): 
+           (total_event_rate == 0.0 and stop_simulation_on_empty_network):
             self.set_simulation_has_ended()
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }

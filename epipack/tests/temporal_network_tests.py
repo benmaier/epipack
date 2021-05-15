@@ -97,7 +97,7 @@ class TemporalNetworkTest(unittest.TestCase):
             pl.hist(taus,bins=100,density=True)
             pl.plot(tt, rates*np.exp(-I2))
             pl.show()
-        assert(entropy(theory, experi) < 0.01)
+        assert(entropy(theory, experi) < 0.02)
 
     def test_degree(self):
 

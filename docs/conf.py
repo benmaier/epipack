@@ -83,7 +83,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'epipack'
-copyright = u'2020,  Benjamin F. Maier'
+copyright = u'2020-2021,  Benjamin F. Maier'
 author = u' Benjamin F. Maier'
 
 # The version info for the project you're documenting, acts as replacement for

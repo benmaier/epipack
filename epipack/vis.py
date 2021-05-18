@@ -29,7 +29,7 @@ class SimulationStatus():
         Number of nodes
     sampling_dt : float
         The amount of simulation time that's supposed
-        to pass during a single update        
+        to pass during a single update
 
     Attributes
     ==========
@@ -37,7 +37,7 @@ class SimulationStatus():
         An array containing node statuses of the previous update
     sampling_dt : float
         The amount of simulation time that's supposed
-        to pass during a single update        
+        to pass during a single update
     simulation_ended : bool
         Whether or not the simulation is over
     paused : bool
@@ -198,7 +198,7 @@ class App(pyglet.window.Window):
         glLoadIdentity()
         glOrtho( self.left, self.right, self.bottom, self.top, 1, -1 )
 
-    
+
     def on_key_press(self, symbol, modifiers):
         """
         Check for keyboard input.
@@ -229,7 +229,7 @@ class App(pyglet.window.Window):
         elif symbol == key.SPACE:
             self.simulation_status.paused = not self.simulation_status.paused
 
-    
+
 
 class Scale():
     """
@@ -271,7 +271,7 @@ class Scale():
     """
 
     def __init__(self,bound_increase_factor=1.0):
-        
+
         self.x0 = np.nan
         self.y0 = np.nan
         self.x1 = np.nan
@@ -333,7 +333,7 @@ class Scale():
             _x = self.mx * (x-self.x0) + self.left
 
         return _x
-        
+
     def scaley(self,y):
         """
         Scale y-data
@@ -381,7 +381,7 @@ class Scale():
         Append an object that depends on this Scale instance.
         """
         self.scaling_objects.append(obj)
-        
+
 
 
 class Curve():
@@ -560,8 +560,8 @@ def get_network_batch(stylized_network,
     network_objects : dict
         A dictionary containing all the necessary objects to draw and
         update the network.
-        
         - `lines` : a list of pyglet-line objects (one entry per link)
+
         - `disks` : a list of pyglet-circle objects (one entry per node)
         - `circles` : a list of pyglet-circle objects (one entry per node)
         - `nodes_to_lines` : a dictionary mapping a node to a list of
@@ -618,7 +618,7 @@ def get_network_batch(stylized_network,
                                       color=tuple(bytes.fromhex(node['color'][1:])),
                                       batch=batch,
                                       )
-                        
+
                 circles[node['id']] = \
                         shapes.Arc(node['x_canvas'],
                                       node['y_canvas']+yoffset,
@@ -642,7 +642,7 @@ def get_network_batch(stylized_network,
 
 _default_config = {
             'plot_sampled_curve': True,
-            'draw_links':True,            
+            'draw_links':True,
             'draw_nodes':True,
             'n_circle_segments':16,
             'plot_height':120,
@@ -736,7 +736,7 @@ def visualize(model,
 
             _default_config = {
                         'plot_sampled_curve': True,
-                        'draw_links':True,            
+                        'draw_links':True,
                         'draw_nodes':True,
                         'n_circle_segments':16,
                         'plot_height':120,
@@ -772,7 +772,7 @@ def visualize(model,
             cfg['bgcolor'] = col.hex_bg_colors[palette]
         if 'compartment_colors' not in cfg:
             cfg['compartment_colors'] = [ col.colors[this_color] for this_color in col.palettes[palette] ]
-        
+
     bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
 
     bgY = 0.2126*bgcolor[0] + 0.7152*bgcolor[1] + 0.0722*bgcolor[2]
@@ -781,7 +781,7 @@ def visualize(model,
             cfg['legend_font_color'] = '#fafaef'
         else:
             cfg['legend_font_color'] = '#232323'
-        
+
     width = network['xlim'][1] - network['xlim'][0]
     height = network['ylim'][1] - network['ylim'][0]
 
@@ -815,7 +815,7 @@ def visualize(model,
         # the demanded height or the legend height
         if with_plot:
             plot_height = max(plot_height, legend_height)
-        legend_y_offset = legend_height            
+        legend_y_offset = legend_height
 
         max_text_width = 0
         legend_objects = [] # this is a hack so that the garbage collector doesn't delete our stuff 
@@ -842,7 +842,7 @@ def visualize(model,
                                       color = cfg['compartment_colors'][iC],
                                       batch=legend_batch,
                                       )
-                        
+
                 circle = shapes.Arc(this_x,
                                       this_y - (dy-1.25*legend_circle_radius)/2,
                                       legend_circle_radius,
@@ -862,7 +862,7 @@ def visualize(model,
             #                          )
             #    legend_objects.append(rect)
 
-            max_text_width = max(max_text_width, label.content_width)        
+            max_text_width = max(max_text_width, label.content_width)
 
         legend_width =   2*cfg['padding'] \
                        + 2*legend_circle_radius \
@@ -977,7 +977,7 @@ def visualize(model,
 
         # get sampling_dt
         sampling_dt = simstate.sampling_dt
-        
+
         # Advance the simulation until time sampling_dt.
         # sim_time is a numpy array including all time values at which
         # the system state changed. The first entry is the initial state
@@ -1024,11 +1024,11 @@ def visualize(model,
                     # and append the whole dataset
                     val = (v[1:].tolist() + [v[-1]])
                     curves[k].append_list(this_time, val)
-                
+
 
         # iterate through the nodes that have to be updated
         for node in ndx:
-            status = model.node_status[node]    
+            status = model.node_status[node]
             if cfg['draw_nodes']:
                 disks[node].color = cfg['compartment_colors'][status]
 
@@ -1062,7 +1062,7 @@ def visualize(model,
 
 def visualize_reaction_diffusion(
               model,
-              network, 
+              network,
               sampling_dt,
               node_compartments,
               value_extent=[0.0,1.0],
@@ -1107,12 +1107,12 @@ def visualize_reaction_diffusion(
                 ]
             }
 
-    sampling_dt : float 
+    sampling_dt : float
         The amount of simulation time that's supposed to pass
         with a single update.
     quarantine_compartments: list
         List of compartment objects that are supposed to be
-        resemble quarantine (i.e. temporarily 
+        resemble quarantine (i.e. temporarily
         losing all connections)
     node_compartments: list
         The compartments for which to display the concentrations.
@@ -1122,13 +1122,13 @@ def visualize_reaction_diffusion(
     config : dict, default = None
         A dictionary containing all possible configuration
         options. Entries in this dictionary will overwrite
-        the default config which is 
+        the default config which is
 
         .. code:: python
 
             _default_config = {
                         'plot_sampled_curve': True,
-                        'draw_links':True,            
+                        'draw_links':True,
                         'draw_nodes':True,
                         'n_circle_segments':16,
                         'plot_height':120,
@@ -1157,7 +1157,7 @@ def visualize_reaction_diffusion(
         cfg.update(config)
 
     bgcolor = [ _/255 for _ in list(bytes.fromhex(cfg['bgcolor'][1:])) ] + [1.0]
-        
+
     width = network['xlim'][1] - network['xlim'][0]
     height = network['ylim'][1] - network['ylim'][0]
 
@@ -1196,7 +1196,7 @@ def visualize_reaction_diffusion(
 
     # handle different strokewidths
     if 'nodeStrokeWidth' in network:
-        node_stroke_width = network['nodeStrokeWidth'] 
+        node_stroke_width = network['nodeStrokeWidth']
     else:
         node_stroke_width = cfg['node_stroke_width']
 
@@ -1223,7 +1223,7 @@ def visualize_reaction_diffusion(
     def _get_opacity(val,this_cmin,this_cmax):
         opacity = (val-this_cmin)/(this_cmax-this_cmin) + this_cmin
         if opacity > 1.0:
-            opacity = 1.0        
+            opacity = 1.0
         if opacity < 0.0:
             opacity = 0.0
         return int(255*opacity)
@@ -1247,7 +1247,7 @@ def visualize_reaction_diffusion(
 
         # get sampling_dt
         sampling_dt = simstate.sampling_dt
-        
+
         # Advance the simulation until time sampling_dt.
         # `sim_result` is a two-dimensional array
         # where index sim_result[iC, iT] gives the

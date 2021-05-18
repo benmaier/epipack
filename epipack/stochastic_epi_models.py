@@ -414,7 +414,7 @@ class StochasticEpiModel():
             else:
                 raise ValueError("Only node transition or link transmission events are "
                                  "allowed to trigger conditional link transmission events "
-                                 '(invalid event: "'+ triggering_event+'"')
+                                 '(invalid event: "'+ str(triggering_event) +'"')
 
             event = (_c0, _s, _t)
             self.conditional_link_transmission_events[event] = {}

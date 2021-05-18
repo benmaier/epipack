@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `epipack.distributions` module, which deals with fitting empirical distributions to sums of exponentially distributed random variables (still in dev mode, also TODO: add docs)
 - tests for this module
 - methods to `EpiModel` that save events that have been set. This will be used to generate model flowcharts with graphviz at some point
+- the possibility to pass a function to ``StochasticEpiModel.simulate`` that checks for a custom stop condition
 
 ## [v0.1.3] - 2020-04-07
 

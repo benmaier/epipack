@@ -1,6 +1,13 @@
 """
-Module to fit duration distributions to sums of exponential functions.
+Heuristics to fit duration distributions to sums of
+exponentially distributed waiting times.
+This module has to be considered work in progress.
+It works, but can be much improved, e.g. by
+putting conditions on the ordering of waiting
+times such that the symmetry in parameter space
+can be utilized for fitting.
 """
+
 import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.integrate import solve_ivp
@@ -9,56 +16,32 @@ from scipy.stats import entropy
 
 _DEFAULT_METHOD = 'RK23'
 
-def integrate_euler(dydt, dt, y0, percentile_cutoff, *args):
+class ExpChain():
     """
-    Integrate an ODE system with Euler's method.
+    A class that represents a chain of states
+    where the waiting time between consecutive
+    states is distributed exponentially with
+    predetermined mean. The class can be
+    used to fit total waiting time distributions,
+    i. e. distributions of sums of exponential
+    random variables.
 
     Parameters
-    ----------
-    dydt : function
-        A function returning the momenta of the ODE system.
-    t : numpy.ndarray of float
-        Array of time points at which the functions should
-        be evaluated.
-    y0 : numpy.ndarray
-        Initial conditions
-    *args : :obj:`list`
-        List of parameters that will be passed to the
-        momenta function.
+    ==========
+    durations : numpy.ndarray of float
+        mean waiting times between states in the chain
+
+    Example
+    =======
+
+    >>> C = ExpChain([0.2,0.4])
+    >>> C.get_mean()
+    0.6
     """
 
-    # get copy
-    y0 = np.array(y0,dtype=float)
-    y = y0
+    def __init__(self,durations):
 
-    # initiate integrator
-    result = [y0]
-    nt = 1
-
-    while y[-1] < percentile_cutoff:
-
-            # get result of ODE integration
-            y = y + dt * dydt(None,y)
-
-            # write result to result vector
-            result.append(y)
-
-            nt += 1
-
-    t = np.arange(nt,dtype=float) * dt
-
-    return t, np.array(result)
-
-class chain():
-
-    def __init__(self,n,durations):
-
-        if n != int(n):
-            raise ValueError("`n` must be integer, but is " + str(n))
-        self.n = int(n)
-
-        if int(n) != len(durations):
-            raise ValueError("`durations` must have the same length as n = "+str(n)+" but has len = " + str(len(durations)))
+        self.n = n = len(durations)
         self.tau = durations
         self.n_st = int(n) + 1
         self.dt = min(durations) / 50.
@@ -80,21 +63,38 @@ class chain():
         self.W = csr_matrix((data, (rows, cols)), shape=2*[self.n_st])
 
     def dydt(self,t,y):
+        """
+        The ODE that performs the transitions between states.
+        """
         return self.W.dot(y)
 
-    def get_cdf_euler(self,dt=None,percentile_cutoff=0.9999):
-
-        if dt is None:
-            dt = self.dt
-
-        y0 = np.zeros(self.n_st)
-        y0[0] = 1.0
-
-        t, y = integrate_euler(self.dydt,dt,y0,percentile_cutoff)
-
-        return t, y[:,-1]
-
     def get_cdf(self,t=None,percentile_cutoff=0.9999,method=_DEFAULT_METHOD):
+        """
+        Obtain the cumulative distribution function of the total waiting
+        time this chain represents.
+
+        Parameters
+        ==========
+        t : numpy.ndarray of float, default = None
+            Ordered array of time points for which the CDF
+            should be returned. If ``None``,
+            ``scipy.optimize.solve_ivp`` will choose
+            the points itself.
+        percentile_cutoff : float, default = 1 - 1e-4
+            maximum value of the CDF
+        method : str, default = 'RK23'
+            This is going to be passed to
+            ``scipy.optimize.solve_ivp``.
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the CDF
+            was computed.
+        cdf : numpy.ndarray of float
+            the corresponding values of the cumulative
+            distribution function
+        """
 
         y0 = np.zeros(self.n_st)
         y0[0] = 1.0
@@ -115,6 +115,33 @@ class chain():
         return result.t, result.y[-1,:]
 
     def get_pdf(self,t=None,percentile_cutoff=0.9999,method=_DEFAULT_METHOD):
+        """
+        Obtain the probability distribution function of the total waiting
+        time this chain represents. Uses :func:`ExpChain.get_cdf`.
+
+        Parameters
+        ==========
+        t : numpy.ndarray of float, default = None
+            Ordered array of time points for which the CDF
+            should be returned. If ``None``,
+            ``scipy.optimize.solve_ivp`` will choose
+            the points itself.
+        percentile_cutoff : float, default = 1 - 1e-4
+            maximum value of the CDF
+        method : str, default = 'RK23'
+            This is going to be passed to
+            ``scipy.optimize.solve_ivp``.
+
+        Returns
+        =======
+        tmean : numpy.ndarray of float
+            Ordered array of bin midpoints for which the pdf
+            was computed.
+        pdf : numpy.ndarray of float
+            the corresponding values of the pdf.
+        df : numpy.ndarray of float
+            the corresponding bin sizes
+        """
         t, P = self.get_cdf(t=t,percentile_cutoff=percentile_cutoff,method=method)
         dt = np.diff(t)
         dP = np.diff(P)
@@ -122,6 +149,32 @@ class chain():
         return tmean, dP/dt, dt
 
     def get_cdf_at_percentiles(self,percentiles,method=_DEFAULT_METHOD):
+        """
+        Obtain the cumulative distribution function of the total waiting
+        time this chain represents.
+
+        Parameters
+        ==========
+        t : numpy.ndarray of float, default = None
+            Ordered array of time points for which the CDF
+            should be returned. If ``None``,
+            ``scipy.optimize.solve_ivp`` will choose
+            the points itself.
+        percentile_cutoff : float, default = 1 - 1e-4
+            maximum value of the CDF
+        method : str, default = 'RK23'
+            This is going to be passed to
+            ``scipy.optimize.solve_ivp``.
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the CDF
+            was computed.
+        cdf : numpy.ndarray of float
+            the corresponding values of the cumulative
+            distribution function
+        """
 
         y0 = np.zeros(self.n_st)
         y0[0] = 1.0
@@ -148,6 +201,25 @@ class chain():
         return time_values, percentiles
 
     def get_median_and_iqr(self,method=_DEFAULT_METHOD):
+        """
+        Returns the median and inter-quartile range
+        of the waiting time distribution this chain
+        represents.
+
+        Parameters
+        ==========
+        method : str, default = 'RK23'
+            This is going to be passed to
+            ``scipy.optimize.solve_ivp``.
+
+        Returns
+        =======
+        median : float
+            the median of the distribution
+        iqr : numpy.ndarray of float
+            array of length 2 containing
+            the inter-quartile range.
+        """
 
         percentiles = [0.25,0.5,0.75]
 
@@ -156,9 +228,64 @@ class chain():
         return time_values[1], time_values[[0,2]]
 
     def get_mean(self):
+        """
+        Returns the mean waiting time of this chain.
+        """
         return sum(self.tau)
 
 def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-15,x0=None):
+    """
+    Fit a chain of exponentially distributed random variables
+    to a distribution where the cdf is known for several time points.
+
+    While there exist statistcally sound measures to quantify
+    the distance between
+    two distributions, I found that the total mean squared distance
+    actually finds decent fits consistently, so this function
+    is going to be using that until someone convinces me that
+    another distance measure yields better results.
+
+    This whole thing should be considered heuristic
+    patch work in any case.
+
+    Parameters
+    ==========
+    n : int
+        number of transitions in the chain
+    time_values : numpy.ndarray of float
+        Ordered array of time points for which the cdf
+        is known.
+    cdf : numpy.ndarray of float
+        Ordered array of corresponding CDF values.
+    lower: float, default = 1e-10
+        lower bound of waiting times for each transition
+    upper: float, default = 1e10
+        upper bound of waiting times for each transition
+    percentile_cutoff : float default = 1 - 1e-15
+        max value of the CDF that should be integrated to
+    x0 : numpy.ndarray of float, default = None
+        array of length n that contains initial guesses
+        of the chain's waiting times. If ``None``,
+        ``x0`` is going to contain the value ``mean/n``
+        n times, where ``mean`` is the mean of the
+        distribution determined by ``cdf``.
+
+    Returns
+    =======
+    chain : ExpChain
+        The chain that was fit to the given CDF.
+
+    Example
+    =======
+
+    >>> median, iqr = 13.184775302968362, ( 7.81098765, 20.86713744)
+    >>> fit_C = fit_chain_by_median_and_iqr(3,median,iqr)
+    >>> fit_C.get_median_and_iqr()
+    13.183969129892406, array([ 7.8109697 , 20.86699702])
+    >>> fit_C.tau
+    [9.22794388 0.75881288 5.72462722]
+
+    """
 
     if n != int(n):
         raise ValueError("`n` must be integer, but is " + str(n))
@@ -172,7 +299,7 @@ def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=
         x0 = [mean/n] * n
 
     def cost(x, n, cdf, time_values, percentile_cutoff):
-        C  = chain(n,x)
+        C  = ExpChain(x)
         _, P = C.get_cdf(time_values,percentile_cutoff=percentile_cutoff)
         if len(P) < len(cdf):
             P = np.concatenate((P,np.ones(len(cdf)-len(P))))
@@ -186,10 +313,49 @@ def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=
 
     result = minimize(cost, x0, (n, cdf, time_values, percentile_cutoff), bounds=[(lower,upper)]*n)
 
-    return chain(n, result.x)
+    return ExpChain(result.x)
 
 
 def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10):
+    """
+    Fit a chain of exponentially distributed random variables
+    to a distribution where only median and iqr are known.
+
+    Parameters
+    ==========
+    n : int
+        number of transitions in the chain
+    median : float
+        the median of the distribution to fit to
+    iqr : 2-tuple of float
+        the inter-quartile range of the distribution to
+        fit to
+    lower: float, default = 1e-10
+        lower bound of waiting times for each transition
+    upper: float, default = 1e10
+        upper bound of waiting times for each transition
+
+    Returns
+    =======
+    chain : ExpChain
+        The chain that was fit to the median and iqr.
+
+    Example
+    =======
+
+    >>> times = [0.3,6.,9,0.4]
+    >>> C = ExpChain(times)
+    >>> fit_C = fit_chain_by_median_and_iqr(3,*C.get_median_and_iqr())
+    >>> C.get_median_and_iqr()
+    13.184775302968362, array([ 7.81098765, 20.86713744])
+    >>> fit_C.get_median_and_iqr()
+    13.183969129892406, array([ 7.8109697 , 20.86699702])
+    >>> C.tau
+    [0.3, 6.0, 9, 0.4]
+    >>> fit_C.tau
+    [9.22794388 0.75881288 5.72462722]
+
+    """
     percentiles = np.array([0.25,0.5,0.75])
     time_values = np.array([iqr[0],median,iqr[1]])
     mean = median
@@ -203,7 +369,7 @@ if __name__ == "__main__":
 
     n = 10
     mean = 10
-    C = chain(n,[mean/n]*n)
+    C = ExpChain([mean/n]*n)
     E = erlang(a=n,scale=mean/n)
 
     t, y = C.get_cdf()
@@ -217,8 +383,9 @@ if __name__ == "__main__":
 
 
     # =========
-    n = 4
-    C = chain(n, [0.3,6.,9,0.4])
+    times = [0.3,6.,9,0.4]
+    n = len(times)
+    C = ExpChain(times)
     fit_C = fit_chain_by_median_and_iqr(3,*C.get_median_and_iqr())
 
     print("C med iqr =",C.get_median_and_iqr())

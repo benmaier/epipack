@@ -103,7 +103,6 @@ installed by ``pip`` during the installation process
 -  ``sympy==1.6``
 -  ``pyglet<1.6``
 -  ``matplotlib>=3.0.0``
--  ``bfmplot>=0.0.7``
 -  ``ipython>=7.14.0``
 -  ``ipywidgets>=7.5.1``
 

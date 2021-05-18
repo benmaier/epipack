@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A new small-world network styling method based on 1d lattice distance (in epipack.networks)
 - methods to compute Jacobian and next generation matrices (NGMs) in `MatrixEpiModel`, as well as R0 from said NGMs (TODO: add docs)
-- `epipack.distributions` module, which deals with fitting empirical distributions to sums of exponentially distributed random variables
-- methods to `EpiModel` that save events that have been set. This will be used to generate model flowcharts with graphviz
+- tests for these methods
+- `epipack.distributions` module, which deals with fitting empirical distributions to sums of exponentially distributed random variables (still in dev mode, also TODO: add docs)
+- methods to `EpiModel` that save events that have been set. This will be used to generate model flowcharts with graphviz at some point
 
 ## [v0.1.3] - 2020-04-07
 

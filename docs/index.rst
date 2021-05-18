@@ -69,6 +69,7 @@ epipack
    api/numeric_matrix_epi_models
    api/symbolic_matrix_epi_models
    api/plottools
+   api/distributions
 
 .. .. toctree::
 ..    :maxdepth: 2

@@ -19,7 +19,7 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
 
                 # fission process
                 ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
-                
+
                 # fusion process
                 ( source_compartment_0, source_compartment_1, rate, target_compartment),
 
@@ -31,9 +31,9 @@ def processes_to_rates(process_list, compartments, ignore_rate_position_checks=F
             ]
 
     compartments : :obj:`list` of hashable type
-        The compartments of these reaction equations. 
+        The compartments of these reaction equations.
     ignore_rate_position_checks : bool, default = False
-        This function usually checks whether the rate of 
+        This function usually checks whether the rate of
         a reaction is positioned correctly. You can
         turn this behavior off for transition, birth, death, and
         transmission processes. (Useful if you want to define
@@ -171,13 +171,13 @@ def fission_processes_to_rates(process_list):
     """
 
     linear_rates = []
-    
+
     for source, rate, target0, target1 in process_list:
 
         _s = source
         _t0 = target0
         _t1 = target1
-        
+
         # source compartment loses an entity
         # target compartments gains one each
         linear_rates.append((_s, _s, -rate))
@@ -217,9 +217,9 @@ def fusion_processes_to_rates(process_list):
     """
 
     quad_rates = []
-    
+
     for source0, source1, rate, target in process_list:
-        
+
         # target compartment gains one entity
         quad_rates.append((source0, source1, target, rate))
         # source compartments lose one entity each
@@ -245,9 +245,9 @@ def transmission_processes_to_rates(process_list):
             ("I", "S", R_0/k_0 * mu, "I", "I")
 
     For the mean-field system here, the corresponding reaction equation would read
-        
+
         .. code:: python
-            
+
             ("I", "S", R_0 * mu, "I", "I")
 
     Parameters
@@ -258,11 +258,11 @@ def transmission_processes_to_rates(process_list):
         .. code:: python
 
             [
-                (source_compartment, 
+                (source_compartment,
                  target_compartment_initial,
-                 rate 
-                 source_compartment, 
-                 target_compartment_final, 
+                 rate
+                 source_compartment,
+                 target_compartment_final,
                  ),
                 ...
             ]
@@ -292,7 +292,7 @@ def transmission_processes_to_rates(process_list):
 
         reactants = [_s0, _s1]
         products = [_t0, _t1]
-        constant = (set.intersection(set(reactants), set(products)))        
+        constant = (set.intersection(set(reactants), set(products)))
         if len(constant) == 2 or tuple(reactants) == tuple(products):
             raise ValueError("Process "+\
                              str((coupling0, coupling1, rate, affected0, affected1)) +\

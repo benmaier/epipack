@@ -119,7 +119,7 @@ class MatrixEpiTest(unittest.TestCase):
         assert(np.isclose(epi.y0[0],0))
 
 
-        
+
         eta = 2
         rho = 1
         epi = MatrixSIRModel(eta,rho)
@@ -169,7 +169,7 @@ class MatrixEpiTest(unittest.TestCase):
         with self.assertWarns(UserWarning):
             epi.set_processes([
                     ("S", "I", eta, "I", "I"),
-                    ("I", rho, "R"),  
+                    ("I", rho, "R"),
                     (None, mu, "S"),
                     ("S", mu, None),
                     ("R", mu, None),
@@ -226,11 +226,114 @@ class MatrixEpiTest(unittest.TestCase):
             # this should raise a warning that initial conditions were set twice
             epi.set_initial_conditions([(A,0.1),(A,0.2)])
 
+    def test_R0(self):
+        """
+        R0 computation test based on
+
+        "The construction of next-generation matrices for compartmental epidemic models"
+        by Diekmann, Heesterbeek, Roberts, J. R. Soc. Interface (2010) 7, 873–885
+        doi.org/10.1098/rsif.2009.0386
+
+        (Section 2.2)
+        """
+
+        b11 = 1
+        b12 = 2
+        b21 = 3
+        b22 = 6
+
+        #we'll use b11*b22 = b12*b21 because it makes 
+        #our lives easier in computing R0 analytically
+
+        mu = 4
+        g1 = 5
+        g2 = 7
+        nu1 = 8
+        nu2 = 9
+        p = 0.2
+        N = 100
+
+        base_comps = list("SEIR")
+        cats = [1,2]
+        comps = []
+        for C in base_comps:
+            for c in cats:
+                comps.append(C+str(c))
+
+        model = MatrixEpiModel(comps,initial_population_size=N)
+        transition_processes = [
+                    ("S1", mu, None),
+                    ("E1", mu, None),
+                    ("I1", mu, None),
+                    ("R1", mu, None),
+                    ("S2", mu, None),
+                    ("E2", mu, None),
+                    ("I2", mu, None),
+                    ("R2", mu, None),
+                    ("E1", nu1, "I1"),
+                    ("E2", nu2, "I2"),
+                    ("I1", g1, "R1"),
+                    ("I2", g2, "R2"),
+                ]
+        transmission_processes = [
+                    ( "S1", "I1", b11, "E1", "I1"),
+                    ( "S1", "I2", b12, "E1", "I2"),
+                    ( "S2", "I1", b21, "E2", "I1"),
+                    ( "S2", "I2", b22, "E2", "I2"),
+                ]
+
+        birth_processes =[
+                (None, p*mu*N, "S1"),
+                (None, (1-p)*mu*N, "S2"),
+            ]
+
+        model.set_processes(transition_processes + \
+                            transmission_processes + \
+                            birth_processes,
+                            allow_nonzero_column_sums=True,
+                            )
+        model.set_initial_conditions({
+                'S1': p*N,
+                'S2': (1-p)*N,
+            })
+
+        R0 = model.get_next_generation_matrix_leading_eigenvalue()
+
+        R0theory = p*b11*nu1/(nu1 + mu)/(g1+mu) + (1-p)*b22*nu2/(nu2+mu)/(g2+mu)
+
+        assert(np.isclose(R0,R0theory))
+
+    def test_jacobian(self):
+        R0 = 3
+        beta = 4
+        model = MatrixSIRModel(R0,beta)\
+                    .set_initial_conditions({'S': 1,})
+
+        j = model.get_jacobian_leading_eigenvalue()
+        modelR0 = model.get_next_generation_matrix_leading_eigenvalue()
+        # in SIR model, leading eigenvalue of jacobian must be equal to
+        # j = beta*(R-1)
+        assert(np.isclose(R0, modelR0))
+        assert(np.isclose(np.real(j), beta*(modelR0-1)))
+
+    def test_2times2_NGM(self):
+        R0 = 3
+        beta = 4
+        nu = 2
+        model = MatrixSEIRModel(R0,beta,nu)\
+                    .set_initial_conditions({'S': 1,})
+
+        modelR0 = model.get_next_generation_matrix_leading_eigenvalue()
+        assert(np.isclose(R0, modelR0))
+
 
 
 if __name__ == "__main__":
 
     T = MatrixEpiTest()
+    T.test_R0()
+    T.test_jacobian()
+    T.test_2times2_NGM()
     T.test_compartments()
     T.test_linear_rates()
     T.test_adding_linear_rates()

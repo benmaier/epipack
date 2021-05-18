@@ -2,7 +2,7 @@
 Provides an API to define Matrix epidemiological models.
 """
 
-import numpy as np 
+import numpy as np
 import scipy.sparse as sprs
 
 import warnings
@@ -24,7 +24,7 @@ from epipack.process_conversions import (
 
 class MatrixEpiModel(IntegrationMixin):
     """
-    A general class to define standard 
+    A general class to define standard
     mean-field compartmental
     epidemiological model.
 
@@ -43,7 +43,7 @@ class MatrixEpiModel(IntegrationMixin):
     N_comp : :obj:`int`
         Number of compartments (including population number)
     linear_rates : scipy.sparse.csr_matrix
-        Sparse matrix containing 
+        Sparse matrix containing
         transition rates of the linear processes.
     quadratic_rates : scipy.sparse.csr_matrix
         List of sparse matrices that contain
@@ -59,7 +59,7 @@ class MatrixEpiModel(IntegrationMixin):
     -------
 
     .. code:: python
-        
+
         >>> epi = MatrixEpiModel(["S","I","R"])
         >>> print(epi.compartments)
         [ "S", "I", "R" ]
@@ -81,7 +81,7 @@ class MatrixEpiModel(IntegrationMixin):
         self.correct_for_dynamical_population_size = correct_for_dynamical_population_size
         self.N_comp = len(self.compartments)
         self.birth_rates = np.zeros((self.N_comp,),dtype=np.float64)
-        self.linear_rates = sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64) 
+        self.linear_rates = sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64)
         self.quadratic_rates = [ sprs.csr_matrix((self.N_comp, self.N_comp),dtype=np.float64)\
                                  for c in range(self.N_comp) ]
 
@@ -93,8 +93,12 @@ class MatrixEpiModel(IntegrationMixin):
         """Get the compartment, given an integer ID ``iC``"""
         return self.compartments[iC]
 
-    def set_processes(self,process_list,allow_nonzero_column_sums=False,reset_rates=True,
-                      ignore_rate_position_checks=False):
+    def set_processes(self,
+                      process_list,
+                      allow_nonzero_column_sums=False,
+                      reset_rates=True,
+                      ignore_rate_position_checks=False,
+                      ):
         """
         Converts a list of reaction process tuples to rate tuples and sets the rates for this model.
 
@@ -114,7 +118,7 @@ class MatrixEpiModel(IntegrationMixin):
 
                     # fission process
                     ( source_compartment, rate, target_compartment_0, target_ccompartment_1),
-                    
+
                     # fusion process
                     ( source_compartment_0, source_compartment_1, rate, target_compartment),
 
@@ -131,16 +135,17 @@ class MatrixEpiModel(IntegrationMixin):
         reset_rates : bool, default : True
             If this is `True`, reset all rates to zero before setting the new ones.
         ignore_rate_position_checks : bool, default = False
-            This function usually checks whether the rate of 
+            This function usually checks whether the rate of
             a reaction is positioned correctly. You can
             turn this behavior off for transition, birth, death, and
             transmission processes. (Useful if you want to define
             symbolic transmission processes that are compartment-dependent).
-
-
         """
 
-        quadratic_rates, linear_rates = processes_to_rates(process_list, self.compartments,ignore_rate_position_checks)
+        quadratic_rates, linear_rates = processes_to_rates(process_list,
+                                                           self.compartments,
+                                                           ignore_rate_position_checks,
+                                                           )
         self.set_linear_rates(linear_rates,allow_nonzero_column_sums=allow_nonzero_column_sums)
         self.set_quadratic_rates(quadratic_rates,allow_nonzero_column_sums=allow_nonzero_column_sums)
 
@@ -171,7 +176,7 @@ class MatrixEpiModel(IntegrationMixin):
         Example
 
         reset_rates : bool, default : True
-            Whether to reset all linear rates to zero before 
+            Whether to reset all linear rates to zero before
             converting those.
         """
 
@@ -246,7 +251,10 @@ class MatrixEpiModel(IntegrationMixin):
 
         linear_rates = transition_processes_to_rates(process_list)
 
-        return self.set_linear_rates(linear_rates, reset_rates=False, allow_nonzero_column_sums=True)
+        return self.set_linear_rates(linear_rates,
+                                     reset_rates=False,
+                                     allow_nonzero_column_sums=True,
+                                     )
 
     def add_fission_processes(self,process_list):
         """
@@ -279,8 +287,11 @@ class MatrixEpiModel(IntegrationMixin):
         """
         linear_rates = fission_processes_to_rates(process_list)
 
-        return self.set_linear_rates(linear_rates, reset_rates=False, allow_nonzero_column_sums=True)
-    
+        return self.set_linear_rates(linear_rates,
+                                     reset_rates=False,
+                                     allow_nonzero_column_sums=True,
+                                     )
+
     def add_fusion_processes(self,process_list):
         """
         Define fusion processes between compartments.
@@ -312,28 +323,32 @@ class MatrixEpiModel(IntegrationMixin):
         """
         quadratic_rates = fusion_processes_to_rates(process_list)
 
-        return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
+        return self.set_quadratic_rates(quadratic_rates,
+                                        reset_rates=False,
+                                        allow_nonzero_column_sums=True
+                                        )
 
     def add_transmission_processes(self,process_list):
         r"""
-        A wrapper to define quadratic process rates through transmission reaction equations.
-        Note that in stochastic network/agent simulations, the transmission
+        A wrapper to define quadratic process rates through
+        transmission reaction equations. Note that in stochastic
+        network/agent simulations, the transmission
         rate is equal to a rate per link. For the mean-field ODEs,
-        the rates provided to this function will just be equal 
+        the rates provided to this function will just be equal
         to the prefactor of the respective quadratic terms.
 
         For instance, if you analyze an SIR system and simulate on a network of mean degree :math:`k_0`,
         a basic reproduction number :math:`R_0`, and a recovery rate :math:`\mu`,
-        you would define the single link transmission process as 
+        you would define the single link transmission process as
 
             .. code:: python
 
                 ("I", "S", R_0/k_0 * mu, "I", "I")
 
         For the mean-field system here, the corresponding reaction equation would read
-            
+
             .. code:: python
-                
+
                 ("I", "S", R_0 * mu, "I", "I")
 
         Parameters
@@ -344,11 +359,11 @@ class MatrixEpiModel(IntegrationMixin):
             .. code:: python
 
                 [
-                    ("source_compartment", 
+                    ("source_compartment",
                      "target_compartment_initial",
-                     rate 
-                     "source_compartment", 
-                     "target_compartment_final", 
+                     rate,
+                     "source_compartment",
+                     "target_compartment_final",
                      ),
                     ...
                 ]
@@ -367,7 +382,10 @@ class MatrixEpiModel(IntegrationMixin):
         """
         quadratic_rates = transmission_processes_to_rates(process_list)
 
-        return self.set_quadratic_rates(quadratic_rates, reset_rates=False, allow_nonzero_column_sums=True)
+        return self.set_quadratic_rates(quadratic_rates,
+                                        reset_rates=False,
+                                        allow_nonzero_column_sums=True,
+                                        )
 
     def add_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
         """
@@ -375,7 +393,10 @@ class MatrixEpiModel(IntegrationMixin):
         See :func:`_tacoma.set_quadratic_rates` for docstring.
         """
 
-        return self.set_quadratic_rates(rate_list,reset_rates=False,allow_nonzero_column_sums=allow_nonzero_column_sums)
+        return self.set_quadratic_rates(rate_list,
+                                        reset_rates=False,
+                                        allow_nonzero_column_sums=allow_nonzero_column_sums,
+                                        )
 
     def add_linear_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
         """
@@ -383,8 +404,11 @@ class MatrixEpiModel(IntegrationMixin):
         See :func:`_tacoma.set_linear_rates` for docstring.
         """
 
-        return self.set_linear_rates(rate_list,reset_rates=False,allow_nonzero_column_sums=allow_nonzero_column_sums)
-    
+        return self.set_linear_rates(rate_list,
+                                     reset_rates=False,
+                                     allow_nonzero_column_sums=allow_nonzero_column_sums,
+                                     )
+
     def set_quadratic_rates(self,rate_list,reset_rates=True,allow_nonzero_column_sums=False):
         r"""
         Define the quadratic transition processes between compartments.
@@ -397,10 +421,11 @@ class MatrixEpiModel(IntegrationMixin):
             .. code:: python
 
                 [
-                    ("coupling_compartment_0", 
-                     "coupling_compartment_1",
-                     "affected_compartment", 
-                     rate 
+                    (
+                      "coupling_compartment_0",
+                      "coupling_compartment_1",
+                      "affected_compartment",
+                      rate
                      ),
                     ...
                 ]
@@ -423,10 +448,10 @@ class MatrixEpiModel(IntegrationMixin):
             ])
 
         Read  as
-        
-        "Coupling of *S* and *I* leads to 
+
+        "Coupling of *S* and *I* leads to
         a reduction in "S" proportional to :math:`S\times I` and rate -1/time_unit.
-        Furthermore, coupling of *S* and *I* leads to 
+        Furthermore, coupling of *S* and *I* leads to
         an increase in "E" proportional to :math:`S\times I` and rate +1/time_unit."
         """
 
@@ -443,7 +468,7 @@ class MatrixEpiModel(IntegrationMixin):
                 else:
                     matrices[iC] = [ [], [], [] ]
             all_affected = self.affected_by_quadratic_process if len(self.affected_by_quadratic_process)>0 else []
-        
+
         for coupling0, coupling1, affected, rate in rate_list:
 
             c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
@@ -490,7 +515,7 @@ class MatrixEpiModel(IntegrationMixin):
             The remaining entries are equal to the current fractions
             of the population of the respective compartments
         """
-        
+
         ynew = self.linear_rates.dot(y) + self.birth_rates
         if self.correct_for_dynamical_population_size:
             population_size = y.sum()
@@ -498,7 +523,7 @@ class MatrixEpiModel(IntegrationMixin):
             population_size = self.initial_population_size
         for c in self.affected_by_quadratic_process:
             ynew[c] += y.T.dot(self.quadratic_rates[c].dot(y)) / population_size
-            
+
         return ynew
 
     def get_numerical_dydt(self):
@@ -506,6 +531,125 @@ class MatrixEpiModel(IntegrationMixin):
         Return a function that obtains t and y as an input and returns dydt of this system
         """
         return self.dydt
+
+    def jacobian(self,y0=None):
+        """
+        Return Jacobian at point ``y0``. Will use ``self.y0`` if argument ``y0`` is ``None``.
+        """
+        return self.get_transmission_matrix(y0=y0) + self.get_transition_matrix()
+
+    def get_jacobian_leading_eigenvalue(self,y0=None,returntype='complex'):
+        """
+        Return leading eigenvalue of Jacobian at point ``y0``.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        Use argument ``returntype='real'`` to only obtain the
+        real part of the eigenvalue.
+        """
+        J = self.jacobian(y0=y0)
+        return self._get_leading_eigenvalue(J,returntype)
+
+    def get_transmission_matrix(self,y0=None):
+        """
+        Return transmission matrix at point ``y0``.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        """
+        if y0 is None:
+            y0 = self.y0
+
+        if y0 is None:
+            raise ValueError("No initial conditions have been given or set.")
+
+        if self.correct_for_dynamical_population_size:
+            raise NotImplementedError("transmission matrices for models with "
+                                      "varying population size have not been implemented.")
+
+        rows = []
+        for M in self.quadratic_rates:
+            row = ((M+M.T).dot(y0)) / self.initial_population_size
+            row = row.reshape(1,self.N_comp)
+            row = sprs.csr_matrix(row)
+            rows.append(row)
+
+        T = sprs.vstack(rows,format='csr')
+
+        return T
+
+    def get_transition_matrix(self):
+        """
+        Return transition matrix.
+        """
+        return self.linear_rates
+
+    def get_next_generation_matrix(self,y0=None):
+        """
+        Return next generation matrix at point y0.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        """
+        T = self.get_transmission_matrix(y0=y0)
+        Sigma = self.get_transition_matrix()
+
+        # delete all compartments that contribute to the singularity
+        # of the transition matrix
+        del_cols = []
+        del_rows = []
+
+        n = Sigma.shape[0]
+
+        for i in range(n):
+            if np.all(Sigma[i,:].data==0):
+                del_rows.append(i)
+        for j in range(n):
+            if np.all(Sigma[:,j].data==0):
+                del_cols.append(j)
+
+        del_comp = set(del_cols) | set(del_rows)
+        use_comp = set(range(n)) - del_comp
+
+        use_comp = sorted(list(use_comp))
+
+        # filter our compartments that do not make the matrix singular
+        Sigma = (Sigma[use_comp,:])[:,use_comp]
+        T = (T[use_comp,:])[:,use_comp]
+
+        # convert Sigma to csc for more efficient inverse algo
+        K = -T.dot(sprs.linalg.inv(Sigma.tocsc()))
+
+        return K
+
+    def get_next_generation_matrix_leading_eigenvalue(self,y0=None,returntype='real'):
+        """
+        Return the leading eigenvalue of the next generation matrix
+        at point ``y0``. Will use ``self.y0`` if argument
+        ``y0`` is ``None``. When ``y0`` is equal to the initial
+        disease-free state, this function will return the
+        basic reproduction number :math:`R_0`.
+
+        The function will return only the real part by default.
+        Use ``returntype='complex'`` to change this.
+        """
+        K = self.get_next_generation_matrix(y0=y0)
+        return self._get_leading_eigenvalue(K,returntype)
+
+    def _get_leading_eigenvalue(self,M,returntype='complex'):
+
+        if M.shape == (1,1):
+            _lambda = M[0,0]
+        elif M.shape == (1,):
+            _lambda = M[0]
+        else:
+            # I thought CSC format would be better for solver
+            # but it's not, so I uncommented this
+            # M_ = M.tocsc()
+            M_ = M
+            if M_.shape == (2,2):
+                lambdas = np.linalg.eig(M_.toarray())[0]
+            else:
+                lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]-2),which='LR')[0]
+            lambdas = sorted(lambdas, key=lambda x: -np.real(x))
+            _lambda = lambdas[0]
+        if returntype == 'real':
+            _lambda = np.real(_lambda)
+        return _lambda
 
 
 class MatrixSIModel(MatrixEpiModel):

@@ -92,7 +92,6 @@ So far, the package's functionality was tested on Mac OS X and CentOS only.
 * `sympy==1.6`
 * `pyglet<1.6`
 * `matplotlib>=3.0.0`
-* `bfmplot>=0.0.7`
 * `ipython>=7.14.0`
 * `ipywidgets>=7.5.1`
 

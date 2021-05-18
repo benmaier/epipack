@@ -281,6 +281,11 @@ class EpiModel(IntegrationMixin):
         self.linear_event_updates = []
         self.quadratic_rate_functions = []
         self.quadratic_event_updates = []
+
+        self.birth_events = []
+        self.linear_events = []
+        self.quadratic_events = []
+
         self.use_ivp_solver = integral_solver == 'solve_ivp'
 
         self.rates_have_explicit_time_dependence = False
@@ -430,11 +435,16 @@ class EpiModel(IntegrationMixin):
             birth_event_updates = []
             linear_rate_functions = []
             linear_event_updates = []
+            birth_events = []
+            linear_events = []
         else:
-            linear_event_updates = self.linear_event_updates
-            birth_event_updates = self.birth_event_updates
-            linear_rate_functions = self.linear_rate_functions
-            birth_rate_functions = self.birth_rate_functions
+            linear_event_updates = list(self.linear_event_updates)
+            birth_event_updates = list(self.birth_event_updates)
+            linear_rate_functions = list(self.linear_rate_functions)
+            birth_rate_functions = list(self.birth_rate_functions)
+            birth_events = list(self.birth_events)
+            linear_events = list(self.linear_events)
+
 
         for acting_compartments, rate, affected_compartments in event_list:
 
@@ -450,6 +460,7 @@ class EpiModel(IntegrationMixin):
                     this_rate = ConstantBirthRate(rate)
                 birth_event_updates.append( dy )
                 birth_rate_functions.append( this_rate )
+                birth_events.append((acting_compartments, rate, affected_compartments))
             else:
                 _s = self.get_compartment_id(acting_compartments[0])
                 if self._rate_has_functional_dependency(rate):
@@ -458,6 +469,7 @@ class EpiModel(IntegrationMixin):
                     this_rate = ConstantLinearRate(rate, _s)
                 linear_event_updates.append( dy )
                 linear_rate_functions.append( this_rate )
+                linear_events.append((acting_compartments, rate, affected_compartments))
 
             if dy.sum() != 0 and not self.correct_for_dynamical_population_size:
                 warnings.warn("This model has processes with a fluctuating "+\
@@ -477,6 +489,8 @@ class EpiModel(IntegrationMixin):
         self.linear_rate_functions = linear_rate_functions
         self.birth_event_updates = birth_event_updates
         self.birth_rate_functions = birth_rate_functions
+        self.linear_events = linear_events
+        self.birth_events = birth_events
 
         return self
 
@@ -672,7 +686,7 @@ class EpiModel(IntegrationMixin):
                                       reset_events=False,
                                       allow_nonzero_column_sums=allow_nonzero_column_sums
                                       )
-    
+
     def set_quadratic_events(self,
                              event_list,
                              allow_nonzero_column_sums=False,
@@ -690,7 +704,7 @@ class EpiModel(IntegrationMixin):
 
                 [
                     (
-                        ("coupling_compartment_0", "coupling_compartment_1"), 
+                        ("coupling_compartment_0", "coupling_compartment_1"),
                         rate,
                         [
                             ("affected_compartment_0", dN0),
@@ -716,25 +730,27 @@ class EpiModel(IntegrationMixin):
 
             epi.set_quadratic_events([
                 ( ("S", "I"),
-                  eta, 
-                  [ ("S", -1), ("E", +1) ] 
+                  eta,
+                  [ ("S", -1), ("E", +1) ]
                 ),
             ])
 
         Read  as
 
         "Coupling of *S* and *I* leads to
-        the decay of one *S* particle to one *E* particle with 
+        the decay of one *S* particle to one *E* particle with
         rate :math:`\eta`.".
         """
 
         if reset_events:
             quadratic_event_updates = []
             quadratic_rate_functions = []
+            quadratic_events = []
         else:
-            quadratic_event_updates = self.quadratic_event_updates
-            quadratic_rate_functions = self.quadratic_rate_functions
-        
+            quadratic_event_updates = list(self.quadratic_event_updates)
+            quadratic_rate_functions = list(self.quadratic_rate_functions)
+            quadratic_events = list(self.quadratic_events)
+
         for coupling_compartments, rate, affected_compartments in event_list:
 
             _s0 = self.get_compartment_id(coupling_compartments[0])
@@ -752,6 +768,7 @@ class EpiModel(IntegrationMixin):
 
             quadratic_event_updates.append( dy )
             quadratic_rate_functions.append( this_rate )
+            quadratic_events.append( (coupling_compartments, rate, affected_compartments) )
 
         if not allow_nonzero_column_sums and len(quadratic_rate_functions)>0:
             _y = np.ones(self.N_comp)
@@ -762,6 +779,7 @@ class EpiModel(IntegrationMixin):
 
         self.quadratic_event_updates = quadratic_event_updates
         self.quadratic_rate_functions = quadratic_rate_functions
+        self.quadratic_events = quadratic_events
 
         return self
 
@@ -896,8 +914,8 @@ class EpiModel(IntegrationMixin):
     def get_event_rates(self, t, y):
         """
         Get a list of rate values corresponding to the previously
-        set events. 
-        
+        set events.
+
         Parameters
         ----------
         t : float
@@ -909,7 +927,7 @@ class EpiModel(IntegrationMixin):
         -------
         rates : list
             A list of rate values corresponding to rates.
-            Ordered as ``birth_rate_functions + 
+            Ordered as ``birth_rate_functions +
             linear_rate_functions + quadratic_rate_functions``.
         """
         rates = [r(t,y) for r in self.birth_rate_functions]
@@ -932,7 +950,7 @@ class EpiModel(IntegrationMixin):
         -------
         get_event_rates : func
             A function that takes the current time ``t`` and
-            state vector ``y`` 
+            state vector ``y``
             and returns numerical event rate lists.
         get_compartment_changes : funx
             A function that takes a numerical list of event ``rates``

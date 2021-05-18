@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.4] - 2020-05-18
+
+### Added
+
+- A new small-world network styling method based on 1d lattice distance (in epipack.networks)
+- methods to compute Jacobian and next generation matrices (NGMs) in `MatrixEpiModel`, as well as R0 from said NGMs (TODO: add docs)
+- tests for these methods
+- `epipack.distributions` module, which deals with fitting empirical distributions to sums of exponentially distributed random variables (still in dev mode, also TODO: add docs)
+- tests for this module
+- methods to `EpiModel` that save events that have been set. This will be used to generate model flowcharts with graphviz at some point
+- the possibility to pass a function to ``StochasticEpiModel.simulate`` that checks for a custom stop condition
+
 ## [v0.1.3] - 2020-04-07
 
 ### Fixed
@@ -88,7 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.4...HEAD
+[v0.1.4]: https://github.com/benmaier/epipack/compare/v0.1.2...v0.1.4]
 [v0.1.3]: https://github.com/benmaier/epipack/compare/v0.1.2...v0.1.3]
 [v0.1.2]: https://github.com/benmaier/epipack/compare/v0.1.1...v0.1.2]
 [v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.0...v0.1.1]

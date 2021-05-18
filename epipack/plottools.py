@@ -6,13 +6,12 @@ regularly and not supposed to be of great merit otherwise.
 Install matplotlib and bfmplot to use this module
 
 .. code::
-    
+
     matplotlib>=3.0.0
     bfmplot>=0.1.0
 """
 
-from bfmplot import pl
-import bfmplot as bp
+import matplotlib.pyplot as pl
 import matplotlib as mpl
 
 import numpy as np
@@ -21,6 +20,20 @@ from epipack.colors import hex_colors, palettes
 
 colors = [hex_colors[c] for c in  palettes['dark']]
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=colors)
+
+def strip_axis(ax,horizontal='right'):
+    """Remove the right and the top axis"""
+    if horizontal == 'right':
+        anti_horizontal = 'left'
+    else:
+        anti_horizontal = 'right'
+        ax.yaxis.set_label_position("right")
+
+    ax.spines[horizontal].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    ax.yaxis.set_ticks_position(anti_horizontal)
+    ax.xaxis.set_ticks_position('bottom')
 
 def plot(t,result,ax=None, curve_label_format='{}',figsize=None):
     """
@@ -52,7 +65,7 @@ def plot(t,result,ax=None, curve_label_format='{}',figsize=None):
     for C, timeseries in result.items():
         ax.plot(t, timeseries, label=curve_label_format.format(str(C)))
         N += timeseries
-    bp.strip_axis(ax)
+    strip_axis(ax)
     ax.set_xlim([t.min(), t.max()])
     ax.set_ylim([0,N.max()])
     ax.set_xlabel('time')

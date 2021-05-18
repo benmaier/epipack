@@ -215,7 +215,13 @@ def get_small_world_layout(
                       ):
     """
     Returns a stylized network dictionary that puts
-    nodes in a random layout.
+    nodes in a small-world inspired circular layout.
+    The ring of nodes will be drawn bouncy
+    to better display connections between nearby regions.
+    Nodes that connect far-away regions of a network
+    will be displayed more centrally.
+    Distance is defined as lattice distance by integer
+    node id. Hence, nodes must be integers in [0,N).
 
     Parameters
     ==========

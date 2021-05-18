@@ -279,7 +279,7 @@ def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=
     =======
 
     >>> median, iqr = 13.184775302968362, ( 7.81098765, 20.86713744)
-    >>> fit_C = fit_chain_by_median_and_iqr(3,median,iqr)
+    >>> fit_C = fit_chain_by_cdf(3,[iqr[0], median, iqr[1]],[0.25,0.5,0.75])
     >>> fit_C.get_median_and_iqr()
     13.183969129892406, array([ 7.8109697 , 20.86699702])
     >>> fit_C.tau

@@ -390,3 +390,27 @@ in this particular simulation.
     :width: 90%
 
     Stochastic system with reimports on a log scale.
+
+Integrating Until a Condition is Reached
+----------------------------------------
+
+We can also specify conditions at which the integration of
+a model should be stopped.
+
+.. code:: python
+
+    from epipack import SIModel
+
+    model = SIModel(infection_rate=1.0)
+    model.set_initial_conditions({"S":0.9,"I":0.1})
+
+    thresh = 0.5
+    _S = model.get_compartment_id("S")
+
+    # stop integration when the frequency of 
+    # susceptibles reaches 50%
+    stop_condition = lambda t, y: thresh - y[_S]
+
+    t0 = 0
+    t, res = model.integrate_until(t0,stop_condition)
+

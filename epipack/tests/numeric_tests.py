@@ -506,9 +506,23 @@ class EpiTest(unittest.TestCase):
         y0 = np.array([0.1,0.2,0.3,0.4])
         t_nwt = time_leap_newton(t0, y0, get_event_rates, rand)
         t_ivp = time_leap_ivp(t0, y0, get_event_rates, rand)
-        expected = 30.76 
+        expected = 30.76
         numeric = np.array([t_nwt, t_ivp])
         assert(np.all( np.abs(numeric-expected)/numeric < 1e-3) )
+
+    def test_integrate_until(self):
+
+        N = 100
+        epi = SIModel(infection_rate=5.0,initial_population_size=N)
+        epi.set_initial_conditions({"S":90,"I":10})
+
+        thresh = 0.5
+        iS = epi.get_compartment_id("S")
+        stop_condition = lambda t, y: thresh*N - y[iS]
+
+        t, res = epi.integrate_until(0,stop_condition,return_compartments=['S'])
+
+        assert(np.isclose(thresh*N,res['S'][-1]))
 
 
 
@@ -518,6 +532,7 @@ if __name__ == "__main__":
     import sys
 
     T = EpiTest()
+    T.test_integrate_until()
     T.test_integral_solvers()
     T.test_temporal_gillespie_repeated_simulation()
     T.test_sampling_callback()

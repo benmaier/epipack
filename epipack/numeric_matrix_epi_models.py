@@ -546,7 +546,7 @@ class MatrixEpiModel(IntegrationMixin):
         real part of the eigenvalue.
         """
         J = self.jacobian(y0=y0)
-        return self._get_leading_eigenvalue(J,returntype)
+        return self._get_leading_eigenvalue(J,returntype,'LR')
 
     def get_transmission_matrix(self,y0=None):
         """
@@ -628,9 +628,9 @@ class MatrixEpiModel(IntegrationMixin):
         Use ``returntype='complex'`` to change this.
         """
         K = self.get_next_generation_matrix(y0=y0)
-        return self._get_leading_eigenvalue(K,returntype)
+        return self._get_leading_eigenvalue(K,returntype,method='LM')
 
-    def _get_leading_eigenvalue(self,M,returntype='complex'):
+    def _get_leading_eigenvalue(self,M,returntype='complex',method='LR'):
 
         if M.shape == (1,1):
             _lambda = M[0,0]
@@ -644,11 +644,17 @@ class MatrixEpiModel(IntegrationMixin):
             if M_.shape == (2,2):
                 lambdas = np.linalg.eig(M_.toarray())[0]
             else:
-                lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]-2),which='LR')[0]
-            lambdas = sorted(lambdas, key=lambda x: -np.real(x))
-            _lambda = lambdas[0]
-        if returntype == 'real':
-            _lambda = np.real(_lambda)
+                lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]-2),which=method)[0]
+            if method == 'LR':
+                lambdas = sorted(lambdas, key=lambda x: -np.real(x))
+                _lambda = lambdas[0]
+                if returntype == 'real':
+                    _lambda = np.real(_lambda)
+            elif method == 'LM':
+                lambdas = sorted(lambdas, key=lambda x: -np.abs(x))
+                _lambda = lambdas[0]
+                if returntype == 'real':
+                    _lambda = np.abs(_lambda)
         return _lambda
 
 

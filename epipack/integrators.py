@@ -9,6 +9,60 @@ import numpy as np
 from scipy.integrate import ode, solve_ivp, quad
 from scipy.optimize import newton
 
+def integrate_ivp_until(dydt, t0, y0, stop_condition, solve_ivp_kwargs={}):
+    """
+    Integrate an ODE system with the ``scipy.integrate.solve_ivp`` method.
+
+    Parameters
+    ----------
+    dydt : function
+        A function returning the momenta of the ODE system.
+    t0 : float
+        Initial time
+    y0 : numpy.ndarray
+        Initial conditions
+    stop_condition : function
+        A function ``stop_condition(t,y)`` that flips from
+        positive to negative values when a certain
+        condition is reached. For instance, when
+        an element reaches a certain threshold value:
+
+        .. code:: python
+
+            stop_condition = lambda t, y: 0.3 - y[2]
+
+    solve_ivp_kwargs : dict
+        Keyword arguments that will be passed to
+        ``scipy.integrate.solve_ivp``.
+
+    Returns
+    -------
+    t : float
+        Times when the system state was recorded
+        The final time corresponds to the time when
+        the stop condition was reached.
+    y : numpy.ndarray
+        First axis accesses system states, second
+        axis refers to the system state corresponding
+        to the time points in ``t``.
+    """
+
+    y0 = np.array(y0,dtype=float)
+    stop_condition.terminal = True
+
+    result = solve_ivp(
+                    fun=dydt,
+                    y0=y0,
+                    t_span=(t0,np.inf),
+                    events=stop_condition,
+                    **solve_ivp_kwargs,
+                  )
+
+    y = result.y
+    t = result.t
+
+    return t, y
+
 def integrate_dopri5(dydt, t, y0, *args):
     """
     Integrate an ODE system with the Runge-Kutte Dormand Prince
@@ -209,6 +263,13 @@ class IntegrationMixin():
             Scalar and constant diffusion coefficients as prefactors
             for each compartment's Wiener process (has to be of same
             length as y0)
+
+        Returns
+        =======
+        result : numpy.ndarray
+            First axis accesses system states, second
+            axis refers to the system state corresponding
+            to the time points in ``time_points``.
         """
 
         dydt = self.get_numerical_dydt()
@@ -266,6 +327,11 @@ class IntegrationMixin():
             Scalar and constant diffusion coefficients as prefactors
             for each compartment's Wiener process (has to be of same
             length as y0)
+
+        Returns
+        =======
+        result : dict
+            Dictionary mapping compartments to time series.
         """
         if return_compartments is None:
             return_compartments = self.compartments
@@ -311,6 +377,133 @@ class IntegrationMixin():
             warnings.warn('Sum of initial conditions does not equal unity.')
 
         return self
+
+    def integrate_and_return_by_index_until(
+                                      self,
+                                      t0,
+                                      stop_condition,
+                                      return_compartments=None,
+                                      adopt_final_state=False,
+                                      solve_ivp_kwargs={},
+                                      ):
+        r"""
+        Integrate the system until a stop condition is reached,
+        using ``scipy.integrate.solve_ivp``.
+        Returns values of the given compartments at the demanded
+        time points (as a numpy.ndarray of shape
+        ``(return_compartments), len(time_points)``.
+
+        Parameters
+        ==========
+        t0 : float
+            Initial time
+        stop_condition : function
+            A function ``stop_condition(t,y)`` that flips from
+            positive to negative values when a certain
+            condition is reached. For instance, when
+            an element reaches a certain threshold value:
+
+            .. code:: python
+
+                stop_condition = lambda t, y: 0.3 - y[2]
+
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
+        solve_ivp_kwargs : dict
+            Keyword arguments that will be passed to
+            ``scipy.integrate.solve_ivp``.
+
+        Returns
+        =======
+        t : float
+            Times when the system state was recorded
+            The final time corresponds to the time when
+            the stop condition was reached.
+        y : numpy.ndarray
+            First axis accesses system states, second
+            axis refers to the system state corresponding
+            to the time points in `t`.
+        """
+
+        dydt = self.get_numerical_dydt()
+        self.t0 = t0
+
+        time_points, result = integrate_ivp_until(dydt, self.t0, self.y0, stop_condition, solve_ivp_kwargs)
+
+        if adopt_final_state:
+            self.t0 = time_points[-1]
+            self.y0 = result[:,-1]
+
+        if return_compartments is not None:
+            ndx = [self.get_compartment_id(C) for C in return_compartments]
+            result = result[ndx,:]
+
+        return time_points, result
+
+    def integrate_until(self,
+                        t0,
+                        stop_condition,
+                        return_compartments=None,
+                        adopt_final_state=False,
+                        solve_ivp_kwargs={},
+                        ):
+        r"""
+        Integrate the system until a stop condition is reached,
+        using ``scipy.integrate.solve_ivp``.
+
+        Parameters
+        ==========
+        t0 : float
+            Initial time
+        stop_condition : function
+            A function ``stop_condition(t,y)`` that flips from
+            positive to negative values when a certain
+            condition is reached. For instance, when
+            an element reaches a certain threshold value:
+
+            .. code:: python
+
+                stop_condition = lambda t, y: 0.3 - y[2]
+
+        return_compartments : list, default = None
+            A list of compartments for which the result should be returned.
+            If ``return_compartments`` is None, all compartments will
+            be returned.
+        adopt_final_state : bool, default = False
+            Whether or not to adopt the final state of the integration
+        solve_ivp_kwargs : dict
+            Keyword arguments that will be passed to
+            ``scipy.integrate.solve_ivp``.
+
+        Returns
+        =======
+        t : float
+            Times when the system state was recorded
+            The final time corresponds to the time when
+            the stop condition was reached.
+        result : dict
+            Dictionary mapping compartments to time series.
+        """
+        if return_compartments is None:
+            return_compartments = self.compartments
+
+        t, result = self.integrate_and_return_by_index_until(
+                            t0,
+                            stop_condition,
+                            return_compartments,
+                            adopt_final_state,
+                            solve_ivp_kwargs,
+                        )
+
+        result_dict = {}
+        for icomp, compartment in enumerate(return_compartments):
+            result_dict[compartment] = result[icomp,:]
+
+        return t, result_dict
 
 def time_leap_newton(t0, y0, get_event_rates, rand=None):
     """
@@ -393,9 +586,9 @@ def time_leap_ivp(t0, y0, get_event_rates, rand=None):
 
 if __name__ == "__main__":     # pragma: no cover
 
-    from epipack import DeterministicSISModel
+    from epipack import SISModel
 
-    SIS = DeterministicSISModel(R0=2.0,recovery_rate=1)
+    SIS = SISModel(infection_rate=2.0,recovery_rate=1)
     SIS.set_initial_conditions({
                     'S': 0.99,
                     'I': 0.01,

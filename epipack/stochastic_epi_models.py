@@ -255,7 +255,7 @@ class StochasticEpiModel():
 
             # add event and rate to the list of events for this compartment
             self.node_transition_events[_s][_EVENTS].append((-1,_s,_t))
-            self.node_transition_events[_s][_RATES].append(rate)
+            self.node_transition_events[_s][_RATES].append(float(rate))
 
         # convert to numpy arrays
         for _c0, events in enumerate(self.node_transition_events):
@@ -322,7 +322,7 @@ class StochasticEpiModel():
 
             # add event and rate to the list of events for this compartment
             self.link_transmission_events[_c0][_EVENTS].append((_c0,_s,_t))
-            self.link_transmission_events[_c0][_RATES].append(rate)
+            self.link_transmission_events[_c0][_RATES].append(float(rate))
 
         # convert to numpy arrays
         for _c0, events in enumerate(self.link_transmission_events):
@@ -470,7 +470,7 @@ class StochasticEpiModel():
                     probabilities.append(1-sum_p)
                     these_events.append((_c0, _s, _s))
 
-                probabilities = np.array(probabilities)
+                probabilities = np.array(probabilities,dtype=float)
                 probabilities /= probabilities.sum()
 
                 self.conditional_link_transmission_events[event][_s] = ( probabilities, these_events )

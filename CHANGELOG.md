@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.5] - 2020-06-08
+
+### Added
+
+- methods to the IntegratorMixin class that allow integration until a stop condition is reached
+
+### Fixed
+
+- specified for MatrixEpiModel that the leading eigenvalue of a Jacobian should be measured by largest real part
+- specified for MatrixEpiModel that the leading eigenvalue of the next generation matrix should be measured by largest magnitude (because R is the matrix's spectral radius)
+- in StochasticEpiModel, convert rate values to float by default
+
 ## [v0.1.4] - 2020-05-18
 
 ### Added
@@ -100,8 +112,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.4...HEAD
-[v0.1.4]: https://github.com/benmaier/epipack/compare/v0.1.2...v0.1.4]
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.5...HEAD
+[v0.1.4]: https://github.com/benmaier/epipack/compare/v0.1.4...v0.1.5]
+[v0.1.4]: https://github.com/benmaier/epipack/compare/v0.1.3...v0.1.4]
 [v0.1.3]: https://github.com/benmaier/epipack/compare/v0.1.2...v0.1.3]
 [v0.1.2]: https://github.com/benmaier/epipack/compare/v0.1.1...v0.1.2]
 [v0.1.1]: https://github.com/benmaier/epipack/compare/v0.1.0...v0.1.1]

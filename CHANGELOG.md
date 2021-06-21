@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Disallowing resizing a visualization app on Linux OSes to avoid a recursion error
+
 ## [v0.1.5] - 2020-06-08
 
 ### Added

@@ -2,6 +2,8 @@
 Visualizations of simulations with pyglet.
 """
 
+from sys import platform
+
 from copy import deepcopy
 from itertools import chain
 
@@ -17,6 +19,14 @@ from epipack import colors as col
 from epipack.colors import colors
 
 _colors = list(colors.values())
+
+
+if platform == "linux" or platform == "linux2":
+    _IS_LINUX = True
+elif platform == "darwin":
+    _IS_LINUX = False
+elif platform == "win32":
+    _IS_LINUX = False
 
 
 class SimulationStatus():
@@ -119,6 +129,8 @@ class App(pyglet.window.Window):
 
         self.simulation_status = simulation_status
 
+        self.has_been_resized_once = False
+
 
     def add_batch(self,batch,prefunc=None):
         """
@@ -153,11 +165,14 @@ class App(pyglet.window.Window):
     def on_resize(self, width, height):
         """Rescale."""
         # Set window values
-        self.width  = width
-        self.height = height
+        #self.width  = width
+        #self.height = height
 
         # Initialize OpenGL context
-        self.init_gl(width, height)
+        if (_IS_LINUX and not self.has_been_resized) or not _IS_LINUX:
+            self.init_gl(width, height)
+
+        self.has_been_resized = True
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Pan."""

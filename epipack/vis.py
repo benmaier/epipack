@@ -129,7 +129,7 @@ class App(pyglet.window.Window):
 
         self.simulation_status = simulation_status
 
-        self.has_been_resized_once = False
+        self.has_been_resized = False
 
 
     def add_batch(self,batch,prefunc=None):

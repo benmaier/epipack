@@ -754,9 +754,9 @@ class StochasticEpiModel():
                         ndx = np.where(coupling_compartments == neigh_status)[0]
                         total_rate += these_rates[ndx].sum()
                 else:
-                    for C in coupling_compartments:
+                    for iC, C in enumerate(coupling_compartments):
                         nodes_of_this_compartment = self.y0[C]
-                        total_rate += these_rates[C] * nodes_of_this_compartment * self.k0 / (self.N_nodes-1)
+                        total_rate += these_rates[iC] * nodes_of_this_compartment * self.k0 / (self.N_nodes-1)
 
         if total_rate == 0.0:
             self.set_simulation_has_ended()
@@ -787,7 +787,7 @@ class StochasticEpiModel():
         Let an event take place according to the new time and return the change in compartment counts.
         """
         reacting_node = self.get_reacting_node()
-        return self.make_random_node_event(reacting_node)
+        return reacting_node, self.make_random_node_event(reacting_node)
 
     def get_reacting_node(self):
         """
@@ -945,12 +945,13 @@ class StochasticEpiModel():
                  max_unsuccessful=None,
                  sampling_callback=None,
                  t0=0.0,
-                 stop_simulation_on_empty_network=True,
+                 stop_simulation_on_vanishing_total_event_rate=True,
                  custom_stop_condition=None,
+                 event_callback=None,
                  **kwargs):
         """
         Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
+        time points (as a numpy.ndarray of shape
         ``(return_compartments), len(time_points)``.
         If ``return_compartments`` is None, all compartments will
         be returned.
@@ -971,8 +972,33 @@ class StochasticEpiModel():
             that a network becomes effectively disconnected while
             nodes are still associated with a maximum event rate).
             If ``None``, this number will be set equal to the number of nodes.
-        sampling_callback : funtion, default = None
+        sampling_callback : function, default = None
             A function that's called when a sample is taken
+        t0 : float, default = 0.0
+            initial time
+        stop_simulation_on_vanishing_total_event_rate : bool, default = True
+            Stop the simulation when the total event rate is
+            zero. This can be switched off for simulations on temporal networks
+            where a temporal edge count of zero can lead to a vanishing
+            total event rate even though nodes can still be infectious
+            later on
+        custom_stop_condition : function, default = None
+            A function that will be called as
+
+            .. code:: python
+
+                custom_stop_condition(current_state,self.node_status)
+
+            after every event. Simulation will be stopped as soon as this
+            function returns ``True``.
+        event_callback : function, default = None
+            A function that will be called as
+
+            .. code:: python
+
+                event_callback(t, reacting_node, self.node_status)
+
+            when a successful event was sampled.
 
         Returns
         -------
@@ -987,6 +1013,9 @@ class StochasticEpiModel():
 
         if sampling_callback is not None and sampling_dt is None:
             raise ValueError('A sampling callback function can only be set if sampling_dt is set, as well.')
+
+        if self.y0 is None:
+            raise ValueError('No initial conditions have been set')
 
         ndx = [self.get_compartment_id(C) for C in return_compartments]
         current_state = self.y0.copy()
@@ -1027,7 +1056,7 @@ class StochasticEpiModel():
             # sample a reacting node from the reaction set
             # let the event take place and get all the compartments
             # that are associated with changes
-            changing_compartments = self.get_compartment_changes()
+            reacting_node, changing_compartments = self.get_compartment_changes()
 
             # only save compartment counts if anything changed
             if len(changing_compartments) > 0:
@@ -1040,6 +1069,10 @@ class StochasticEpiModel():
                         compartments.append(current_state.copy())
                         if sampling_callback is not None:
                             sampling_callback()
+
+                # call back 
+                if event_callback is not None:
+                    event_callback(new_t, reacting_node, self.node_status)
 
                 # write losses and gains into the current state vector
                 for losing, gaining in changing_compartments:
@@ -1090,7 +1123,7 @@ class StochasticEpiModel():
             sampling_callback()
 
         if not self.reactions_may_still_occur(current_state) or\
-           (total_event_rate == 0.0 and stop_simulation_on_empty_network):
+           (total_event_rate == 0.0 and stop_simulation_on_vanishing_total_event_rate):
             self.set_simulation_has_ended()
 
         return time, { compartment: result[:,c_ndx] for c_ndx, compartment in zip(ndx, return_compartments) }
@@ -1106,16 +1139,16 @@ class StochasticSIModel(StochasticEpiModel):
     infection_rate : float
         Inverse mean duration of a single SI-contact until infection :math:`\eta=1/\tau`.
     *args : list
-        List of arguments that will be passed to 
+        List of arguments that will be passed to
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
     **kwargs : dict
-        Additional keyword arguments that will be passed to 
+        Additional keyword arguments that will be passed to
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
 
     Attributes
     ----------
     compartments : list of str
-        
+
         .. code:: python
 
             [ "S", "I" ]
@@ -1142,16 +1175,16 @@ class StochasticSIRModel(StochasticEpiModel):
     recovery_rate : float
         Inverse duration of infection :math:`\rho=1/\tau_I`.
     *args : list
-        List of arguments that will be passed to 
+        List of arguments that will be passed to
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
     **kwargs : dict
-        Additional keyword arguments that will be passed to 
+        Additional keyword arguments that will be passed to
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
 
     Attributes
     ----------
     compartments : list of str
-        
+
         .. code:: python
 
             [ "S", "I", "R" ]
@@ -1161,7 +1194,7 @@ class StochasticSIRModel(StochasticEpiModel):
 
         StochasticEpiModel.__init__(self, list("SIR"), N, *args, **kwargs)
 
-        k0 = self.out_strength.mean() 
+        k0 = self.out_strength.mean()
         infection_rate = R0 * recovery_rate / k0
 
         self.set_node_transition_processes([
@@ -1185,16 +1218,16 @@ class StochasticSISModel(StochasticEpiModel):
     recovery_rate : float
         Inverse duration of infection :math:`\rho=1/\tau_I`.
     *args : list
-        List of arguments that will be passed to 
+        List of arguments that will be passed to
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
     **kwargs : dict
-        Additional keyword arguments that will be passed to 
+        Additional keyword arguments that will be passed to
         :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
 
     Attributes
     ----------
     compartments : list of str
-        
+
         .. code:: python
 
             [ "S", "I" ]
@@ -1227,7 +1260,7 @@ if __name__ == "__main__":     # pragma: no cover
     print(model.node_transition_events)
     for comp, comp_events in enumerate(model.node_and_link_events):
         print(model.get_compartment(comp), comp_events)
-    
+
     #model.set_well_mixed(3,mean_contact_number=1)
     model.set_random_initial_conditions({"S": 2, "I": 1})
 
@@ -1312,7 +1345,7 @@ if __name__ == "__main__":     # pragma: no cover
 
     for comp, series in result.items():
         pl.plot(t, series, label=comp)
-    
+
     pl.legend()
 
     print("====== BARABASI-ALBERT ========")
@@ -1359,12 +1392,12 @@ if __name__ == "__main__":     # pragma: no cover
     start = time()
     model = SIR_weighted(N,weighted_edge_tuples,infection_rate=R0/k_norm*mu,recovery_rate=mu,number_of_initially_infected=I0)
     end = time()
-    print("force of infection needed", end-start,"seconds") 
+    print("force of infection needed", end-start,"seconds")
     _t, _I, _R = model.simulation(100)
 
     pl.plot(_t, _I, label="I")
     pl.plot(_t, _R, label="R")
-    
+
 
     pl.legend()
     pl.show()

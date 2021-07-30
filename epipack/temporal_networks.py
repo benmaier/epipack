@@ -323,15 +323,15 @@ class TemporalNetworkSimulation():
                     N_nodes=self.temporal_network.N,
                     edge_weight_tuples=edges,
                     directed=self.temporal_network.directed,
-                    )
+                )
 
             _t, _res = self.model.simulate(
                     t0=t,
                     tmax=next_t,
                     return_compartments=return_compartments,
                     max_unsuccessful=max_unsuccessful,
-                    stop_simulation_on_empty_network=False,
-                    )
+                    stop_simulation_on_vanishing_total_event_rate=False,
+                )
 
             if next_t > tmax:
                 next_t == tmax
@@ -364,7 +364,7 @@ class TemporalNetworkSimulation():
 
 
 
-                    
+
 if __name__=="__main__": # pragma: no cover
     edges = [ [ (0,1) ], [ (0,1), (0,2) ], [] ]
     temporal_network = TemporalNetwork(3,edges,[0,0.5,0.6],1.0)

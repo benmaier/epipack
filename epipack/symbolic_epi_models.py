@@ -722,7 +722,7 @@ class SymbolicODEModel(SymbolicEpiModel):
     def _get_compartments_and_assert_derivatives(self, ODEs):
         """
         Iterate through a list of ODES, assert that
-        each of them is of format 
+        each of them is of format
 
         .. code:: python
 
@@ -738,7 +738,7 @@ class SymbolicODEModel(SymbolicEpiModel):
 
         for eq in ODEs:
 
-            lhs, rhs = eq.lhs, eq.rhs    
+            lhs, rhs = eq.lhs, eq.rhs
             assert(isinstance(lhs, sympy.Derivative))
 
             expr = lhs.expr
@@ -823,6 +823,26 @@ class SymbolicSIRModel(SymbolicEpiModel):
                 (I, recovery_rate, R),
             ])
 
+class SymbolicSEIRModel(SymbolicEpiModel):
+    """
+    An SEIR model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
+    """
+
+    def __init__(self, infection_rate, latency_rate, recovery_rate, initial_population_size=1):
+
+        S, E, I, R = sympy.symbols("S E I R")
+
+        SymbolicEpiModel.__init__(self,[S, E, I, R], initial_population_size)
+
+        self.add_transmission_processes([
+                (S, I, infection_rate, E, I),
+                (E, latency_rate, I ),
+            ])
+
+        self.add_transition_processes([
+                (I, recovery_rate, R),
+            ])
+
 class SymbolicSISModel(SymbolicEpiModel):
     """
     An SIS model derived from :class:`epipack.symbolic_epi_models.SymbolicEpiModel`.
@@ -870,7 +890,7 @@ if __name__=="__main__":    # pragma: no cover
     #    print(C, M)
 
     print(epi.dydt())
-    
+
     print(epi.jacobian())
 
     print(epi.get_eigenvalues_at_disease_free_state())

@@ -4,7 +4,7 @@ Provides an API to define epidemiological models in terms of sympy symbolic expr
 
 import warnings
 
-import numpy as np 
+import numpy as np
 import scipy.sparse as sprs
 
 import sympy

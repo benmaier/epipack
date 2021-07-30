@@ -3,6 +3,7 @@ Some network models and layout functions.
 """
 
 import numpy as np
+from scipy.spatial import KDTree
 
 def _edge(u,v,w):
     u, v = sorted([u,v])
@@ -10,6 +11,106 @@ def _edge(u,v,w):
 
 def _dist(i,j,N):
     return min(np.abs(i-j), N-np.abs(i-j))
+
+def get_RGG_links_and_network(N,k,
+                          windowwidth=400,
+                          linkwidth=1,
+                          node_scale_by_degree=0.5,
+                          node_radius_scale = 1/3,
+                          pos = None,
+                      ):
+    """
+    Return the links and the stylized network
+    of a non-periodic random geometric graph
+    on a square.
+
+    Parameters
+    ==========
+    N : int
+        Number of nodes
+    k : float
+        mean degree
+    windowwidth : float, default = 400
+        The width of the network visualization
+    linkwidth : float, default = 1.0
+        All links get the same width.
+    node_scale_by_degree : float, default = 0.5
+        Scale the node radius by ``degree**node_scale_by_degree``.
+        Per default, the node disk area will be
+        proportional to the degree. If you want
+        all nodes to be equally sized, set
+        ``node_scale_by_degree = 0``.
+    node_radius_scale : float, default = 1/3
+        Factor by which the default node size is scaled.
+    pos : numpy.ndarray, default = None
+        If ``None``, node positions will be drawn uniform at random.
+        If not ``None``, should be position array of shape ``N x 2``.
+
+    Returns
+    =======
+    edge_weight_tuples : list of tuple
+        list of tuples that are structured like ``(source, target, weight)``
+    network : dict
+        stylized network that can be passed to the visualization
+    """
+
+
+    if pos is None:
+        pos = np.random.rand(N,2)
+        ndx = np.argsort(pos[:,0])
+        pos = pos[ndx,:]
+
+    tree = KDTree(pos)
+
+    V = N-1
+    R = np.sqrt(k/V/np.pi)
+
+    pairs = tree.query_pairs(R)
+    edge_weight_tuples = []
+    for u, v in pairs:
+        edge_weight_tuples.append(_edge(int(u),int(v),1.0))
+
+    w = h = windowwidth
+    N_side = int(np.ceil(np.sqrt(N)))
+    dx = w / N_side
+    radius = dx * node_radius_scale
+
+    network = {}
+    stylized_network = {
+        'xlim': [0, w],
+        'ylim': [0, h],
+        'linkAlpha': 0.5,
+        'nodeStrokeWidth': 0.0001,
+    }
+
+    degree = np.zeros(N,)
+    for u, v, _w in edge_weight_tuples:
+        degree[u] += 1
+        degree[v] += 1
+
+    median_degree = np.median(degree)
+    if median_degree == 0:
+        median_degree = 1
+    radius_scale = (degree/median_degree)**node_scale_by_degree
+    radius_scale[radius_scale==0] = 1.0
+    radius = radius_scale * radius
+
+    pos *= w
+
+    nodes = [ {
+                'id': i,
+                'x_canvas': _pos[0],
+                'y_canvas': _pos[1],
+                'radius': radius[i],
+              } for i, _pos in enumerate(pos)]
+
+    nodes = nodes[:N]
+    links = [ {'source': u, 'target': v, 'width': linkwidth} for u, v, w in edge_weight_tuples ]
+
+    stylized_network['nodes'] = nodes
+    stylized_network['links'] = links
+
+    return edge_weight_tuples, stylized_network
 
 def get_2D_lattice_links(N_side,periodic=False,diagonal_links=False):
     """

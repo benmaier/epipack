@@ -19,11 +19,6 @@ that approximates rates as either
     integral for a new time leap. Re-evaluate rates at the new time
     and choose event from those.
 
-## Simulations on temporal networks
-
-Straight-forward to set up based on
-[tacoma](https://github.com/benmaier/tacoma)-types.
-
 ## Spatial systems
 
 Based on our implementation in the `metapop`-prototype (github.com/benmaier/metapop), it should be fairly simple to set up more efficient reaction-diffusion systems for `MatrixEpiModel`.

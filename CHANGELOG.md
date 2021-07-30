@@ -7,11 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.6] - 2021-07-30
+
+### Changed
+
+- renamed a parameter in `StochasticEpiModel.simulate` to `stop_simulation_on_vanishing_total_event_rate`, because it describes the mechanism better (adjusted `TemporalNetwork`) accordingly
+
 ### Fixed
 
 - Disallowing resizing a visualization app on Linux OSes to avoid a recursion error
+- metadata such as `epipack.__version__` is now correctly given out
 
-## [v0.1.5] - 2020-06-08
+### Added
+
+- a `SymbolicSEIRModel`
+- a routine to generate random geometric graphs
+- the possiblity to add a callback function in `StochasticEpiModel.simulate` such that event tracking is possible
+
+## [v0.1.5] - 2021-06-08
 
 ### Added
 
@@ -23,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - specified for MatrixEpiModel that the leading eigenvalue of the next generation matrix should be measured by largest magnitude (because R is the matrix's spectral radius)
 - in StochasticEpiModel, convert rate values to float by default
 
-## [v0.1.4] - 2020-05-18
+## [v0.1.4] - 2021-05-18
 
 ### Added
 
@@ -35,20 +48,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - methods to `EpiModel` that save events that have been set. This will be used to generate model flowcharts with graphviz at some point
 - the possibility to pass a function to ``StochasticEpiModel.simulate`` that checks for a custom stop condition
 
-## [v0.1.3] - 2020-04-07
+## [v0.1.3] - 2021-04-07
 
 ### Fixed
 
 - dependency issues with pyglet, apparently the "shapes" module did not appear until lately. Defined a range of versions for pyglet
 - bug in example code in README.md
 
-## [v0.1.2] - 2020-04-01
+## [v0.1.2] - 2021-04-01
 
 ### Fixed
 
 - A bug where the `reset_events`-flag was ignored when setting processes
 
-## [v0.1.1] - 2020-03-03
+## [v0.1.1] - 2021-03-03
 
 ### Added
 
@@ -116,7 +129,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.6...HEAD
+[v0.1.6]: https://github.com/benmaier/epipack/compare/v0.1.5...v0.1.6]
 [v0.1.5]: https://github.com/benmaier/epipack/compare/v0.1.4...v0.1.5]
 [v0.1.4]: https://github.com/benmaier/epipack/compare/v0.1.3...v0.1.4]
 [v0.1.3]: https://github.com/benmaier/epipack/compare/v0.1.2...v0.1.3]

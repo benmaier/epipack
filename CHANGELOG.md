@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- changed references to deprecated classes in examples and docstrings
+
 ## [v0.1.6] - 2021-07-30
 
 ### Changed

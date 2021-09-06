@@ -1090,8 +1090,8 @@ def visualize_reaction_diffusion(
 
     Parameters
     ==========
-    model : epipack.deterministic_epi_models.DeterministicEpiModel
-        An initialized DeterministicEpiModel.
+    model : :class:`epipack.numeric_matrix_epi_models.MatrixEpiModel
+        An initialized ``MatrixEpiModel``.
     network: dict
         A stylized network in the netwulf-format
         (see https://netwulf.readthedocs.io/en/latest/python_api/post_back.html)

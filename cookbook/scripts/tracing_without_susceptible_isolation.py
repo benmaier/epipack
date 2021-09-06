@@ -23,7 +23,7 @@ if __name__=="__main__":
     edges = [ (e[0], e[1], 1.0) for e in G.edges() ]
 
     #model = StochasticEpiModel(list("SIXRQ"),N,edge_weight_tuples=edges)
-    model = StochasticEpiModel(list("SIXRQT"),N,well_mixed_mean_contact_number=k0) 
+    model = StochasticEpiModel(list("SIXRQT"),N,well_mixed_mean_contact_number=k0)
 
     model.set_node_transition_processes([
             ("I",rho,"R"),
@@ -36,8 +36,8 @@ if __name__=="__main__":
         ])
 
     model.set_conditional_link_transmission_processes({
-            ( "T", "->", "X" ) : [ 
-                        ("X","I","->","X","X"), 
+            ( "T", "->", "X" ) : [
+                        ("X","I","->","X","X"),
                     ]
         })
 
@@ -69,7 +69,7 @@ if __name__=="__main__":
          }
 
     t, result = mean_field_SIRX_tracing(kw)
-             
+
     for comp, series in result.items():
         pl.plot(t, series*N, label=comp)
 

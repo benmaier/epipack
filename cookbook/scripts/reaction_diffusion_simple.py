@@ -1,4 +1,4 @@
-from epipack import NumericMatrixBasedEpiModel, get_2D_lattice_links
+from epipack import MatrixEpiModel, get_2D_lattice_links
 import numpy as np
 
 from time import time
@@ -11,7 +11,7 @@ links = [ (i,i+1,1.0) for i in range(N-1) ]
 base_compartments = "SIR"
 
 compartments = [ (node, C) for node in range(N) for C in "SIR" ]
-model = NumericMatrixBasedEpiModel(compartments)
+model = MatrixEpiModel(compartments)
 
 infection_rate = 2
 recovery_rate = 1

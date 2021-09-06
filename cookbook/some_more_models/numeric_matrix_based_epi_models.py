@@ -1,21 +1,21 @@
 """
-Provides an API to define NumericMatrixBased epidemiological models.
+Provides an API to define Matrix epidemiological models.
 """
 
 import numpy as np 
 
-from epipack import NumericMatrixBasedEpiModel
+from epipack import MatrixEpiModel
 
-class NumericMatrixBasedSIRXModel(NumericMatrixBasedEpiModel):
+class MatrixSIRXModel(MatrixEpiModel):
     """
-    An SIRX model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
+    An SIRX model derived from :class:`epipack.numeric_matrix_based_epi_models.MatrixEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, quarantine_rate, containment_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        NumericMatrixBasedEpiModel.__init__(self, list("SIRXH"), population_size)
+        MatrixEpiModel.__init__(self, list("SIRXH"), population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -27,16 +27,16 @@ class NumericMatrixBasedSIRXModel(NumericMatrixBasedEpiModel):
                 ("I", containment_rate+quarantine_rate, "X"),
             ])
 
-class NumericMatrixBasedSEIRXModel(NumericMatrixBasedEpiModel):
+class MatrixSEIRXModel(MatrixEpiModel):
     """
-    An SEIRX model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
+    An SEIRX model derived from :class:`epipack.numeric_matrix_based_epi_models.MatrixEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, quarantine_rate, containment_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        NumericMatrixBasedEpiModel.__init__(self, list("SEIRXH"), population_size)
+        MatrixEpiModel.__init__(self, list("SEIRXH"), population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -49,16 +49,16 @@ class NumericMatrixBasedSEIRXModel(NumericMatrixBasedEpiModel):
                 ("I", containment_rate+quarantine_rate,"X")
             ])
 
-class NumericMatrixBasedSEIRModel(NumericMatrixBasedEpiModel):
+class MatrixSEIRModel(MatrixEpiModel):
     """
-    An SEIR model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
+    An SEIR model derived from :class:`epipack.numeric_matrix_based_epi_models.MatrixEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        NumericMatrixBasedEpiModel.__init__(self, list("SEIR"), population_size)
+        MatrixEpiModel.__init__(self, list("SEIR"), population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -69,16 +69,16 @@ class NumericMatrixBasedSEIRModel(NumericMatrixBasedEpiModel):
                 ("I", recovery_rate, "R"),
             ])
 
-class NumericMatrixBasedSEIRSModel(NumericMatrixBasedEpiModel):
+class MatrixSEIRSModel(MatrixEpiModel):
     """
-    An SEIRS model derived from :class:`epipack.numeric_matrix_based_epi_models.NumericMatrixBasedEpiModel`.
+    An SEIRS model derived from :class:`epipack.numeric_matrix_based_epi_models.MatrixEpiModel`.
     """
 
     def __init__(self, R0, recovery_rate, symptomatic_rate, waning_immunity_rate, population_size=1.0):
 
         infection_rate = R0 * recovery_rate
 
-        NumericMatrixBasedEpiModel.__init__(self, list("SEIR"), population_size)
+        MatrixEpiModel.__init__(self, list("SEIR"), population_size)
 
         self.set_quadratic_rates([
                 ("S", "I", "S", -infection_rate),
@@ -92,7 +92,7 @@ class NumericMatrixBasedSEIRSModel(NumericMatrixBasedEpiModel):
 
 
 if __name__=="__main__":    # pragma: no cover
-    epi = NumericMatrixBasedEpiModel(list("SEIR"))
+    epi = MatrixEpiModel(list("SEIR"))
     print(epi.compartments)
     print()
     epi.add_transition_processes([

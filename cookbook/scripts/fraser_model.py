@@ -1,4 +1,4 @@
-from epipack import StochasticEpiModel, EpiModel, EpiModel
+from epipack import StochasticEpiModel, EpiModel
 import networkx as nx
 
 R0 = 2.5

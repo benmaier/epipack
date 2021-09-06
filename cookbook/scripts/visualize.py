@@ -13,7 +13,6 @@ if __name__=="__main__":
     edge_list = [ ( link['source'], link['target'], 1.0 ) for link in network['links'] ]
     k0 = 2*len(edge_list)/len(network['nodes'])
 
-    
     model = StochasticEpiModel(list("SIRXTQ"),N=len(network['nodes']),
                                edge_weight_tuples=edge_list
                                )

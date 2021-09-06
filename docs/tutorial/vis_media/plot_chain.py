@@ -1,4 +1,4 @@
-from epipack import DeterministicEpiModel
+from epipack import MatrixEpiModel
 
 N = 4
 nodes = list(range(N))
@@ -8,7 +8,7 @@ base_compartments = list("SIR")
 compartments = [
         (node, comp) for node in nodes for comp in base_compartments
     ]
-model = DeterministicEpiModel(compartments)
+model = MatrixEpiModel(compartments)
 
 infection_rate = 3
 recovery_rate = 1

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v0.1.7] - 2021-10-18
+
 ### Added
 
 - it's possible to set explicit time dependence of rates now when starting a simulation
@@ -138,7 +140,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - initialized
 
-[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/benmaier/epipack/compare/v0.1.7...HEAD
+[v0.1.7]: https://github.com/benmaier/epipack/compare/v0.1.6...v0.1.7]
 [v0.1.6]: https://github.com/benmaier/epipack/compare/v0.1.5...v0.1.6]
 [v0.1.5]: https://github.com/benmaier/epipack/compare/v0.1.4...v0.1.5]
 [v0.1.4]: https://github.com/benmaier/epipack/compare/v0.1.3...v0.1.4]

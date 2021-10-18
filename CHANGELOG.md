@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- it's possible to set explicit time dependence of rates now when starting a simulation
+
 ### Fixed
 
 - changed references to deprecated classes in examples and docstrings
+- better handling of detecting explicit time-dependence in functional rates.
 
 ## [v0.1.6] - 2021-07-30
 

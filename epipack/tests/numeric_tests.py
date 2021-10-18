@@ -2,7 +2,9 @@ import unittest
 
 import numpy as np
 from scipy.optimize import root
+from scipy.interpolate import interp1d
 from scipy.stats import entropy, poisson
+import warnings
 
 from epipack.numeric_epi_models import (
             DynamicBirthRate,
@@ -38,7 +40,7 @@ class EpiTest(unittest.TestCase):
                 ("E", 1.0, "I"),
                 ("I", 1.0, "R"),
             ])
-        linear_rates = [ ConstantLinearRate(1.0,1), ConstantLinearRate(1.0,2) ] 
+        linear_rates = [ ConstantLinearRate(1.0,1), ConstantLinearRate(1.0,2) ]
         linear_events = [ np.array([0,-1,+1,0]), np.array([0,0,-1,+1.]) ]
         for r0, r1 in zip(linear_rates, epi.linear_rate_functions):
             assert(r0(0,[0.1,0.2,0.3,0.4,0.5]) == r1(0, [0.1,0.2,0.3,0.4,0.5]))
@@ -52,7 +54,7 @@ class EpiTest(unittest.TestCase):
                 ("E", _r0,  "I"),
                 ("I", _r1,  "R"),
             ])
-        linear_rates = [ DynamicLinearRate(_r0,1), DynamicLinearRate(_r1,2) ] 
+        linear_rates = [ DynamicLinearRate(_r0,1), DynamicLinearRate(_r1,2) ]
         linear_events = [ np.array([0,-1,+1,0]), np.array([0,0,-1,+1.]) ]
 
         for r0, r1 in zip(linear_rates, epi.linear_rate_functions):
@@ -72,7 +74,7 @@ class EpiTest(unittest.TestCase):
                 ("I", 1.0, "R"),
                 ])
 
-        linear_rates = [ ConstantLinearRate(1.0,1), ConstantLinearRate(1.0,2) ] 
+        linear_rates = [ ConstantLinearRate(1.0,1), ConstantLinearRate(1.0,2) ]
         linear_events = [ np.array([0,-1,+1,0]), np.array([0,0,-1,+1.]) ]
         for r0, r1 in zip(linear_rates, epi.linear_rate_functions):
             assert(r0(0,[0.1,0.2,0.3,0.4,0.5]) == r1(0, [0.1,0.2,0.3,0.4,0.5]))
@@ -82,7 +84,7 @@ class EpiTest(unittest.TestCase):
     def test_quadratic_processes(self):
 
         epi = EpiModel(list("SEIAR"))
-        quadratic_rates = [ ConstantQuadraticRate(1.0,2,0)] 
+        quadratic_rates = [ ConstantQuadraticRate(1.0,2,0)]
         quadratic_events = [ np.array([-1,+1,0,0,0.])]
         epi.add_transmission_processes([
                 ("S", "I",  1.0, "I", "E"),
@@ -96,7 +98,7 @@ class EpiTest(unittest.TestCase):
     def test_adding_quadratic_processes(self):
 
         epi = EpiModel(list("SEIAR"))
-        quadratic_rates = [ ConstantQuadraticRate(1.0,2,0), ConstantQuadraticRate(1.0,3,0) ] 
+        quadratic_rates = [ ConstantQuadraticRate(1.0,2,0), ConstantQuadraticRate(1.0,3,0) ]
         quadratic_events = [ np.array([-1,+1,0,0,0.]), np.array([-1,+1,0,0,0.]) ]
         epi.set_processes([
                 ("S", "I",  1.0, "I", "E"),
@@ -148,7 +150,7 @@ class EpiTest(unittest.TestCase):
         with self.assertWarns(UserWarning):
             epi.set_processes([
                     ("S", "I", eta, "I", "I"),
-                    ("I", rho, "R"),  
+                    ("I", rho, "R"),
                     (None, mu, "S"),
                     ("S", mu, None),
                     ("R", mu, None),
@@ -222,7 +224,7 @@ class EpiTest(unittest.TestCase):
         with self.assertWarns(UserWarning):
             # this should raise a warning that rates do not sum to zero
             epi.add_linear_events([
-                   ((A,), 1, [(B,-1)]) 
+                   ((A,), 1, [(B,-1)])
                 ])
 
     def test_initial_condition_warnings(self):
@@ -251,7 +253,6 @@ class EpiTest(unittest.TestCase):
         assert(np.isclose(epi.y0[0],0))
 
 
-        
         eta = 2
         rho = 1
         epi = SIRModel(eta,rho)
@@ -288,6 +289,52 @@ class EpiTest(unittest.TestCase):
         tt = np.linspace(0,1000,2)
         result = epi.integrate(tt)
         assert(np.isclose(result[R][-1],(1-rho/eta)/(1+omega/rho)))
+
+    def test_inference_of_temporal_dependence(self,plot=False):
+
+        data = np.array([
+            (1.0,  2.00),
+            (10000.0, 2.00),
+            (10001.0, -2.00),
+        ])
+        times, rates = data[:,0], data[:,1]
+        f = interp1d(times, rates, kind='linear')
+
+        def infection_rate(t,y):
+            return f(t)
+
+        S, I = list("SI")
+        N = 100
+        rec = 1
+        model = EpiModel([S,I], N)
+
+        # first, initialize the time to t0 = 1, so
+        # column sum tests do not fail
+        model.set_initial_conditions({S:99,I:1},initial_time=1)
+
+        # Here, the function will fail to evaluate time dependence
+        # but will warn the user that there were errors in time
+        # evaluation.
+        self.assertWarns(UserWarning,model.set_processes,
+                            [
+                                (S, I, infection_rate, I, I),
+                                (I, infection_rate, S),
+                            ],
+                        )
+
+        assert(not model.rates_have_explicit_time_dependence)
+        assert(model.rates_have_functional_dependence)
+
+        # this should warn the user that rates are functionally dependent
+        # but that no temporal dependence could be inferred, to in case
+        # they know that there's a time dependence, they have to state
+        # that explicitly
+        self.assertWarns(UserWarning,model.simulate,tmax=2)
+        model.set_initial_conditions({S:99,I:1},initial_time=1)
+
+        # here, the time dependence is given explicitly and so
+        # the warning will not be shown
+        model.simulate(tmax=2,rates_have_explicit_time_dependence=True)
 
     def test_temporal_gillespie(self,plot=False):
 
@@ -532,24 +579,25 @@ if __name__ == "__main__":
     import sys
 
     T = EpiTest()
-    T.test_integrate_until()
-    T.test_integral_solvers()
-    T.test_temporal_gillespie_repeated_simulation()
-    T.test_sampling_callback()
-    T.test_birth_stochastics()
-    T.test_stochastic_fission()
-    T.test_correcting_for_declining_pop_size()
-    T.test_dynamic_birth()
-    T.test_stochastic_well_mixed()
-    T.test_temporal_gillespie()
-    T.test_compartments()
-    T.test_linear_rates()
-    T.test_adding_linear_rates()
-    T.test_quadratic_processes()
-    T.test_adding_quadratic_processes()
-    T.test_SIS_with_simulation_restart_and_euler()
-    T.test_repeated_simulation()
-    T.test_custom_models()
-    T.test_birth_death()
     T.test_fusion_and_adding_rates()
-    T.test_initial_condition_warnings()
+    T.test_inference_of_temporal_dependence()
+    #T.test_integrate_until()
+    #T.test_integral_solvers()
+    #T.test_temporal_gillespie_repeated_simulation()
+    #T.test_sampling_callback()
+    #T.test_birth_stochastics()
+    #T.test_stochastic_fission()
+    #T.test_correcting_for_declining_pop_size()
+    #T.test_dynamic_birth()
+    #T.test_stochastic_well_mixed()
+    #T.test_temporal_gillespie()
+    #T.test_compartments()
+    #T.test_linear_rates()
+    #T.test_adding_linear_rates()
+    #T.test_quadratic_processes()
+    #T.test_adding_quadratic_processes()
+    #T.test_SIS_with_simulation_restart_and_euler()
+    #T.test_repeated_simulation()
+    #T.test_custom_models()
+    #T.test_birth_death()
+    #T.test_initial_condition_warnings()

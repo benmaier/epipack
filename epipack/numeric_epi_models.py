@@ -239,6 +239,9 @@ class EpiModel(IntegrationMixin):
     y0 : numpy.ndarray
         The initial conditions.
     rates_have_explicit_time_dependence : bool
+        Internal switch that's flipped when any functional
+        rate is passed to the model.
+    rates_have_explicit_time_dependence : bool
         Internal switch that's flipped when a non-constant
         rate is passed to the model.
     use_ivp_solver : bool
@@ -267,6 +270,7 @@ class EpiModel(IntegrationMixin):
                   ):
 
         self.y0 = None
+        self.t0 = None
 
         self.compartments = list(compartments)
         self.compartment_ids = { C: iC for iC, C in enumerate(compartments) }
@@ -289,6 +293,7 @@ class EpiModel(IntegrationMixin):
         self.use_ivp_solver = integral_solver == 'solve_ivp'
 
         self.rates_have_explicit_time_dependence = False
+        self.rates_have_functional_dependence = False
 
     def get_compartment_id(self,C):
         """Get the integer ID of a compartment ``C``"""
@@ -362,12 +367,36 @@ class EpiModel(IntegrationMixin):
 
     def _rate_has_functional_dependency(self,rate):
         if callable(rate):
-            t = [0,1,2,10000,-10000]
-            y = np.ones(self.N_comp)
-            test = np.array([ rate(_t, y) for _t in t ])
-            has_time_dependence = not np.all(test == test[0])
+            t = [0,1,2,np.random.rand()*365,-np.random.rand()*365,10000,-10000]
+            y = np.random.rand(self.N_comp)
+            this_val = None
+            all_equal = None
+            errors = False
+            for _t in t:
+                try:
+                    val = rate(_t, y)
+                    if this_val is None:
+                        this_val = val
+                    else:
+                        if np.isclose(this_val,val):
+                            all_equal = True
+                        else:
+                            all_equal = False
+                            break
+                except ValueError as e:
+                    errors = True
+            if errors:
+                warnings.warn(f"There were errors when trying to evaluate a rate function named {rate.__name__}, at different points in time.")
+
+            if all_equal is None:
+                warnings.warn(f"Rate function {rate.__name__} couldn't be evaluated at more than one point or no point in time {t}")
+                has_time_dependence = False
+            else:
+                has_time_dependence = not all_equal
+
             self.rates_have_explicit_time_dependence = \
                     self.rates_have_explicit_time_dependence or has_time_dependence
+            self.rates_have_functional_dependence = True
             return True
         else:
             return False
@@ -479,11 +508,37 @@ class EpiModel(IntegrationMixin):
 
         if not allow_nonzero_column_sums and len(linear_rate_functions)>0:
             _y = np.ones(self.N_comp)
-            test = sum([r(0,_y) * dy for dy, r in zip (linear_event_updates, linear_rate_functions)])
-            test += sum([r(0,_y) * dy for dy, r in zip (birth_event_updates, birth_rate_functions)])
-            test_sum = test.sum()
-            if np.abs(test_sum) > 1e-15:
-                warnings.warn("events do not sum to zero for each column:" + str(test_sum))
+
+            if not self.rates_have_explicit_time_dependence:
+                if self.t0 is None:
+                    t0 = 0
+                else:
+                    t0 = self.t0
+            else:
+                if self.t0 is None:
+                    t0 = None
+                    warnings.warn('Rates are time-dependent, but no initial time was set yet, so I cannot check the column sums.')
+                else:
+                    t0 = self.t0
+
+
+            if t0 is not None:
+                try:
+                    test = sum([r(t0,_y) * dy for dy, r in zip (linear_event_updates, linear_rate_functions)])
+                    test += sum([r(t0,_y) * dy for dy, r in zip (birth_event_updates, birth_rate_functions)])
+                    test_sum = test.sum()
+                    if np.abs(test_sum) > 1e-15:
+                        warnings.warn("events do not sum to zero for each column:" + str(test_sum))
+                except ValueError as e:
+                    warnings.warn(' '.join(
+                                  f"Some rate functions couldn't be evaluated at {t0=}. This can happen when",
+                                  f"explicit time-dependence couldn't be inferred from any of your rates but they're time-dependent nevertheless.",
+                                  f"You can get rid of this warning by setting",
+                                  '``model.set_initial_conditions(...,initial_time=actual_initial_time)`` before setting processes.',
+                                  'You should also make sure to tell the model.simulate() function that it should assume explicit time',
+                                  'dependence by calling it as',
+                                  '``model.simulate(...,rates_have_explicit_time_dependence=True)``',
+                                  ))
 
         self.linear_event_updates = linear_event_updates
         self.linear_rate_functions = linear_rate_functions
@@ -598,7 +653,7 @@ class EpiModel(IntegrationMixin):
         quadratic_events = fusion_processes_to_events(process_list)
 
         return self.set_quadratic_events(quadratic_events,
-                                         reset_events=False, 
+                                         reset_events=False,
                                          allow_nonzero_column_sums=True)
 
     def add_transmission_processes(self,process_list):
@@ -607,14 +662,13 @@ class EpiModel(IntegrationMixin):
         through transmission reaction equations.
         Note that in stochastic network/agent simulations, the transmission
         rate is equal to a rate per link. For the mean-field ODEs,
-        the rates provided to this function will just be equal 
+        the rates provided to this function will just be equal
         to the prefactor of the respective quadratic terms.
 
-        For instance, if you analyze an SIR system and simulate
         on a network of mean degree :math:`k_0`,
-        a basic reproduction number :math:`R_0`, and a 
-        recovery rate :math:`\mu`, you would define the single 
-        link transmission process as 
+        a basic reproduction number :math:`R_0`, and a
+        recovery rate :math:`\mu`, you would define the single
+        link transmission process as
 
             .. code:: python
 
@@ -634,11 +688,11 @@ class EpiModel(IntegrationMixin):
             .. code:: python
 
                 [
-                    ("source_compartment", 
+                    ("source_compartment",
                      "target_compartment_initial",
-                     rate 
-                     "source_compartment", 
-                     "target_compartment_final", 
+                     rate,
+                     "source_compartment",
+                     "target_compartment_final",
                      ),
                     ...
                 ]
@@ -658,7 +712,7 @@ class EpiModel(IntegrationMixin):
         quadratic_events = transmission_processes_to_events(process_list)
 
         return self.set_quadratic_events(quadratic_events,
-                                         reset_events=False, 
+                                         reset_events=False,
                                          allow_nonzero_column_sums=True)
 
     def add_quadratic_events(self,
@@ -691,6 +745,7 @@ class EpiModel(IntegrationMixin):
                              event_list,
                              allow_nonzero_column_sums=False,
                              reset_events=True,
+                             initial_time_for_column_sum_test=0,
                              ):
         r"""
         Define quadratic transition events between compartments.
@@ -772,10 +827,34 @@ class EpiModel(IntegrationMixin):
 
         if not allow_nonzero_column_sums and len(quadratic_rate_functions)>0:
             _y = np.ones(self.N_comp)
-            test = sum([r(0,_y) * dy for dy, r in zip (quadratic_event_updates, quadratic_rate_functions)])
-            test_sum = test.sum()
-            if np.abs(test_sum) > 1e-15:
-                warnings.warn("events do not sum to zero for each column:" + str(test_sum))
+            if not self.rates_have_explicit_time_dependence:
+                if self.t0 is None:
+                    t0 = 0
+                else:
+                    t0 = self.t0
+            else:
+                if self.t0 is None:
+                    t0 = None
+                    warnings.warn('Rates are time-dependent, but no initial time was set yet, so I cannot check the column sums.')
+                else:
+                    t0 = self.t0
+
+            if t0 is not None:
+                try:
+                    test = sum([r(t0,_y) * dy for dy, r in zip (quadratic_event_updates, quadratic_rate_functions)])
+                    test_sum = test.sum()
+                    if np.abs(test_sum) > 1e-15:
+                        warnings.warn("events do not sum to zero for each column:" + str(test_sum))
+                except ValueError as e:
+                    warnings.warn(' '.join([
+                                  f"Some rate functions couldn't be evaluated at {t0=}. This can happen when",
+                                  f"explicit time-dependence couldn't be inferred from any of your rates but they're time-dependent nevertheless.",
+                                  f"You can get rid of this warning by setting",
+                                  '``model.set_initial_conditions(...,initial_time=actual_initial_time)`` before setting processes.',
+                                  'You should also make sure to tell the model.simulate() function that it should assume explicit time',
+                                  'dependence by calling it as',
+                                  '``model.simulate(...,rates_have_explicit_time_dependence=True)``',
+                                  ]))
 
         self.quadratic_event_updates = quadratic_event_updates
         self.quadratic_rate_functions = quadratic_rate_functions
@@ -795,7 +874,7 @@ class EpiModel(IntegrationMixin):
             The entries correspond to the compartment frequencies
             (or counts, depending on population size).
         """
-        
+
         ynew = sum([r(t,y) * dy for dy, r in zip(self.linear_event_updates, self.linear_rate_functions)])
         ynew += sum([r(t,y) * dy for dy, r in zip(self.birth_event_updates, self.birth_rate_functions)])
         if self.correct_for_dynamical_population_size:
@@ -814,9 +893,11 @@ class EpiModel(IntegrationMixin):
 
     def get_time_leap_and_proposed_compartment_changes(self,
                                                        t,
-                                                       current_event_rates = None, 
+                                                       current_event_rates = None,
                                                        get_event_rates = None,
                                                        get_compartment_changes = None,
+                                                       use_ivp_solver = None,
+                                                       rates_have_explicit_time_dependence = None,
                                                        ):
         """
         For the current event rates, obtain a proposed
@@ -835,7 +916,7 @@ class EpiModel(IntegrationMixin):
             which is why ``None`` is a valid value.
         get_event_rates : function, default = None
             A function that takes time ``t`` and current
-            state ``y`` as input and computes the rates of 
+            state ``y`` as input and computes the rates of
             all possible events.
             If ``None``, will attempt
             to set this to self.get_event_rates().
@@ -845,6 +926,17 @@ class EpiModel(IntegrationMixin):
             probability proportional to its rate.
             If ``None``, will attempt
             to set this to self.get_compartment_changes().
+        use_ivp_solver : bool, default = None
+            Whether or not to use an initial value problem solver
+            to obtain a time leap in explicitly time-dependent
+            problems.
+            If ``None``, will use the value
+            of the class attribute ``self.use_ivp_solver``.
+        rates_have_explicit_time_dependence : bool, default = None
+            Whether or not the problem is explicitly time-dependent.
+            If ``None``, will use the value
+            of the class attribute ``self.rates_have_explicit_time_dependence``.
+
 
         Returns
         -------
@@ -859,9 +951,15 @@ class EpiModel(IntegrationMixin):
         if get_compartment_changes is None:
             get_compartment_changes = self.get_compartment_changes
 
-        if self.rates_have_explicit_time_dependence:
+        if use_ivp_solver is None:
+            use_ivp_solver = self.use_ivp_solver
+
+        if rates_have_explicit_time_dependence is None:
+            rates_have_explicit_time_dependence = self.rates_have_explicit_time_dependence
+
+        if rates_have_explicit_time_dependence:
             # solve the integral numerically
-            if self.use_ivp_solver:
+            if use_ivp_solver:
                 new_t = time_leap_ivp(t, self.y0, get_event_rates)
             else:
                 new_t = time_leap_newton(t, self.y0, get_event_rates)
@@ -872,7 +970,7 @@ class EpiModel(IntegrationMixin):
         else:
 
             total_event_rate = current_event_rates.sum()
-        
+
             tau = np.random.exponential(1/total_event_rate)
             dy = get_compartment_changes(current_event_rates)
 
@@ -882,7 +980,7 @@ class EpiModel(IntegrationMixin):
         """
         Sample a state change vector with probability
         proportional to its rate in ``rates``.
-        
+
         Needed for stochastic simulations.
 
         Parameters
@@ -890,7 +988,7 @@ class EpiModel(IntegrationMixin):
         rates : numpy.ndarray
             A non-zero list of rates.
             Expects ``rates`` to be sorted according
-            to 
+            to
             ``self.birth_event_updates + self.linear_event_updates + self.quadratic_event_updates``.
 
         Returns
@@ -965,10 +1063,13 @@ class EpiModel(IntegrationMixin):
                  sampling_dt=None,
                  sampling_callback=None,
                  adopt_final_state=False,
+                 use_ivp_solver=None,
+                 rates_have_explicit_time_dependence=None,
+                 ignore_warnings=False,
                  ):
         """
         Returns values of the given compartments at the demanded
-        time points (as a numpy.ndarray of shape 
+        time points (as a numpy.ndarray of shape
         ``(return_compartments), len(time_points)``.
 
         If ``return_compartments`` is None, all compartments will
@@ -986,6 +1087,18 @@ class EpiModel(IntegrationMixin):
             If ``None``, every change will be returned.
         sampling_callback : funtion, default = None
             A function that's called when a sample is taken
+        use_ivp_solver : bool, default = None
+            Wether or not to use an initial value problem solver
+            to obtain a time leap in explicitly time-dependent
+            problems.
+            If ``None``, will use the value
+            of the class attribute ``self.use_ivp_solver``.
+        rates_have_explicit_time_dependence : bool, default = None
+            Wether or not the problem is explicitly time-dependent.
+            If ``None``, will use the value
+            of the class attribute ``self.rates_have_explicit_time_dependence``.
+        ignore_warnings : bool, default = False
+            wether or not to raise warnings about unset explicit time.
 
         Returns
         -------
@@ -1019,6 +1132,19 @@ class EpiModel(IntegrationMixin):
         if sampling_callback is not None:
             sampling_callback()
 
+        if self.rates_have_functional_dependence and\
+                (\
+                    ((rates_have_explicit_time_dependence is not None) and (not rates_have_explicit_time_dependence))\
+                 or ((rates_have_explicit_time_dependence is None) and (not self.rates_have_explicit_time_dependence))\
+                ):
+            if not ignore_warnings:
+                warnings.warn('Some rates have a functional dependence but no explicit time dependence was detected or set. '+\
+                              'In case you know that these rates change depending on time explicitly, call this function with keyword '+\
+                              '``rates_have_explicit_time_dependence=True`` or set ``model.rates_have_explicit_time_dependence=True.`` '+\
+                              'You can suppress this warning by calling this function with keyword '+\
+                              '``ignore_warnings=True``.',
+                              )
+
         # Check for a) zero event rate and b) zero possibility for any nodes being changed still.
         # This is important because it might happen that nodes
         # have a non-zero reaction rate but no targets left
@@ -1031,6 +1157,8 @@ class EpiModel(IntegrationMixin):
                                                                           current_event_rates=current_event_rates,
                                                                           get_event_rates=get_event_rates,
                                                                           get_compartment_changes=get_compartment_changes,
+                                                                          use_ivp_solver=use_ivp_solver,
+                                                                          rates_have_explicit_time_dependence=rates_have_explicit_time_dependence,
                                                                           )
             new_t = t + tau
 

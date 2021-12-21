@@ -386,10 +386,10 @@ class EpiModel(IntegrationMixin):
                 except ValueError as e:
                     errors = True
             if errors:
-                warnings.warn(f"There were errors when trying to evaluate a rate function named {rate.__name__}, at different points in time.")
+                warnings.warn("There were errors when trying to evaluate a rate function named "+str(rate.__name__)+" at different points in time.")
 
             if all_equal is None:
-                warnings.warn(f"Rate function {rate.__name__} couldn't be evaluated at more than one point or no point in time {t}")
+                warnings.warn("Rate function"+ str(rate.__name__) +"couldn't be evaluated at more than one point or no point in time "+ str(t))
                 has_time_dependence = False
             else:
                 has_time_dependence = not all_equal

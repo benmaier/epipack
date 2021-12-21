@@ -531,9 +531,9 @@ class EpiModel(IntegrationMixin):
                         warnings.warn("events do not sum to zero for each column:" + str(test_sum))
                 except ValueError as e:
                     warnings.warn(' '.join(
-                                  f"Some rate functions couldn't be evaluated at {t0=}. This can happen when",
-                                  f"explicit time-dependence couldn't be inferred from any of your rates but they're time-dependent nevertheless.",
-                                  f"You can get rid of this warning by setting",
+                                  "Some rate functions couldn't be evaluated at t0="+str(t0)+". This can happen when",
+                                  "explicit time-dependence couldn't be inferred from any of your rates but they're time-dependent nevertheless.",
+                                  "You can get rid of this warning by setting",
                                   '``model.set_initial_conditions(...,initial_time=actual_initial_time)`` before setting processes.',
                                   'You should also make sure to tell the model.simulate() function that it should assume explicit time',
                                   'dependence by calling it as',
@@ -847,9 +847,9 @@ class EpiModel(IntegrationMixin):
                         warnings.warn("events do not sum to zero for each column:" + str(test_sum))
                 except ValueError as e:
                     warnings.warn(' '.join([
-                                  f"Some rate functions couldn't be evaluated at {t0=}. This can happen when",
-                                  f"explicit time-dependence couldn't be inferred from any of your rates but they're time-dependent nevertheless.",
-                                  f"You can get rid of this warning by setting",
+                                  "Some rate functions couldn't be evaluated at t0="+str(t0)+". This can happen when",
+                                  "explicit time-dependence couldn't be inferred from any of your rates but they're time-dependent nevertheless.",
+                                  "You can get rid of this warning by setting",
                                   '``model.set_initial_conditions(...,initial_time=actual_initial_time)`` before setting processes.',
                                   'You should also make sure to tell the model.simulate() function that it should assume explicit time',
                                   'dependence by calling it as',

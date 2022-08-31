@@ -112,6 +112,33 @@ install**
 
 **manually** (pip won't do it for you).
 
+In order for the interactive jupyter widget to work, make sure that
+``jupyter-matplotlib`` installed. First, install `jupyter
+nbextensions <https://github.com/ipython-contrib/jupyter_contrib_nbextensions>`__
+
+.. code:: bash
+
+   pip install jupyter_contrib_nbextensions
+
+Then, install
+
+.. code:: bash
+
+   jupyter nbextension install --py --symlink --sys-prefix --overwrite ipympl
+   jupyter nbextension enable --py --sys-prefix ipympl
+
+(see
+`npmjs.com/package/jupyter-matplotlib <https://www.npmjs.com/package/jupyter-matplotlib>`__).
+
+Please also note that the visualizations are based on
+`pyglet <https://github.com/pyglet/pyglet>`__, which tends to cause
+annoying messages for reopening on Macs. In order to turn these off, let
+the Mac know that you don't want to reopen closed Python applications:
+
+.. code:: bash
+
+   defaults write org.python.python ApplePersistenceIgnoreState NO
+
 Documentation
 -------------
 

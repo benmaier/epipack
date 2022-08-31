@@ -156,7 +156,7 @@ if USE_KATEX:
     }"""
 
 else:
-    mathjax_config = {
+    mathjax3_config = {
             'TeX' : {
                     'Macros' : {
                         'expv' : ( r'{\\left\\langle #1\\right\\rangle}', 1 ),

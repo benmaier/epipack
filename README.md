@@ -101,6 +101,25 @@ Please note that **fast network simulations are only available if you install**
 
 **manually** (pip won't do it for you).
 
+In order for the interactive jupyter widget to work, make sure that `jupyter-matplotlib` installed.
+First, install [jupyter nbextensions](https://github.com/ipython-contrib/jupyter_contrib_nbextensions)
+
+    pip install jupyter_contrib_nbextensions
+
+Then, install 
+
+    jupyter nbextension install --py --symlink --sys-prefix --overwrite ipympl
+    jupyter nbextension enable --py --sys-prefix ipympl
+
+(see [npmjs.com/package/jupyter-matplotlib](https://www.npmjs.com/package/jupyter-matplotlib)).
+
+Please also note that the visualizations are based on [pyglet](https://github.com/pyglet/pyglet),
+which tends to cause annoying messages for reopening on Macs. In order to turn these off,
+let the Mac know that you don't want to reopen closed Python applications:
+
+    defaults write org.python.python ApplePersistenceIgnoreState NO
+
+
 ## Documentation
 
 The full documentation is available at [epipack.benmaier.org](http://epipack.benmaier.org).

@@ -6,6 +6,8 @@ from epipack import StochasticEpiModel
 # load network
 network, config, _ = nw.load('./MHRN.json')
 
+
+
 # get the network properties
 N = len(network['nodes'])
 edge_list = [ ( link['source'], link['target'], 1.0 ) for link in network['links'] ]

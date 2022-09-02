@@ -537,7 +537,7 @@ class StochasticEpiModel():
         self.transitioning_compartments = np.array(list(transitioning_compartments),dtype=int)
         self.transmitting_compartments = np.array(list(transmitting_compartments),dtype=int)
 
-    def set_random_initial_conditions(self, initial_conditions):
+    def set_random_initial_conditions(self, initial_conditions, seed=None):
         """
         Set random initial conditions for each compartment.
 
@@ -547,10 +547,16 @@ class StochasticEpiModel():
             A dictionary that maps a compartment to a number of nodes
             that should be sampled to be in this compartment initially.
             Unset compartmens are assumed to have an initial condition of zero.
+        seed : int, default = None
+            Seed to pass to ``numpy.random.seed`` before choosing initial conditions.
+            If ``None``, no seed will be passed.
         """
 
         if type(initial_conditions) == dict:
             initial_conditions = list(initial_conditions.items())
+
+        if seed is not None:
+            np.random.seed(seed)
 
         # initially, all nodes can be distributed
         nodes_left = set(range(self.N_nodes))

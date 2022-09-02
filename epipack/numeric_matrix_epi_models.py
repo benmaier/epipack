@@ -172,12 +172,12 @@ class MatrixEpiModel(IntegrationMixin):
             Traditionally, epidemiological models preserve the
             total population size. If that's not the case,
             switch off testing for this.
-
-        Example
-
         reset_rates : bool, default : True
             Whether to reset all linear rates to zero before
             converting those.
+
+        Example
+        =======
         """
 
         if reset_rates:
@@ -656,6 +656,212 @@ class MatrixEpiModel(IntegrationMixin):
                 if returntype == 'real':
                     _lambda = np.abs(_lambda)
         return _lambda
+
+
+class NetworkMarkovEpiModel(IntegrationMixin):
+    """
+    Define a spreading model on a network using
+    the individual-based Markov-chain framework.
+    """
+
+    def __init__(self,compartments,N,edge_weight_tuples,directed=False):
+
+        self.N_nodes = N
+        self.y0 = None
+        self.adjacency_matrix = sprs.lil_matrix((N,N),dtype=float)
+
+        for source, target, w in edge_weight_tuples:
+            self.adjacency_matrix[target,source] = w
+            if not directed:
+                self.adjacency_matrix[source,target] = w
+
+        self.adjacency_matrix = self.adjacency_matrix.to_csr()
+        self.matrix_model = MatrixEpiModel(compartments, initial_population_size=1.0)
+
+    def set_node_transition_processes(self,process_list,reset_rates=False):
+        """
+        Define the linear node transition processes between compartments.
+
+        Parameters
+        ==========
+        process_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains transitions rates in the following format:
+
+            .. code:: python
+
+                [
+                    ("source_compartment", rate, "target_compartment" ),
+                    ...
+                ]
+
+        Example
+        =======
+        For an SEIR model.
+
+        .. code:: python
+
+            epi.set_node_transition_processes([
+                ("E", symptomatic_rate, "I" ),
+                ("I", recovery_rate, "R" ),
+            ])
+        """
+
+        self.matrix_model.add_transition_processes(process_list)
+
+        return self
+
+    def set_link_transmission_processes(self,process_list):
+        r"""
+        Define link transmission processes between compartments.
+
+        Parameters
+        ----------
+        process_list : :obj:`list` of :obj:`tuple`
+            A list of tuples that contains transitions rates in the following format:
+
+            .. code:: python
+
+                [
+                    ("source_compartment",
+                     "target_compartment_initial",
+                     rate
+                     "source_compartment",
+                     "target_compartment_final",
+                     ),
+                    ...
+                ]
+
+        Example
+        -------
+        For an SEIR model.
+
+        .. code:: python
+
+            epi.set_link_transmission_processes([
+                ("I", "S", +1, "I", "E" ),
+            ])
+        """
+
+        # iterate through processes
+        for coupling0, coupling1, rate, affected0, affected1 in process_list:
+
+            if coupling0 != affected0:
+                raise ValueError("In process",
+                                  coupling0, coupling1, "->", affected0, affected1,
+                                  "The source (infecting) compartment", coupling0, "and first affected compartment (here: ", affected0,
+                                  "), must be equal on both sides of the reaction equation but are not.",
+                                  )
+
+        self.matrix_model.add_transmission_processes(process_list)
+
+        # convert these quadratic matrices to coo-matrices, because we need to loop over non-zero entries unfortunately
+        self.matrix_model.quadratic_rates = [ Q.to_coo() for Q in self.matrix_model.quadratic_rates ]
+
+        return self
+
+    def set_random_initial_conditions(self, initial_conditions, seed=None):
+        """
+        Set random initial conditions for each compartment.
+
+        Parameters
+        ----------
+        initial_conditions : dict
+            A dictionary that maps a compartment to a number of nodes
+            that should be sampled to be in this compartment initially.
+            Unset compartmens are assumed to have an initial condition of zero.
+        seed : int, default = None
+            Seed to pass to ``numpy.random.seed`` before choosing initial conditions.
+            If ``None``, no seed will be passed.
+        """
+
+        if type(initial_conditions) == dict:
+            initial_conditions = list(initial_conditions.items())
+
+        if seed is not None:
+            np.random.seed(seed)
+
+        # initially, all nodes can be distributed
+        nodes_left = set(range(self.N_nodes))
+
+        # save node status and initial conditions
+        node_status = np.zeros(self.N_nodes,dtype=int)
+        status_counts = np.zeros(self.N_comp)
+        total = 0
+
+        # iterate through all initial conditions
+        for compartment, amount in initial_conditions:
+
+            # ignore nullified initial conditions
+            if amount == 0:
+                continue
+
+            # count the number of nodes in this compartment
+            total += amount
+            comp_id = self.get_compartment_id(compartment)
+
+            # check whether it was defined before
+            if status_counts[comp_id] != 0:
+                raise ValueError('Double entry in initial conditions for compartment '+str(compartment))
+            else:
+                # if node, sample `amount` nodes from the remaining set,
+                # take those nodes out of the set and carry on with the set of remaining nodes
+                these_nodes = np.random.choice(list(nodes_left),size=amount,replace=False)
+                status_counts[comp_id] = amount
+                node_status[these_nodes] = comp_id
+                nodes_left = nodes_left.difference(these_nodes)
+
+        # check that the initial conditions contain all nodes
+        if np.abs(total-self.N_nodes)/self.N_nodes > 1e-14:
+            raise ValueError('Sum of initial conditions does not equal unity.')
+
+        self.set_node_statuses(node_status)
+        self.status_counts = status_counts
+
+        return self
+
+    def set_node_statuses(self,node_statuses):
+        """
+        Set initial state from a list of node statuses
+
+        Parameters
+        ==========
+        node_statuses : list of int
+            The `i`-th entry of this list contains the compartment id
+            of node i that will be set to 1 initially
+        """
+
+        self.y0 = np.zeros((self.N_comp, self.N_nodes),dtype=float)
+
+        self.y0[node_statuses,
+                range(self.N_nodes)] = 1.
+
+        return self
+
+    def dydt(self,t,y):
+        """
+        Compute the current momenta of the epidemiological model.
+
+        Parameters
+        ----------
+        t : :obj:`float`
+            Current time
+        y : numpy.ndarray
+            The entries are equal to the current fractions
+            of the population of the respective compartments
+        """
+
+        mtrx = self.matrix_model
+        A = self.adjacency_matrix
+        y = y.reshape(self.N_comps, self.N_nodes)
+
+        dy = mtrx.linear_rates.dot(y)
+        for c in mtrx.affected_by_quadratic_process:
+
+            Q = mtrx.quadratic_rates[c]
+            for affected, causing, rate in zip(Q.row, Q.col, Q.data):
+                dy[c,:] += rate * ( y[affected,:] * (A.dot(y[causing,:].T)) )
+
+        return dy.ravel()
 
 
 class MatrixSIModel(MatrixEpiModel):

@@ -437,8 +437,8 @@ def get_layout_from_positions(
                       scale_position=False,
                       ):
     """
-    Returns a stylized network dictionary that puts
-    nodes in a random layout.
+    Returns a stylized network dictionary in netwulf
+    format from predefined node positions.
 
     Parameters
     ==========

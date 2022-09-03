@@ -9,6 +9,8 @@ from itertools import groupby
 
 import numpy as np
 
+import epipack.numeric_matrix_epi_models
+
 # Try to import the original SamplableSet,
 # but if that doesn't work, use the mock version
 # that's implemented in this package
@@ -119,7 +121,45 @@ class StochasticEpiModel():
         else:
             self.set_well_mixed(N,well_mixed_mean_contact_number)
 
+        self.original_edge_weight_tuples = edge_weight_tuples
+        self.directed = directed
+        self.original_link_transmission_processes = None
+        self.original_node_transition_processes = None
+
         self._simulation_ended = False
+
+    def get_markovian_clone(self):
+        """
+        Return a
+        :class:`epipack.numeric_matrix_epi_models.NetworkMarkovEpiModel`
+        that uses the same setup as this model.
+        """
+
+        if not self.is_network_model:
+            return ValueError("Can only return an individual-based Markov chain version of this model if it is a network model, but it's not.")
+
+        model = epipack.numeric_matrix_epi_models.NetworkMarkovEpiModel(
+                    self.compartments,
+                    self.N_nodes,
+                    self.original_edge_weight_tuples,
+                    directed=self.directed,
+                )
+
+        if self.original_link_transmission_processes is not None:
+            model.set_link_transmission_processes(
+                    self.original_link_transmission_processes
+                )
+
+        if self.original_node_transition_processes is not None:
+            model.set_node_transition_processes(
+                    self.original_node_transition_processes
+                )
+
+        if self.node_status is not None:
+            model.set_node_statuses(self.node_status)
+
+        return model
+
 
     def set_network(self,N_nodes,edge_weight_tuples,directed=False):
         """
@@ -267,6 +307,8 @@ class StochasticEpiModel():
         if self.link_transmission_events is not None:
             self._zip_events()
 
+        self.original_node_transition_processes = process_list
+
         return self
 
     def set_link_transmission_processes(self,process_list):
@@ -333,6 +375,8 @@ class StochasticEpiModel():
         # to form a unified event list for each compartment
         if self.node_transition_events is not None:
             self._zip_events()
+
+        self.original_link_transmission_processes = process_list
 
         return self
 

@@ -22,6 +22,7 @@ from .numeric_matrix_epi_models import (
         MatrixSIRModel,
         MatrixSIRSModel,
         MatrixSEIRModel,
+        NetworkMarkovEpiModel,
     )
 
 from .numeric_epi_models import (

@@ -6,15 +6,25 @@ It works, but can be much improved, e.g. by
 putting conditions on the ordering of waiting
 times such that the symmetry in parameter space
 can be utilized for fitting.
+
+The whole thing is based on using matrix exponentia/ls
+to compute cdf and pdf of a hypoexonential distribution
+(special case of a phase-type distribution), see
+https://en.wikipedia.org/wiki/Hypoexponential_distribution .
 """
 
 import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize
+from scipy.optimize import minimize, newton, brentq
 from scipy.stats import entropy
+import scipy.sparse as sprs
 
-_DEFAULT_METHOD = 'RK23'
+# this used to be 'RK23', but the problems are often stiff and then Runge-Kutta doesn't work
+
+#_DEFAULT_METHOD = 'RK23'
+#_DEFAULT_METHOD = 'LSODA'
+_DEFAULT_METHOD = 'DOP853'
 
 class ExpChain():
     """
@@ -60,7 +70,12 @@ class ExpChain():
             cols.append(src)
             data.append(-1/self.tau[i])
 
+        # transition matrix in state space
         self.W = csr_matrix((data, (rows, cols)), shape=2*[self.n_st])
+
+        # transition matrix as left-oriented stochastic matrix in transition space
+        self.Theta = self.W.T[:self.n_st-1,:self.n_st-1]
+        self.Theta1 = self.Theta.sum(axis=1)
 
     def dydt(self,t,y):
         """
@@ -68,10 +83,10 @@ class ExpChain():
         """
         return self.W.dot(y)
 
-    def get_cdf(self,t=None,percentile_cutoff=0.9999,method=_DEFAULT_METHOD):
+    def get_cdf_ivp(self,t=None,percentile_cutoff=0.9999,method=_DEFAULT_METHOD):
         """
         Obtain the cumulative distribution function of the total waiting
-        time this chain represents.
+        time this chain represents, using the scipy ``solve_ivp`` routine.
 
         Parameters
         ==========
@@ -102,6 +117,8 @@ class ExpChain():
         stop_condition = lambda t, y: percentile_cutoff - y[-1]
         stop_condition.terminal = True
 
+        #print(percentile_cutoff)
+        #print(f"{t=}")
         result = solve_ivp(
                             fun=self.dydt,
                             y0=y0,
@@ -111,13 +128,171 @@ class ExpChain():
                             method=method,
                           )
 
-
         return result.t, result.y[-1,:]
 
-    def get_pdf(self,t=None,percentile_cutoff=0.9999,method=_DEFAULT_METHOD):
+    def get_cdf(self,t=None,*args,**kwargs):
+        """
+        Obtain the cumulative distribution function of the total waiting
+        time this chain represents, using the ``scipy.sparse.linalg.expm_multiply``
+        framework.
+
+        Parameters
+        ==========
+        t : numpy.ndarray of float, default = None
+            Array of time points for which the CDF
+            should be returned. If ``None``,
+            :func:`ExpChain.get_cdf_constant_interval` will be
+            called instead.
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the CDF
+            was computed.
+        cdf : numpy.ndarray of float
+            the corresponding values of the cumulative
+            distribution function
+        """
+
+        if t is None:
+            return self.get_cdf_constant_interval()
+
+        Theta = self.Theta
+        F = np.zeros(len(t))
+        for it, _t in enumerate(t):
+            projection = sprs.linalg.expm(_t*Theta).sum(axis=1)
+            value = projection[0]
+            F[it] = 1-value
+
+        return t, F
+
+    def get_cdf_constant_interval(self,t_final=None,num_time_points=101):
+        """
+        Obtain the cumulative distribution function of the total waiting
+        time this chain represents, using the ``scipy.sparse.linalg.expm_multiply``
+        framework.
+
+        Parameters
+        ==========
+        t_final : float, default = None
+            Final time point at which the CDF should be evaluated
+        num_time_points : int, default = 101
+            Number of time points for which the CDF should be computed
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the CDF
+            was computed.
+        cdf : numpy.ndarray of float
+            the corresponding values of the cumulative
+            distribution function
+        """
+
+        t_start = 0.0
+        if t_final is None:
+            t_final = 3*self.get_mean()
+
+        Theta = self.Theta
+        ones = np.ones(self.n_st-1)
+        t = np.linspace(t_start,t_final,num_time_points)
+        result = sprs.linalg.expm_multiply(Theta,
+                                           ones,
+                                           start=t_start,
+                                           stop=t_final,
+                                           num=num_time_points,
+                                           )
+
+        first_elements = 1-result[:,0]
+
+        return t, first_elements
+
+    def get_pdf(self,t=None,*args,**kwargs):
+        """
+        Obtain the probability density function of the total waiting
+        time this chain represents, using the ``scipy.sparse.linalg.expm_multiply``
+        framework.
+
+        Parameters
+        ==========
+        t : numpy.ndarray of float, default = None
+            Array of time points for which the PDF
+            should be returned. If ``None``,
+            :func:`ExpChain.get_cdf_constant_interval` will be
+            called instead.
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the PDF
+            was computed.
+        pdf : numpy.ndarray of float
+            the corresponding values of the probability
+            distribution function
+        """
+
+        if t is None:
+            return self.get_pdf_constant_interval()
+
+        Theta = self.Theta
+        Theta1 = self.Theta1
+        p = np.zeros(len(t))
+        for it, _t in enumerate(t):
+            projection = sprs.linalg.expm(_t*Theta).dot(Theta1)
+            value = projection[0]
+            p[it] = -value
+
+        p[np.where(p<0)] = 0.0
+
+        return t, p
+
+    def get_pdf_constant_interval(self,t_final=None,num_time_points=101):
+        """
+        Obtain the probability density function of the total waiting
+        time this chain represents, using the ``scipy.sparse.linalg.expm_multiply``
+        framework.
+
+        Parameters
+        ==========
+        t_final : float, default = None
+            Final time point at which the PDF should be evaluated
+        num_time_points : int, default = 101
+            Number of time points for which the PDF should be computed
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the PDF
+            was computed.
+        pdf : numpy.ndarray of float
+            the corresponding values of the probability
+            distribution function
+        """
+
+        t_start = 0.0
+        if t_final is None:
+            t_final = 3*self.get_mean()
+
+        Theta = self.Theta
+        Theta1 = self.Theta1
+        t = np.linspace(t_start,t_final,num_time_points)
+        result = sprs.linalg.expm_multiply(Theta,
+                                           Theta1,
+                                           start=t_start,
+                                           stop=t_final,
+                                           num=num_time_points,
+                                           )
+
+        p = -result[:,0]
+
+        p[np.where(p<0)] = 0.0
+
+        return t, p
+
+    def get_pdf_ivp(self,t=None,percentile_cutoff=0.9999,method=_DEFAULT_METHOD):
         """
         Obtain the probability distribution function of the total waiting
-        time this chain represents. Uses :func:`ExpChain.get_cdf`.
+        time this chain represents. Uses :func:`ExpChain.get_cdf_ivp`.
 
         Parameters
         ==========
@@ -148,10 +323,62 @@ class ExpChain():
         tmean = 0.5*(t[1:]+t[:-1])
         return tmean, dP/dt, dt
 
-    def get_cdf_at_percentiles(self,percentiles,method=_DEFAULT_METHOD):
+    def get_cdf_at_percentile(self,percentile):
         """
         Obtain the cumulative distribution function of the total waiting
-        time this chain represents.
+        time this chain represents for a percentile.
+
+        Parameters
+        ==========
+        percentile : float
+            For which to find t of this chain
+
+        Returns
+        =======
+        t : float
+            time point found for which CDF = `percentile`.
+        cdf : numpy.ndarray of float
+            the corresponding value of the cumulative
+            distribution function
+        """
+        assert(percentile > 0)
+        assert(percentile < 1)
+
+        func = lambda x: self.get_cdf([x])[1][0] - percentile
+
+        zero = brentq(func, 0, 100*self.get_mean(), rtol=1e-6)
+
+        return zero, func(zero) + percentile
+
+    def get_cdf_at_percentiles(self,percentiles,*args,**kwargs):
+        """
+        Obtain the cumulative distribution function of the total waiting
+        time this chain represents for certain percentiles.
+
+        Returns
+        =======
+        t : numpy.ndarray of float
+            Ordered array of time points for which the CDF
+            was computed.
+        cdf : numpy.ndarray of float
+            the corresponding values of the cumulative
+            distribution function
+        """
+
+        ts = np.zeros(len(percentiles))
+        cdfs = np.zeros(len(percentiles))
+        for ip, percentile in enumerate(percentiles):
+            t, cdf = self.get_cdf_at_percentile(percentile)
+            ts[ip] = t
+            cdfs[ip] = cdf
+
+        return ts, cdfs
+
+    def get_cdf_at_percentiles_ivp(self,percentiles,method=_DEFAULT_METHOD):
+        """
+        Obtain the cumulative distribution function of the total waiting
+        time this chain represents for certain percentiles.
+        Uses :func:`ExpChain.get_cdf_ivp`.
 
         Parameters
         ==========
@@ -200,11 +427,34 @@ class ExpChain():
 
         return time_values, percentiles
 
-    def get_median_and_iqr(self,method=_DEFAULT_METHOD):
+    def get_median_and_iqr(self):
         """
         Returns the median and inter-quartile range
         of the waiting time distribution this chain
-        represents.
+        represents. Uses the ``scipy.sparse.expm_multiply``
+        framework.
+
+        Returns
+        =======
+        median : float
+            the median of the distribution
+        iqr : numpy.ndarray of float
+            array of length 2 containing
+            the inter-quartile range.
+        """
+
+        percentiles = [0.25,0.5,0.75]
+
+        time_values, _ = self.get_cdf_at_percentiles(percentiles)
+
+        return time_values[1], time_values[[0,2]]
+
+    def get_median_and_iqr_ivp(self,method=_DEFAULT_METHOD):
+        """
+        Returns the median and inter-quartile range
+        of the waiting time distribution this chain
+        represents. Uses the ``scipy.optimize.solve_ivp``
+        framework.
 
         Parameters
         ==========
@@ -223,7 +473,7 @@ class ExpChain():
 
         percentiles = [0.25,0.5,0.75]
 
-        time_values, _ = self.get_cdf_at_percentiles(percentiles,method=method)
+        time_values, _ = self.get_cdf_at_percentiles_ivp(percentiles,method=method)
 
         return time_values[1], time_values[[0,2]]
 
@@ -233,7 +483,7 @@ class ExpChain():
         """
         return sum(self.tau)
 
-def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-15,x0=None):
+def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-10,x0=None):
     """
     Fit a chain of exponentially distributed random variables
     to a distribution where the cdf is known for several time points.
@@ -298,25 +548,19 @@ def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=
         mean = (np.diff(np.concatenate((np.array([0]),time_values))) * (1 - cdf)).sum()
         x0 = [mean/n] * n
 
-    def cost(x, n, cdf, time_values, percentile_cutoff):
+    def cost(x, n, cdf, time_values,):
         C  = ExpChain(x)
-        _, P = C.get_cdf(time_values,percentile_cutoff=percentile_cutoff)
+        _, P = C.get_cdf(time_values,)
         if len(P) < len(cdf):
             P = np.concatenate((P,np.ones(len(cdf)-len(P))))
-        #return ( ((cdf - P)/cdf)**2).sum()
         return ( ((cdf - P)/cdf)**2).sum()
-        #return max(np.abs(cdf - P))
-        #return ( ((percentiles - P))**2).sum()
-        #dP = np.diff(P)
-        #return entropy(np.diff(P), dQ)
 
-
-    result = minimize(cost, x0, (n, cdf, time_values, percentile_cutoff), bounds=[(lower,upper)]*n)
+    result = minimize(cost, x0, (n, cdf, time_values), bounds=[(lower,upper)]*n,method='Nelder-Mead')
 
     return ExpChain(result.x)
 
 
-def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10):
+def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-10):
     """
     Fit a chain of exponentially distributed random variables
     to a distribution where only median and iqr are known.
@@ -356,11 +600,12 @@ def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10):
     [9.22794388 0.75881288 5.72462722]
 
     """
+    assert(n == int(n))
     percentiles = np.array([0.25,0.5,0.75])
     time_values = np.array([iqr[0],median,iqr[1]])
     mean = median
     x0 = [mean/n]*n
-    return fit_chain_by_cdf(n,time_values,percentiles,lower,upper,x0=x0)
+    return fit_chain_by_cdf(n,time_values,percentiles,lower,upper,x0=x0,percentile_cutoff=percentile_cutoff)
 
 
 if __name__ == "__main__":
@@ -466,8 +711,8 @@ if __name__ == "__main__":
     ax[1].bar(t, P,alpha=0.4)
     ch = fit_chain_by_cdf(3,t,CDF,lower=0.1,upper=50,x0=[1.29,3.37,4.01])
     #ch = fit_chain_by_cdf(8,t,CDF,lower=0.1,upper=50)
-    t, dPdt, width = ch.get_pdf()
-    ax[1].bar(t, dPdt, width=width,alpha=0.4)
+    t, dPdt= ch.get_pdf()
+    ax[1].plot(t, dPdt,lw=3,alpha=0.4)
     ax[0].plot(*ch.get_cdf(t))
 
     pl.show()
@@ -492,8 +737,8 @@ if __name__ == "__main__":
         print()
         fig, ax = pl.subplots(1,2,figsize=(8,4))
         ax[0].plot(*fit_C.get_cdf())
-        t, dPdt, width = fit_C.get_pdf()
-        ax[1].bar(t, dPdt, width=width)
+        t, dPdt = fit_C.get_pdf()
+        ax[1].plot(t, dPdt, alpha=0.4,lw=2)
 
     pl.show()
 

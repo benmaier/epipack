@@ -112,7 +112,7 @@ class MatrixEpiTest(unittest.TestCase):
         model.set_random_initial_conditions({'I':1,'S':1})
         tt = np.linspace(0,200,201)
         result = model.integrate(tt)
-        pl.plot(t, result[I]
+        pl.plot(t, result[I])
         print(result)
 
     def test_different_order_of_process_definition(self):

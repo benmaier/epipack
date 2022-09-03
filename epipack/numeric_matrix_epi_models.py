@@ -21,6 +21,8 @@ from epipack.process_conversions import (
             transmission_processes_to_rates,
         )
 
+import epipack.stochastic_epi_models
+
 
 class MatrixEpiModel(IntegrationMixin):
     """
@@ -469,9 +471,15 @@ class MatrixEpiModel(IntegrationMixin):
                     matrices[iC] = [ [], [], [] ]
             all_affected = self.affected_by_quadratic_process if len(self.affected_by_quadratic_process)>0 else []
 
-        for coupling0, coupling1, affected, rate in rate_list:
+        # The ordering between infected and susceptible is ambiguous here. For the classical case,
+        # it doesn't matter in which order they appear here. However, for matrix-network (indi-
+        # vidual-based Markov-chain) models, the order is actually important. In this case,
+        # the ordering will be enforced externally.
+        for infected, susceptible, affected, rate in rate_list:
 
-            c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
+            #c0, c1 = sorted([ self.get_compartment_id(c) for c in [coupling0, coupling1] ])
+            c0 = self.get_compartment_id(susceptible)
+            c1 = self.get_compartment_id(infected)
             a = self.get_compartment_id(affected)
 
             matrices[a][0].append(c0)
@@ -662,12 +670,17 @@ class NetworkMarkovEpiModel(IntegrationMixin):
     """
     Define a spreading model on a network using
     the individual-based Markov-chain framework.
+    Uses an API that corresponds to
+    :class:`epipack.stochastic_epi_models.StochasticEpiModel`.
+
+
     """
 
     def __init__(self,compartments,N,edge_weight_tuples,directed=False):
 
         self.N_nodes = N
         self.y0 = None
+        self.t0 = None
         self.adjacency_matrix = sprs.lil_matrix((N,N),dtype=float)
 
         for source, target, w in edge_weight_tuples:
@@ -675,8 +688,54 @@ class NetworkMarkovEpiModel(IntegrationMixin):
             if not directed:
                 self.adjacency_matrix[source,target] = w
 
-        self.adjacency_matrix = self.adjacency_matrix.to_csr()
+        self.adjacency_matrix = self.adjacency_matrix.tocsr()
         self.matrix_model = MatrixEpiModel(compartments, initial_population_size=1.0)
+        self.compartments = [ (C, i) for C in compartments for i in range(N) ]
+        self.compartment_ids = {comp: i for i, comp in enumerate(self.compartments)}
+
+        self.original_edge_weight_tuples = edge_weight_tuples
+        self.directed = directed
+        self.original_link_transmission_processes = None
+        self.original_node_transition_processes = None
+        self.node_status = None
+
+    def get_compartment_id(self,C):
+        """Get the integer ID of a compartment ``C``"""
+        return self.compartment_ids[C]
+
+    def get_compartment(self,iC):
+        """Get the compartment, given an integer ID ``iC``"""
+        return self.compartments[iC]
+
+    def get_stochastic_clone(self):
+        """
+        Return a
+        :class:`epipack.stochastic_epi_models.StochasticEpiModel`
+        that uses the same setup as this model.
+        """
+
+        model = epipack.stochastic_epi_models.StochasticEpiModel(
+                    self.matrix_model.compartments,
+                    self.N_nodes,
+                    self.original_edge_weight_tuples,
+                    directed=self.directed
+                )
+
+        if self.original_link_transmission_processes is not None:
+            model.set_link_transmission_processes(
+                    self.original_link_transmission_processes
+                )
+
+        if self.original_node_transition_processes is not None:
+            model.set_node_transition_processes(
+                    self.original_node_transition_processes
+                )
+
+        if self.node_status is not None:
+            model.set_node_statuses(self.node_status)
+
+        return model
+
 
     def set_node_transition_processes(self,process_list,reset_rates=False):
         """
@@ -706,6 +765,7 @@ class NetworkMarkovEpiModel(IntegrationMixin):
             ])
         """
 
+        self.original_node_transition_processes = process_list
         self.matrix_model.add_transition_processes(process_list)
 
         return self
@@ -752,10 +812,11 @@ class NetworkMarkovEpiModel(IntegrationMixin):
                                   "), must be equal on both sides of the reaction equation but are not.",
                                   )
 
+        self.original_link_transmission_processes = None
         self.matrix_model.add_transmission_processes(process_list)
 
         # convert these quadratic matrices to coo-matrices, because we need to loop over non-zero entries unfortunately
-        self.matrix_model.quadratic_rates = [ Q.to_coo() for Q in self.matrix_model.quadratic_rates ]
+        self.matrix_model.quadratic_rates = [ Q.tocoo() for Q in self.matrix_model.quadratic_rates ]
 
         return self
 
@@ -785,7 +846,7 @@ class NetworkMarkovEpiModel(IntegrationMixin):
 
         # save node status and initial conditions
         node_status = np.zeros(self.N_nodes,dtype=int)
-        status_counts = np.zeros(self.N_comp)
+        status_counts = np.zeros(self.matrix_model.N_comp)
         total = 0
 
         # iterate through all initial conditions
@@ -797,7 +858,7 @@ class NetworkMarkovEpiModel(IntegrationMixin):
 
             # count the number of nodes in this compartment
             total += amount
-            comp_id = self.get_compartment_id(compartment)
+            comp_id = self.matrix_model.get_compartment_id(compartment)
 
             # check whether it was defined before
             if status_counts[comp_id] != 0:
@@ -819,7 +880,7 @@ class NetworkMarkovEpiModel(IntegrationMixin):
 
         return self
 
-    def set_node_statuses(self,node_statuses):
+    def set_node_statuses(self,node_status):
         """
         Set initial state from a list of node statuses
 
@@ -830,10 +891,13 @@ class NetworkMarkovEpiModel(IntegrationMixin):
             of node i that will be set to 1 initially
         """
 
-        self.y0 = np.zeros((self.N_comp, self.N_nodes),dtype=float)
+        self.y0 = np.zeros((self.matrix_model.N_comp, self.N_nodes),dtype=float)
 
-        self.y0[node_statuses,
+        self.y0[node_status,
                 range(self.N_nodes)] = 1.
+
+        self.y0 = self.y0.ravel()
+        self.node_status = node_status
 
         return self
 
@@ -852,16 +916,42 @@ class NetworkMarkovEpiModel(IntegrationMixin):
 
         mtrx = self.matrix_model
         A = self.adjacency_matrix
-        y = y.reshape(self.N_comps, self.N_nodes)
+        y = y.reshape(mtrx.N_comp, self.N_nodes)
 
         dy = mtrx.linear_rates.dot(y)
         for c in mtrx.affected_by_quadratic_process:
 
             Q = mtrx.quadratic_rates[c]
             for affected, causing, rate in zip(Q.row, Q.col, Q.data):
+                #print(mtrx.get_compartment(c),
+                #      mtrx.get_compartment(affected),
+                #      mtrx.get_compartment(causing),
+                #      rate,
+                #      )
+                #print(y[affected,:], y[causing,:])
                 dy[c,:] += rate * ( y[affected,:] * (A.dot(y[causing,:].T)) )
 
         return dy.ravel()
+
+    def get_numerical_dydt(self):
+        return self.dydt
+
+
+    def collapse_result_to_status_counts(self,result):
+        """
+        Convert result of the integration to a format
+        that is returned by
+        :func:`epipack.stochastic_epi_models.StochasticEpiModel.simulate`.
+        """
+        length = len(
+                     next(
+                          iter(result.values())
+                        )
+                     )
+        newres = { C: np.zeros(length) for C in self.matrix_model.compartments }
+        for (C, node), timeseries in result.items():
+            newres[C] += timeseries
+        return newres
 
 
 class MatrixSIModel(MatrixEpiModel):

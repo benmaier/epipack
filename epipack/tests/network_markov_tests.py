@@ -278,10 +278,10 @@ class NetworkMarkovEpiTest(unittest.TestCase):
         assert(np.all(gilles.out_degree==gilles_from_markov.out_degree))
         assert(np.all(gilles.out_strength==gilles_from_markov.out_strength))
 
-        transit_0 = gilles.transitioning_compartments
-        transit_1 = gilles_from_markov.transitioning_compartments
-        transm_0 = gilles.transmitting_compartments
-        transm_1 = gilles_from_markov.transmitting_compartments
+        transit_0 = gilles.transitioning_compartments.flatten()
+        transit_1 = gilles_from_markov.transitioning_compartments.flatten()
+        transm_0 = gilles.transmitting_compartments.flatten()
+        transm_1 = gilles_from_markov.transmitting_compartments.flatten()
 
         for _T0, _T1 in zip(sorted(transit_0), sorted(transit_1)):
             assert(_T0 == _T1)

@@ -812,7 +812,7 @@ class NetworkMarkovEpiModel(IntegrationMixin):
                                   "), must be equal on both sides of the reaction equation but are not.",
                                   )
 
-        self.original_link_transmission_processes = None
+        self.original_link_transmission_processes = process_list
         self.matrix_model.add_transmission_processes(process_list)
 
         # convert these quadratic matrices to coo-matrices, because we need to loop over non-zero entries unfortunately

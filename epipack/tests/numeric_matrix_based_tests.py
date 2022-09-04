@@ -10,7 +10,6 @@ from epipack.numeric_matrix_epi_models import (
             MatrixSIRModel,
             MatrixSEIRModel,
             MatrixSIRSModel,
-            NetworkMarkovEpiModel,
         )
 
 class MatrixEpiTest(unittest.TestCase):
@@ -94,26 +93,6 @@ class MatrixEpiTest(unittest.TestCase):
         tt = np.linspace(0,100,1000)
         result = epi.integrate_and_return_by_index(tt,['S'],integrator='euler')
         assert(np.isclose(result[0,-1],N/2))
-
-    def test_network_matrix_model(self):
-        N = 2
-        recovery_rate = 1
-        R0 = 2
-        edge_weight_tuples = [ (0,1,1.0) ]
-        mean_degree = sum([ _[-1] for _ in edge_weight_tuples ]) / N
-        model = NetworkMarkovEpiModel(list("RIES"),N,edge_weight_tuples)
-        model.set_node_transition_processes([
-                ("I", recovery_rate, "R"),
-                ("E", recovery_rate, "I"),
-            ])
-        model.set_link_transmission_processes([
-                ("I","S", R0/recovery_rate/mean_degree, "I","E"),
-            ])
-        model.set_random_initial_conditions({'I':1,'S':1})
-        tt = np.linspace(0,200,201)
-        result = model.integrate(tt)
-        pl.plot(t, result[I])
-        print(result)
 
     def test_different_order_of_process_definition(self):
         N = 100

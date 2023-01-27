@@ -5,6 +5,13 @@ import polars as po
 from collections import Counter
 from scipy.interpolate import interp1d
 
+from epipack.distributions import (
+        ExpChain,
+        fit_chain_by_cdf,
+        fit_chain_by_median_and_iqr,
+    )
+
+import epipack as epk
 df = po.read_csv('distribution_icu_world.csv')
 
 days = df['x'].cast(float).to_numpy()
@@ -18,11 +25,26 @@ for _t in t:
 
 
 
-fig, axh = pl.subplots(1,2,figsize=(8,4),sharex=True)
+figh, axh = pl.subplots(1,2,figsize=(8,4),sharex=True)
 axh[0].plot(t+0.5, hist,'-s')
 axh[1].plot(t+0.5, hist,'-s')
 axh[1].set_yscale('log')
+axh[0].set_xlabel('days')
+axh[1].set_xlabel('days')
+axh[0].set_ylabel('pdf')
 
+figh.tight_layout()
+figh.savefig('hist_00.pdf')
+
+print(f"{np.mean(days)=}")
+mean_ICU_duration = np.mean(days+0.5)
+
+singlechain = ExpChain([mean_ICU_duration])
+_, pdf = singlechain.get_pdf(t)
+axh[0].plot(t, pdf)
+axh[1].plot(t, pdf)
+figh.tight_layout()
+figh.savefig('hist_01.pdf')
 
 # Flavor 1
 interp_t = np.concatenate(( t, [t[-1]+1]))
@@ -30,8 +52,8 @@ interp_hist = np.concatenate(( hist, [0.]))
 interpolated_pdf = interp1d(interp_t,interp_hist,kind='zero',bounds_error=False,fill_value=0.)
 
 tt = np.linspace(0,61,1001)
-axh[0].plot(tt, interpolated_pdf(tt))
-axh[1].plot(tt, interpolated_pdf(tt))
+#axh[0].plot(tt, interpolated_pdf(tt))
+#axh[1].plot(tt, interpolated_pdf(tt))
 # Flavor 2
 interp_t = np.concatenate(( [0.], t+0.5, [t[-1]+1]))
 interp_hist = np.concatenate(( [0.],hist, [0.]))
@@ -41,33 +63,29 @@ interpolated_pdf = interp1d(interp_t,interp_hist/new_norm,kind='linear',bounds_e
 tt = np.linspace(0,61,1001)
 axh[0].plot(tt, interpolated_pdf(tt))
 axh[1].plot(tt, interpolated_pdf(tt))
+figh.tight_layout()
+figh.savefig('hist_02.pdf')
 
 
 l25, med, u75 = np.percentile(days+0.5,[25,50,75])
 
-print(f"{np.mean(days)=}")
-mean_ICU_duration = np.mean(days+0.5)
 
 print(l25,med,u75)
 
 
 
 
-from epipack.distributions import (
-        ExpChain,
-        fit_chain_by_cdf,
-        fit_chain_by_median_and_iqr,
-    )
-
-import epipack as epk
 
 chain = fit_chain_by_median_and_iqr(n=3,median=med,iqr=(l25,u75),callback=True)
-print(chain.get_median_and_iqr())
-print(chain.tau)
+print(f"{chain.get_median_and_iqr()=}")
+print(f"{chain.tau=}")
 
 _, pdf = chain.get_pdf(t)
 axh[0].plot(t, pdf)
 axh[1].plot(t, pdf)
+
+figh.tight_layout()
+figh.savefig('hist_03.pdf')
 
 #=================
 
@@ -83,10 +101,17 @@ axh[1].plot(t, pdf)
 
 #pl.show()
 
-fig, ax = pl.subplots(1,1)
 
 def incidence(t,y=None):
     return 100*np.sin(t/10)**2
+
+_fig, _ax = pl.subplots(1,1)
+
+_ax.plot(tt, incidence(tt))
+_ax.set_xlabel('days')
+_ax.set_ylabel('incidence (ICU influx)')
+_fig.tight_layout()
+_fig.savefig('incidence.pdf')
 
 def get_model(chain,incidence):
 
@@ -139,21 +164,23 @@ def analyze_model(model,last_tau,ax=None):
     ax.plot(tt, ICU_prevalence)
     last_itau = len(model.compartments)-1
     ax.plot(tt, res['ICU_'+str(last_itau)]/last_tau)
+    ax.set_xlabel('days')
+    ax.set_ylabel('frequency')
 
     return ax
 
 
 model = get_model(chain,incidence)
 ax = analyze_model(model,chain.tau[-1])
+fig = ax.get_figure()
+fig.tight_layout()
+fig.savefig('frequency_00.pdf')
 
-
-singlechain = ExpChain([mean_ICU_duration])
-_, pdf = singlechain.get_pdf(t)
-axh[0].plot(t, pdf)
-axh[1].plot(t, pdf)
 
 model = get_model(singlechain,incidence)
 analyze_model(model,singlechain.tau[-1],ax=ax)
+fig.tight_layout()
+fig.savefig('frequency_01.pdf')
 
 
 #=================================
@@ -185,6 +212,8 @@ res = model.integrate(tt)
 
 print(res)
 ax.plot(tt, res['ICU'])
+fig.tight_layout()
+fig.savefig('frequency_02.pdf')
 
 pl.show()
 

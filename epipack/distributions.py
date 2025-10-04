@@ -7,10 +7,13 @@ putting conditions on the ordering of waiting
 times such that the symmetry in parameter space
 can be utilized for fitting.
 
-The whole thing is based on using matrix exponentia/ls
+The whole thing is based on using matrix exponentials
 to compute cdf and pdf of a hypoexonential distribution
 (special case of a phase-type distribution), see
 https://en.wikipedia.org/wiki/Hypoexponential_distribution .
+
+See also
+https://link.springer.com/article/10.1007/s00285-019-01412-w
 """
 
 import numpy as np
@@ -19,6 +22,8 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import minimize, newton, brentq
 from scipy.stats import entropy
 import scipy.sparse as sprs
+
+from tqdm import tqdm
 
 # this used to be 'RK23', but the problems are often stiff and then Runge-Kutta doesn't work
 
@@ -156,6 +161,14 @@ class ExpChain():
 
         if t is None:
             return self.get_cdf_constant_interval()
+        elif len(t) > 1:
+            dt = np.diff(t)
+            if np.all(dt == dt[0]):
+                return self.get_cdf_constant_interval(t_start=t[0],
+                                                      t_final=t[-1],
+                                                      num_time_points=\
+                                                             int((t[-1]-t[0])/dt[0])+1
+                                                      )
 
         Theta = self.Theta
         F = np.zeros(len(t))
@@ -166,7 +179,7 @@ class ExpChain():
 
         return t, F
 
-    def get_cdf_constant_interval(self,t_final=None,num_time_points=101):
+    def get_cdf_constant_interval(self,t_start=0.0,t_final=None,num_time_points=101):
         """
         Obtain the cumulative distribution function of the total waiting
         time this chain represents, using the ``scipy.sparse.linalg.expm_multiply``
@@ -174,6 +187,8 @@ class ExpChain():
 
         Parameters
         ==========
+        t_start : float, default = 0.0
+            Initial time point at which the CDF should be evaluated
         t_final : float, default = None
             Final time point at which the CDF should be evaluated
         num_time_points : int, default = 101
@@ -233,6 +248,14 @@ class ExpChain():
 
         if t is None:
             return self.get_pdf_constant_interval()
+        elif len(t) > 1:
+            dt = np.diff(t)
+            if np.all(dt == dt[0]):
+                return self.get_pdf_constant_interval(t_start=t[0],
+                                                      t_final=t[-1],
+                                                      num_time_points=\
+                                                             int((t[-1]-t[0])/dt[0])+1
+                                                     )
 
         Theta = self.Theta
         Theta1 = self.Theta1
@@ -246,7 +269,7 @@ class ExpChain():
 
         return t, p
 
-    def get_pdf_constant_interval(self,t_final=None,num_time_points=101):
+    def get_pdf_constant_interval(self,t_start=0.0,t_final=None,num_time_points=101):
         """
         Obtain the probability density function of the total waiting
         time this chain represents, using the ``scipy.sparse.linalg.expm_multiply``
@@ -254,6 +277,8 @@ class ExpChain():
 
         Parameters
         ==========
+        t_start : float, default = 0.0
+            Initial time point at which the PDF should be evaluated
         t_final : float, default = None
             Final time point at which the PDF should be evaluated
         num_time_points : int, default = 101
@@ -269,7 +294,6 @@ class ExpChain():
             distribution function
         """
 
-        t_start = 0.0
         if t_final is None:
             t_final = 3*self.get_mean()
 
@@ -483,7 +507,7 @@ class ExpChain():
         """
         return sum(self.tau)
 
-def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-10,x0=None):
+def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-10,x0=None,callback=None):
     """
     Fit a chain of exponentially distributed random variables
     to a distribution where the cdf is known for several time points.
@@ -519,6 +543,12 @@ def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=
         ``x0`` is going to contain the value ``mean/n``
         n times, where ``mean`` is the mean of the
         distribution determined by ``cdf``.
+    callback: function or bool, default = None
+        A function ``lambda parameter_list: ...`` that
+        gets passed the current parameter estimation
+        after every step.
+        If `True', will default to a `tqdm` progressbar.
+        If `None', nothing will be called
 
     Returns
     =======
@@ -555,12 +585,18 @@ def fit_chain_by_cdf(n,time_values,cdf,lower=1e-10,upper=1e10,percentile_cutoff=
             P = np.concatenate((P,np.ones(len(cdf)-len(P))))
         return ( ((cdf - P)/cdf)**2).sum()
 
-    result = minimize(cost, x0, (n, cdf, time_values), bounds=[(lower,upper)]*n,method='Nelder-Mead')
+    # don't crucify me for this pls
+    if callback == True:
+        maxiter_default_nelder_mead = n*200
+        pbar = tqdm(total=maxiter_default_nelder_mead)
+        callback = lambda x: pbar.update()
+
+    result = minimize(cost, x0, (n, cdf, time_values), bounds=[(lower,upper)]*n,method='Nelder-Mead',callback=callback)
 
     return ExpChain(result.x)
 
 
-def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-10):
+def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10,percentile_cutoff=1-1e-10,callback=None):
     """
     Fit a chain of exponentially distributed random variables
     to a distribution where only median and iqr are known.
@@ -578,6 +614,12 @@ def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10,percentile_c
         lower bound of waiting times for each transition
     upper: float, default = 1e10
         upper bound of waiting times for each transition
+    callback: function or bool, default = None
+        A function ``lambda parameter_list: ...`` that
+        gets passed the current parameter estimation
+        after every step.
+        If `True', will default to a `tqdm` progressbar.
+        If `None', nothing will be called
 
     Returns
     =======
@@ -605,7 +647,7 @@ def fit_chain_by_median_and_iqr(n,median,iqr,lower=1e-10,upper=1e10,percentile_c
     time_values = np.array([iqr[0],median,iqr[1]])
     mean = median
     x0 = [mean/n]*n
-    return fit_chain_by_cdf(n,time_values,percentiles,lower,upper,x0=x0,percentile_cutoff=percentile_cutoff)
+    return fit_chain_by_cdf(n,time_values,percentiles,lower,upper,x0=x0,percentile_cutoff=percentile_cutoff,callback=callback)
 
 
 if __name__ == "__main__":

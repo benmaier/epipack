@@ -233,5 +233,5 @@ dev:
 	cd _build/html; python -m "http.server" 1313
 
 publish:
-	scp -r _build/html/* epipack@devi.biologie.hu-berlin.de:public_html/
+	scp -r _build/html/* bfmaier@pool2.physik.hu-berlin.de:public_html/epipack/
 

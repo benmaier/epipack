@@ -1,5 +1,5 @@
 """
-Contains a general base class to define 
+Contains a general base class to define
 stochastic epidemiological models in
 populations of constant size.
 """
@@ -637,7 +637,6 @@ class StochasticEpiModel():
             raise ValueError('Sum of initial conditions does not equal unity.')
 
         self.set_node_statuses(node_status)
-        self.y0 = y0
 
         return self
 
@@ -655,13 +654,16 @@ class StochasticEpiModel():
         if len(node_status) != self.N_nodes:
             raise ValueError("`node_status` must carry N_nodes values")
 
+        # make a copy (and convert to array, in case it's a list)
+        node_status = np.array(node_status,dtype=int)
+
         if self.link_transmission_events is None:
             self.set_link_transmission_processes([])
         if self.node_transition_events is None:
             self.set_node_transition_processes([])
 
         # filter out the minimally possible rate (other than zero) and the maximally
-        # possible rate 
+        # possible rate
         smax = self.out_strength.max()
         smin = self.out_strength.min()
         compartment_mins = np.zeros(self.N_comp)
@@ -689,7 +691,7 @@ class StochasticEpiModel():
             compartment_max = (compartment_maxs).max()
 
         # set these node statuses
-        self.node_status = node_status.copy()
+        self.node_status = node_status
 
         # construct a SamplableSet in which we insert the node reaction rates
         self.all_node_events = SamplableSet(compartment_min,compartment_max,cpp_type='int')
@@ -726,7 +728,7 @@ class StochasticEpiModel():
         # get the events that can happen to a node of this status/compartment
         status_events = self.node_and_link_events[status]
 
-        # if no events can happen, remove the node from 
+        # if no events can happen, remove the node from
         # the event set and set the node events to an empty set
         if len(status_events[_RATES]) == 0:
             del self.all_node_events[node]
@@ -734,7 +736,7 @@ class StochasticEpiModel():
         else:
             # otherwise, get a copy of this compartment's rate vector
             these_rates = status_events[_RATES].copy()
-            # scale the link events by this node's out degree            
+            # scale the link events by this node's out degree
             scale_from, scale_to = status_events[_LINK_PROCESS_INDICES]
             these_rates[scale_from:scale_to] *= self.out_strength[node]
             total_rate = these_rates.sum()
@@ -906,7 +908,7 @@ class StochasticEpiModel():
         # if is transmission event
         if is_transmission_event:
             if neighbor is None:
-                # if no reacting neighbor was specified    
+                # if no reacting neighbor was specified
                 if self.is_network_model:
                     # sample a neighbor from the reacting node's neighbor set
                     neighbor, _ = self.graph[reacting_node].sample()
@@ -951,7 +953,7 @@ class StochasticEpiModel():
 
                 # iterate through neighbors
                 for n in neighbors:
-                    # samplableset returns node ids together with weight, therefore we 
+                    # samplableset returns node ids together with weight, therefore we
                     # have to ask for the first entry of n
                     try:
                         n = n[0]
@@ -1120,7 +1122,7 @@ class StochasticEpiModel():
                         if sampling_callback is not None:
                             sampling_callback()
 
-                # call back 
+                # call back
                 if event_callback is not None:
                     event_callback(new_t, reacting_node, self.node_status)
 
@@ -1288,7 +1290,7 @@ class StochasticSISModel(StochasticEpiModel):
 
         StochasticEpiModel.__init__(self, list("SI"), N, *args, **kwargs)
 
-        k0 = self.out_strength.mean() 
+        k0 = self.out_strength.mean()
         infection_rate = R0 * recovery_rate / k0
 
         self.set_node_transition_processes([
@@ -1429,7 +1431,7 @@ if __name__ == "__main__":     # pragma: no cover
     start = time()
     t, result = model.simulate(100)
     end = time()
-    print("composition rejection needed", end-start,"seconds") 
+    print("composition rejection needed", end-start,"seconds")
 
 
     pl.figure()

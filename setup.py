@@ -25,6 +25,7 @@ setup(
                 'ipython>=7.14.0',
                 'ipywidgets>=7.5.1',
                 'matplotlib>=3.0.0',
+                'tqdm',
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],

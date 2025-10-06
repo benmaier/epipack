@@ -235,7 +235,7 @@ class MatrixEpiTest(unittest.TestCase):
         with self.assertWarns(UserWarning):
             # this should raise a warning that rates do not sum to zero
             epi.add_linear_rates([
-                   (A, B, -1) 
+                   (A, B, -1)
                 ])
 
     def test_initial_condition_warnings(self):
@@ -268,7 +268,7 @@ class MatrixEpiTest(unittest.TestCase):
         b21 = 3
         b22 = 6
 
-        #we'll use b11*b22 = b12*b21 because it makes 
+        #we'll use b11*b22 = b12*b21 because it makes
         #our lives easier in computing R0 analytically
 
         mu = 4
@@ -342,6 +342,93 @@ class MatrixEpiTest(unittest.TestCase):
         assert(np.isclose(R0, modelR0))
         assert(np.isclose(np.real(j), beta*(modelR0-1)))
 
+        jsmalldomain, v, ids = model.get_jacobian_of_small_domain_leading_eigenvalue(return_eigenvector=True,returntype='real')
+        assert(v[0] == 1.0)
+        assert(np.isclose(np.real(j), jsmalldomain))
+        assert(len(ids) == 1)
+        assert(ids[0] == 'I')
+
+
+    def test_jacobian_of_small_domain(self):
+        R0 = 3
+        beta = 4
+        gamma = 1
+        model = MatrixSEIRModel(R0,beta,gamma)\
+                    .set_initial_conditions({'S': 1})
+
+        J, comps = model.jacobian_of_small_domain()
+        assert(J[0,0] == -gamma)
+        assert(J[1,0] == +gamma)
+        assert(J[0,1] == +R0*beta)
+        assert(J[1,1] == -beta)
+        assert(comps[0] == 'E')
+        assert(comps[1] == 'I')
+
+        j, v, comps = model.get_jacobian_of_small_domain_leading_eigenvalue(returntype='real',return_eigenvector=True)
+        modelR0 = model.get_next_generation_matrix_leading_eigenvalue()
+        v /= v.sum()
+
+        # growth rate is known analytically for SEIR
+        r = 0.5*(-(beta+gamma)+np.sqrt((beta-gamma)**2 + 4*beta*gamma*modelR0))
+        assert(np.isclose(R0, modelR0))
+        assert(np.isclose(j, r))
+        # eigenvector too
+        assert(np.isclose(v[0],(beta+r) / (beta+r+gamma)))
+        assert(np.isclose(v[1],(gamma) / (beta+r+gamma)))
+
+
+        # test: this should be the same for the large model
+        jL, vL = model.get_jacobian_leading_eigenvalue(returntype='real',return_eigenvector=True)
+
+        vL = vL[1:-1]
+        vL /= vL.sum()
+        assert(np.isclose(v[0],vL[0]))
+        assert(np.isclose(v[1],vL[1]))
+
+    def test_next_gen_matrix_eigenvector(self):
+        R0 = 3
+        beta = 4
+        gamma = 1
+        model = MatrixSEIRModel(R0,beta,gamma)\
+                    .set_initial_conditions({'S': 1})
+
+        K = model.get_next_generation_matrix()
+        mR0, v = model.get_next_generation_matrix_leading_eigenvalue(return_eigenvector=True)
+
+        v /= v.sum()
+        assert(np.isclose(mR0,R0))
+        assert(np.isclose(v[0],1))
+
+    def test_mean_generation_time(self):
+        R0 = 3
+        beta = 4
+        gamma = 1
+        model = MatrixSEIRModel(R0,beta,gamma)\
+                    .set_initial_conditions({'S': 1})
+
+        Tg = model.get_mean_generation_time()
+        Tg_exact = 1/beta + 1/gamma
+
+        assert(np.isclose(Tg, Tg_exact))
+
+    def test_generation_time_distribution(self):
+        R0 = 3
+        beta = 4
+        gamma = 1
+        model = MatrixSEIRModel(R0,beta,gamma)\
+                    .set_initial_conditions({'S': 1})
+
+        tau = np.linspace(0,5,11)
+
+        g_exact = gamma*beta/(beta-gamma) * (np.exp(-gamma*tau) - np.exp(-beta*tau))
+        g_numer = model.get_generation_time_distribution(tau)
+
+        assert(all([np.isclose(a,b) for a, b in zip(g_exact, g_numer)]))
+
+
+
+
+
     def test_2times2_NGM(self):
         R0 = 3
         beta = 4
@@ -357,19 +444,23 @@ class MatrixEpiTest(unittest.TestCase):
 if __name__ == "__main__":
 
     T = MatrixEpiTest()
-    T.test_network_matrix_model()
-    T.test_different_order_of_process_definition()
-    T.test_R0()
-    T.test_jacobian()
-    T.test_2times2_NGM()
-    T.test_compartments()
-    T.test_linear_rates()
-    T.test_adding_linear_rates()
-    T.test_quadratic_processes()
-    T.test_adding_quadratic_processes()
-    T.test_SIS_with_simulation_restart_and_euler()
-    T.test_repeated_simulation()
-    T.test_custom_models()
-    T.test_birth_death()
-    T.test_fusion_and_adding_rates()
-    T.test_initial_condition_warnings()
+    #T.test_network_matrix_model()
+    #T.test_different_order_of_process_definition()
+    #T.test_R0()
+    #T.test_jacobian()
+    #T.test_jacobian_of_small_domain()
+    #T.test_next_gen_matrix_eigenvector()
+    T.test_mean_generation_time()
+    T.test_generation_time_distribution()
+    #T.test_2times2_NGM()
+    #T.test_compartments()
+    #T.test_linear_rates()
+    #T.test_adding_linear_rates()
+    #T.test_quadratic_processes()
+    #T.test_adding_quadratic_processes()
+    #T.test_SIS_with_simulation_restart_and_euler()
+    #T.test_repeated_simulation()
+    #T.test_custom_models()
+    #T.test_birth_death()
+    #T.test_fusion_and_adding_rates()
+    #T.test_initial_condition_warnings()

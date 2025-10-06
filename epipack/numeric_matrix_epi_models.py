@@ -546,7 +546,68 @@ class MatrixEpiModel(IntegrationMixin):
         """
         return self.get_transmission_matrix(y0=y0) + self.get_transition_matrix()
 
-    def get_jacobian_leading_eigenvalue(self,y0=None,returntype='complex'):
+    def get_transmission_and_transition_matrices_of_small_domain(self,y0=None, return_compartment_list=False):
+        r"""
+        Returns T and :math:`\Sigma` of small domain at point ``y0`` in phase space
+        (i.e. only containing compartments that do not make the transition matrix singular,
+        typically transitional compartments).
+
+        Parameters
+        ----------
+        y0 : np.array, default = None
+            At which point in phase space to compute the transmission matrix
+            Will use ``self.y0`` if argument ``y0`` is ``None``.
+        return_compartment_list : list of str, default = False
+            If ``True``, will return as a third option the list of compartments
+            corresponding to rows/columns in the transmission matrix
+
+        Returns
+        -------
+        T : scipy.sparse.csr_matrix
+            Transmission matrix at point ``y0``
+        Sigma : scipy.sparse.csr_matrix
+            Transition matrix
+        compartment_list : list of str, (if parameter ``return_compartment_list=True``)
+            list of compartments corresponding to rows/columns in the transmission matrix
+        """
+
+        T = self.get_transmission_matrix(y0=y0)
+        Sigma, use_comp = self.get_transition_matrix_of_small_domain_and_compartment_ids()
+        T = (T[use_comp,:])[:,use_comp]
+        if not return_compartment_list:
+            return T, Sigma
+        else:
+            return T, Sigma, [ self.get_compartment(iC) for iC in use_comp ]
+
+    def jacobian_of_small_domain(self,y0=None, return_compartment_list=False):
+        """
+        Returns jacobian of small domain at point ``y0`` in phase space
+        (i.e. only containing compartments that do not make the transition matrix singular,
+        typically transitional compartments).
+
+        Parameters
+        ----------
+        y0 : np.array, default = None
+            At which point in phase space to compute the transmission matrix
+            Will use ``self.y0`` if argument ``y0`` is ``None``.
+        return_compartment_list : list of str, default = False
+            If ``True``, will return as a third option the list of compartments
+            corresponding to rows/columns in the transmission matrix
+
+        Returns
+        -------
+        J : scipy.sparse.csr_matrix
+            Jacobian of small domain at point ``y0``
+        compartment_list : list of str, (if parameter ``return_compartment_list=True``)
+            list of compartments corresponding to rows/columns in the transmission matrix
+        """
+        T, Sigma, return_compartment_list = self.get_transmission_and_transition_matrices_of_small_domain(y0, return_compartment_list=True)
+        if not return_compartment_list:
+            return T + Sigma
+        else:
+            return T + Sigma, return_compartment_list
+
+    def get_jacobian_leading_eigenvalue(self,y0=None,returntype='complex',return_eigenvector=False):
         """
         Return leading eigenvalue of Jacobian at point ``y0``.
         Will use ``self.y0`` if argument ``y0`` is ``None``.
@@ -554,7 +615,21 @@ class MatrixEpiModel(IntegrationMixin):
         real part of the eigenvalue.
         """
         J = self.jacobian(y0=y0)
-        return self._get_leading_eigenvalue(J,returntype,'LR')
+        return self._get_leading_eigenvalue(J,returntype,'LR',return_eigenvector=return_eigenvector)
+
+    def get_jacobian_of_small_domain_leading_eigenvalue(self,y0=None,returntype='complex',return_eigenvector=False, return_compartment_list=True):
+        """
+        Return leading eigenvalue of Jacobian at point ``y0``.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        Use argument ``returntype='real'`` to only obtain the
+        real part of the eigenvalue.
+        """
+        J, compartment_list = self.jacobian_of_small_domain(y0, return_compartment_list=True)
+        result = self._get_leading_eigenvalue(J,returntype,'LR',return_eigenvector=return_eigenvector)
+        if return_eigenvector and return_compartment_list:
+            return (*result, compartment_list)
+        else:
+            return result
 
     def get_transmission_matrix(self,y0=None):
         """
@@ -588,12 +663,18 @@ class MatrixEpiModel(IntegrationMixin):
         """
         return self.linear_rates
 
-    def get_next_generation_matrix(self,y0=None):
+    def get_transition_matrix_of_small_domain_and_compartment_ids(self):
         """
-        Return next generation matrix at point y0.
-        Will use ``self.y0`` if argument ``y0`` is ``None``.
+        Returns the transition matrix of small domain (i.e. only containing compartments
+        that do not make the transition matrix singular, typically transitional compartments).
+
+        Returns
+        -------
+        Sigma : scipy.sparse.csr_matrix
+            Transition matrix of small domain
+        compartment_list : list of str, (if parameter ``return_compartment_list=True``)
+            list of compartments corresponding to rows/columns in the transmission matrix
         """
-        T = self.get_transmission_matrix(y0=y0)
         Sigma = self.get_transition_matrix()
 
         # delete all compartments that contribute to the singularity
@@ -617,14 +698,42 @@ class MatrixEpiModel(IntegrationMixin):
 
         # filter our compartments that do not make the matrix singular
         Sigma = (Sigma[use_comp,:])[:,use_comp]
-        T = (T[use_comp,:])[:,use_comp]
+
+        return Sigma, use_comp
+
+    def get_next_generation_matrix(self,y0=None,return_compartment_list=False):
+        """
+        Return next generation matrix at point y0.
+        Will use ``self.y0`` if argument ``y0`` is ``None``.
+
+        Parameters
+        ----------
+        y0 : np.array, default = None
+            At which point in phase space to compute the transmission matrix
+            Will use ``self.y0`` if argument ``y0`` is ``None``.
+        return_compartment_list : list of str, default = False
+            If ``True``, will return as a third option the list of compartments
+            corresponding to rows/columns in the transmission matrix
+
+        Returns
+        -------
+        J : scipy.sparse.csr_matrix
+            Jacobian of small domain at point ``y0``
+        compartment_list : list of str, (if parameter ``return_compartment_list=True``)
+            list of compartments corresponding to rows/columns in the transmission matrix
+        """
+
+        T, Sigma, compartment_list = self.get_transmission_and_transition_matrices_of_small_domain(y0,return_compartment_list=True)
 
         # convert Sigma to csc for more efficient inverse algo
         K = -T.dot(sprs.linalg.inv(Sigma.tocsc()))
 
-        return K
+        if return_compartment_list:
+            return K, compartment_list
+        else:
+            return K
 
-    def get_next_generation_matrix_leading_eigenvalue(self,y0=None,returntype='real'):
+    def get_next_generation_matrix_leading_eigenvalue(self,y0=None,returntype='real',return_eigenvector=False):
         """
         Return the leading eigenvalue of the next generation matrix
         at point ``y0``. Will use ``self.y0`` if argument
@@ -636,34 +745,90 @@ class MatrixEpiModel(IntegrationMixin):
         Use ``returntype='complex'`` to change this.
         """
         K = self.get_next_generation_matrix(y0=y0)
-        return self._get_leading_eigenvalue(K,returntype,method='LM')
+        return self._get_leading_eigenvalue(K,returntype,method='LM', return_eigenvector=return_eigenvector)
 
-    def _get_leading_eigenvalue(self,M,returntype='complex',method='LR'):
+    def _get_leading_eigenvalue(self,M,returntype='complex',method='LR',return_eigenvector=False):
 
         if M.shape == (1,1):
             _lambda = M[0,0]
+            _v = np.array([1.])
         elif M.shape == (1,):
             _lambda = M[0]
+            _v = np.array([1.])
         else:
             # I thought CSC format would be better for solver
             # but it's not, so I uncommented this
             # M_ = M.tocsc()
             M_ = M
             if M_.shape == (2,2):
-                lambdas = np.linalg.eig(M_.toarray())[0]
+                lambdas, v = np.linalg.eig(M_.toarray())
             else:
-                lambdas = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]-2),which=method)[0]
+                lambdas, v = sprs.linalg.eigs(M_,k=min(2,M_.shape[0]-2),which=method)
             if method == 'LR':
-                lambdas = sorted(lambdas, key=lambda x: -np.real(x))
-                _lambda = lambdas[0]
+                arglambda = np.argmax(np.real(lambdas))
+                #lambdas = sorted(lambdas, key=lambda x: -np.real(x))
+                _lambda = lambdas[arglambda]
+                _v = v[:,arglambda]
                 if returntype == 'real':
                     _lambda = np.real(_lambda)
+                    _v = np.real(_v)
             elif method == 'LM':
-                lambdas = sorted(lambdas, key=lambda x: -np.abs(x))
-                _lambda = lambdas[0]
+                arglambda = np.argmax(np.abs(lambdas))
+                #lambdas = sorted(lambdas, key=lambda x: -np.abs(x))
+                _lambda = lambdas[arglambda]
+                _v = v[:,arglambda]
                 if returntype == 'real':
                     _lambda = np.abs(_lambda)
-        return _lambda
+                    _v = np.real(_v)
+        if return_eigenvector:
+            return _lambda, _v
+        else:
+            return _lambda
+
+    def get_mean_generation_time(self,y0=None):
+        """
+        Compute :math:`T_g = - 1^T K V^{-1} u / R_0`
+        where K is the next-generation matrix of small domain,
+        V is the transition matrix of small domain and
+        :math:`K u = R_0 u`.
+        """
+        T, Sigma = self.get_transmission_and_transition_matrices_of_small_domain(y0)
+        invSigma = sprs.linalg.inv(Sigma.tocsc())
+        K = -T.dot(invSigma)
+        R0, v = self._get_leading_eigenvalue(K,'real','LM',return_eigenvector=True)
+        v /= v.sum()
+        return K.dot(-invSigma).dot(v).sum()/R0
+
+    def get_infection_kernel(self,tau,y0=None, return_R0=False):
+        r"""
+        Return the infection kernel :math:`k(\tau)` at time points :math:`\tau`
+        as :math:`k(\tau = 1^T T \exp(\Sigma\tau) u`
+        where :math:`-T\Sigma^{-1} u = R_0 u`.
+        """
+        t = tau
+        T, Sigma = self.get_transmission_and_transition_matrices_of_small_domain(y0)
+        Sigma = Sigma.tocsc()
+        invSigma = sprs.linalg.inv(Sigma)
+        K = -T.dot(invSigma)
+        R0, v = self._get_leading_eigenvalue(K,'real','LM',return_eigenvector=True)
+        v /= v.sum()
+        kernel = np.zeros_like(t)
+        for i, tau in enumerate(t):
+            kernel[i] = T.dot(sprs.linalg.expm(Sigma*tau)).dot(v).sum()
+        if return_R0:
+            return kernel, R0
+        else:
+            return kernel
+
+    def get_generation_time_distribution(self, tau, y0=None):
+        r"""
+        Returns the generation time distribution :math:`g(\tau) = k(\tau)/R0`
+        at time points :math:`\tau`.
+        """
+        kernel, R0 = self.get_infection_kernel(tau,y0=y0,return_R0=True)
+        return kernel / R0
+
+
 
 
 class NetworkMarkovEpiModel(IntegrationMixin):

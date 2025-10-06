@@ -29,6 +29,7 @@ a.out
 /.vscode/
 /_vscode/
 /cookbook/notebooks/.ipynb_checkpoints/
+/cookbook/distributions/example_use_case/distribution_icu_world.csv
 
 __pycache__
 /.eggs/

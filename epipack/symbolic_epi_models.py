@@ -12,7 +12,7 @@ import sympy
 
 from epipack.numeric_epi_models import EpiModel, custom_choice
 from IPython.display import Math, display
-from sympy.printing.theanocode import theano_function
+#from sympy.printing.theanocode import theano_function
 
 class SymbolicMixin():
     """
